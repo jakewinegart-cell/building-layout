@@ -5,7 +5,7 @@
 //               which metric buys which item, waste %, pack size, rounding)
 // Nothing here knows a price; prices come from the price table (placeholder by default).
 // ============================================================================
-import { LUMBER, LUMBER_T_IN, pierDepthIn } from './config.js';
+import { LUMBER, LUMBER_T_IN, pierDepthIn, pierShapeOf } from './config.js';
 import { getLayer } from './model.js';
 import { dist, bbox, offsetPolygon, signedArea, pointInPoly, fmtFtIn } from './geom.js';
 import { studLayout } from './homeplan-derived.js';
@@ -46,9 +46,9 @@ export function measure(m) {
   // ---- foundation
   const piers = fnd.objects.filter((o) => o.type === 'pier');
   M.pierCount = piers.length;
-  M.pierConcreteCf = r2(piers.reduce((s, o) => s + Math.PI * Math.pow((o.props.diaIn * IN) / 2, 2) * o.height, 0));
+  M.pierConcreteCf = r2(piers.reduce((s, o) => { const sh = pierShapeOf(o, f); return s + (sh.shape === 'precast' ? 0 : sh.shape === 'square' ? Math.pow(2 * sh.halfFt, 2) * o.height : Math.PI * Math.pow((o.props.diaIn * IN) / 2, 2) * o.height); }, 0));
   M.pierRebarLf = r2(piers.reduce((s, o) => s + 4 * Math.max(1, o.height - 3 * IN), 0));   // 4 verticals, 3 in cover
-  const tubes = map('sonotubes'); piers.forEach((o) => addMap(tubes, `${o.props.diaIn}`, Math.ceil(o.height / 4 - 1e-6)));
+  const tubes = map('sonotubes'); piers.filter((o) => pierShapeOf(o, f).shape === 'round').forEach((o) => addMap(tubes, `${o.props.diaIn}`, Math.ceil(o.height / 4 - 1e-6)));
   M.pierDiaList = Array.from(new Set(piers.map((o) => o.props.diaIn))).sort((a, b) => a - b).join(' / ');
   M.pierDepthText = `${fmtFtIn(M.frostDepthIn * IN)}${M.frostEntered ? '' : ' (PLACEHOLDER — enter your frost depth)'}`;
   M.pierManual = piers.filter((o) => !o.derivedFrom).length;

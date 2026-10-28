@@ -9,6 +9,7 @@ import { bbox, dist, lerp } from './geom.js';
 import { lumberAlong, studLayout } from './homeplan-derived.js';
 import { houseOf, tieInInfo } from './roof-calc.js';
 import { snapPier, dropPier, isManual, pierDims, originOf } from './piers.js';
+import { pierShapeOf } from './config.js';
 import { findObject } from './model.js';
 import { fmtFtIn, inwardNormal, distToSeg, intersectLines } from './geom.js';
 import { PIERS } from './config.js';
@@ -594,17 +595,21 @@ export function createView3D(container, app) {
 
   function buildFoundation({ l, alpha, g }) {
     const concrete = mat('#a4a6a8', alpha), dark = mat('#8c8f93', alpha);
-    const manualM = mat('#4f86c6', alpha), flagM = mat('#d0453a', alpha);
+    const manualM = mat('#4f86c6', alpha), flagM = mat('#d0453a', alpha), precastM = mat('#b9a98f', alpha);
     l.objects.forEach((o) => {
       if (o.type === 'footing') {
         const w = o.props.widthIn * IN;
         g.add(tag(lumberAlong(THREE, o.geometry.a, o.geometry.b, w, o.z, o.z + o.height, o.props.role === 'stem' ? concrete : dark, null, w / 2), o));
       } else if (o.type === 'pier') {
-        const r = (o.props.diaIn * IN) / 2;
-        const cyl = new THREE.Mesh(new THREE.CylinderGeometry(r, r, o.height, 18), o.props.flags && o.props.flags.length ? flagM : isManual(o) ? manualM : concrete);
+        const sh = pierShapeOf(o, l.params);
+        const r = sh.shape === 'round' ? (o.props.diaIn * IN) / 2 : sh.halfFt;
+        const pm = o.props.flags && o.props.flags.length ? flagM : sh.shape === 'precast' ? precastM : isManual(o) ? manualM : concrete;
+        const cyl = new THREE.Mesh(sh.shape === 'round' ? new THREE.CylinderGeometry(r, r, o.height, 18) : sh.shape === 'precast' ? new THREE.CylinderGeometry(r * 0.7, r * Math.SQRT2, o.height, 4, 1) : new THREE.BoxGeometry(2 * r, o.height, 2 * r), pm);
+        if (sh.shape === 'precast') cyl.rotation.y = Math.PI / 4;   // a tapered square block
         cyl.userData.objectType = 'pier';
         cyl.position.set(o.geometry.c[0], o.z + o.height / 2, o.geometry.c[1]);
         g.add(tag(cyl, o));
+        if (sh.shape !== 'round') return;   // square piers and precast blocks have no bell/pad
         const pad = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.8, r * 1.8, 0.67, 18), dark);
         pad.position.set(o.geometry.c[0], o.z + 0.33, o.geometry.c[1]);
         pad.userData.objectType = 'pier'; pad.userData.part = { k: 'pierPad' };

@@ -48,13 +48,13 @@ export const DEFAULTS = {
     grade: { type: 'flat', slopePct: 0, downhill: 'S' },
   },
   foundation: {
-    type: 'crawlspace',                // slab | crawlspace | basement | piers
+    type: 'piersOnly',                 // hotfix: piersOnly (individual piers, NO continuous concrete) | piers (piers + grade beam) | crawlspace | slab | basement
     footingWidthIn: 16,
     footingDepthIn: 8,
     frostDepthIn: null,                // from the startup ZIP lookup (verified only) or the user; never guessed
     placeholderFrostIn: 48,            // v4: unknown/skipped ZIP → conservative 48 in, DRAWING ONLY + FLAGGED (content-v4 fallback)
     frostMarginIn: 0,                  // optional user margin ("dig 3 in extra"); code adds none
-    topAboveGradeIn: { slab: 8, crawlspace: 24, basement: 8, piers: 30 }, // spec min 8 in
+    topAboveGradeIn: { slab: 8, crawlspace: 24, basement: 8, piers: 30, piersOnly: 24 }, // spec min 8 in; piersOnly = top of pier (the floor framing sits on it)
     stemWallIn: 8,
     basementWallFt: 8,
     slabIn: 4,
@@ -69,6 +69,10 @@ export const DEFAULTS = {
     placeDepthIn: null,                // bottom below grade, in (null = frost depth, or the placeholder)
     gradeBeamDepthIn: 12,
     gradeBeamWidthIn: 12,
+    // hotfix (piers-only): pier shape, global default + per-pier override (props.shape / props.sizeIn)
+    pierShape: 'round',                // 'round' Sonotube (default) | 'square' formed square concrete pier | 'precast' precast concrete pier/deck block
+    pierSquareIn: 12,                  // side of a formed square pier (in): 12 or 16
+    deletedContinuous: [],             // keys ("gradeBeam:w-ext-0", "stem:…", "footing:…", "slab:footprint") of continuous concrete the user deleted
     soilType: 'unknown',               // v3 (Remodel Guide missing_fields): 'unknown' | 'normal' | 'expansive' — expansive → engineered piers
   },
   floor: {
@@ -132,6 +136,35 @@ export const PIERS = {
   duplicateOffsetFt: 2,              // Duplicate puts the copy this far along the wall (or east)
   mergeFt: 1,                        // an auto slot within this distance of a manual pier is not generated (no overlaps)
 };
+
+/** Pier shapes (hotfix). Square sizes are the formed pier's side. Precast blocks have no Home Depot
+ *  price in content-v3/content-v4 homedepot-prices.json → "needs a price" (never invented). */
+export const PIER_SHAPES = {
+  round: { label: 'Round Sonotube', short: 'Sonotube' },
+  square: { label: 'Square formed concrete pier', short: 'Square pier', sizesIn: [12, 16] },
+  precast: { label: 'Precast concrete pier / deck block', short: 'Precast block', sizeIn: 11, heightIn: 8 },
+};
+export const FOUNDATION_TYPES = [
+  ['piersOnly', 'Piers only (no continuous concrete)'], ['piers', 'Piers + grade beam'],
+  ['crawlspace', 'Crawlspace (perimeter footing + stem wall)'], ['slab', 'Slab on grade'], ['basement', 'Basement'],
+];
+export const isPierType = (t) => t === 'piers' || t === 'piersOnly';
+/** Effective shape of one pier: its own override, else the layer default. → { shape, sizeIn, diaIn, halfFt } */
+export function pierShapeOf(o, f) {
+  const shape = (o && o.props && o.props.shape) || (f && f.pierShape) || 'round';
+  if (shape === 'square') { const s = Number((o && o.props && o.props.sizeIn) || (f && f.pierSquareIn) || 12); return { shape, sizeIn: s, halfFt: s / 24 }; }
+  if (shape === 'precast') { const s = PIER_SHAPES.precast.sizeIn; return { shape, sizeIn: s, heightIn: PIER_SHAPES.precast.heightIn, halfFt: s / 24 }; }
+  const d = Number((o && o.props && o.props.diaIn) || (f && f.pierDiaIn) || 12); return { shape: 'round', diaIn: d, halfFt: d / 24 };
+}
+export function pierShapeLabel(o, f) {
+  const s = pierShapeOf(o, f);
+  return s.shape === 'square' ? `Square pier ${s.sizeIn}×${s.sizeIn} in` : s.shape === 'precast' ? 'Precast pier block' : `Sonotube Ø${s.diaIn} in`;
+}
+/** Frost warning for precast blocks on the surface (null when not applicable). */
+export function precastFrostWarning(f) {
+  const fr = frostKnown(f) ? `${Number(f.frostDepthIn)} in` : 'unknown';
+  return `NOT FROST-PROTECTED: a precast block sits on the surface, but the frost depth here is ${fr}. Frost heave can lift and shift it. IRC R403.1.4 wants footings below frost depth; small detached accessory buildings may be exempt (R403.1.4.1) — ask your building department before you use blocks.`;
+}
 
 /** EXAMPLE header table — verify with your building department / engineer. */
 export const HEADER_EXAMPLE = [

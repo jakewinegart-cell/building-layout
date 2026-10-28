@@ -1,6 +1,6 @@
 // Piers / Sonotubes v2: snapping, live dimensions, manual vs auto, delete / duplicate /
 // reset. Pure model helpers shared by Plan, 3D and the pier panel. All coords in ft.
-import { PIERS, DEFAULTS, pierDepthIn } from './config.js';
+import { PIERS, DEFAULTS, pierDepthIn, pierShapeLabel, pierShapeOf } from './config.js';
 import { getLayer, uid } from './model.js';
 import { dist, distToSeg, lerp, bbox } from './geom.js';
 import { pierSlotKey } from './homeplan-derived.js';
@@ -78,12 +78,15 @@ function onWallId(m, c) { const w = nearestWall(m, c); return w && w.d < 0.05 ? 
 export function makeManualPier(m, c, opts = {}) {
   const f = pierLayer(m).params;
   const dia = opts.diaIn || f.placeDiaIn || 12;
-  return {
+  const o = {
     id: uid('pier'), type: 'pier', geometry: { c: [c[0], c[1]] }, z: 0, height: 0,
     props: { diaIn: dia, manual: true, topIn: opts.topIn != null ? opts.topIn : (f.placeTopIn != null && f.placeTopIn !== '' ? Number(f.placeTopIn) : null),
       depthIn: opts.depthIn != null ? opts.depthIn : (f.placeDepthIn != null && f.placeDepthIn !== '' ? Number(f.placeDepthIn) : null),
       onWall: onWallId(m, c), label: `Sonotube Ø${dia} in` },
   };
+  if (opts.shape) { o.props.shape = opts.shape; if (opts.sizeIn) o.props.sizeIn = opts.sizeIn; }
+  o.props.label = pierShapeLabel(o, f);
+  return o;
 }
 
 /** Drop a new manual pier at a (snapped) point. Returns the object. */
@@ -124,7 +127,7 @@ export function duplicatePier(m, o) {
     const dir = s + off <= w.len ? 1 : -1;  // stay on the wall
     c = [o.geometry.c[0] + ux * off * dir, o.geometry.c[1] + uy * off * dir];
   } else c = [o.geometry.c[0] + off, o.geometry.c[1]];
-  const copy = makeManualPier(m, c, { diaIn: o.props.diaIn, topIn: o.props.topIn, depthIn: o.props.depthIn });
+  const copy = makeManualPier(m, c, { diaIn: o.props.diaIn, topIn: o.props.topIn, depthIn: o.props.depthIn, shape: o.props.shape, sizeIn: o.props.sizeIn });
   pierLayer(m).objects.push(copy);
   return copy;
 }
@@ -166,3 +169,21 @@ export function parseFtIn(s) {
 }
 
 export const DEFAULT_FOUNDATION = DEFAULTS.foundation;
+
+/** Half-width (ft) of a pier in plan: radius for a tube, half the side for a square pier/block. */
+export const pierHalfFt = (m, o) => pierShapeOf(o, pierLayer(m).params).halfFt;
+
+// ---- hotfix: continuous concrete (grade beam, footing, stem wall, slab) can be deleted and restored
+export const isContinuousConcrete = (o) => !!(o && o.props && o.props.ckey);
+export function deleteContinuous(m, o) {
+  const l = pierLayer(m);
+  if (!Array.isArray(l.params.deletedContinuous)) l.params.deletedContinuous = [];
+  if (!l.params.deletedContinuous.includes(o.props.ckey)) l.params.deletedContinuous.push(o.props.ckey);
+  l.objects = l.objects.filter((x) => x !== o);
+  if (m.selection && m.selection.objectId === o.id) m.selection = null;
+}
+export function restoreContinuous(m) {
+  const l = pierLayer(m); const n = (l.params.deletedContinuous || []).length; l.params.deletedContinuous = []; return n;
+}
+/** Remaining continuous concrete in the model. */
+export const continuousConcrete = (m) => pierLayer(m).objects.filter(isContinuousConcrete);

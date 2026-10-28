@@ -12,6 +12,7 @@ import { regenerate } from './generate.js';
 import { takeoff as placeholderTakeoff, measure } from './takeoff.js';
 import { applyRoofingFixes, withFixPrices } from './roofing-fixes.js';
 import { applyRoofV4 } from './roof-takeoff.js';
+import { prepareEngineModel, applyPierOptions } from './pier-options.js';
 
 const r2 = (x) => Math.round(x * 100) / 100;
 export const GROUPS = [
@@ -44,7 +45,9 @@ export function runEstimate(m, C, optsOverride = {}) {
     const J = siteJurisdiction(m, C);
     const opts = Object.assign(engineOpts(m), J ? { jurisdiction: J } : {}, C.fastenerSchedule ? { fastenerSchedule: C.fastenerSchedule } : {}, optsOverride);
     withFixPrices(C.prices);
-    const r = C.engine.takeoff(mm, C.rules, C.prices, opts);
+    const em = JSON.parse(JSON.stringify(mm)); const split = prepareEngineModel(em);   // engine sees round Sonotubes only
+    const r = C.engine.takeoff(em, C.rules, C.prices, opts);
+    applyPierOptions(r, mm, split, Object.assign({}, C, { concreteMode: opts.concreteMode }));
     // Remodel Guide roofing fixes (ice-barrier courses, 19/32 at 24 in o.c., double underlayment 2:12–<4:12)
     // v4: full roofing-v1 roof takeoff for a shed (always) or when the Roof steps turned it on; else the v3 fixes
     const rpp = getLayer(mm, 'roof').params;

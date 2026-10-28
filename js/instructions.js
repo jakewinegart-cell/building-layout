@@ -5,7 +5,7 @@
 //   [if cond] … [/if]      → inline or block conditional; an [if] with no [/if] on its line runs to end of line
 // ============================================================================
 import { getLayer } from './model.js';
-import { pierDepthIn } from './config.js';
+import { pierDepthIn, pierShapeOf, pierShapeLabel, precastFrostWarning } from './config.js';
 import { bbox } from './geom.js';
 
 const LUMBER_D = { '2x4': 3.5, '2x6': 5.5, '2x8': 7.25, '2x10': 9.25, '2x12': 11.25 };
@@ -39,9 +39,10 @@ export function instructionVars(m, est, rules) {
   const shingles = line('roof.shingles')[0];
   const frostSet = f.frostDepthIn != null && f.frostDepthIn !== '';
   const depth = pierDepthIn(f);
-  const pierTop = (f.topAboveGradeIn.piers || 0) - f.gradeBeamDepthIn;
+  const pierTop = f.type === 'piersOnly' ? (f.topAboveGradeIn.piersOnly || 0) : (f.topAboveGradeIn.piers || 0) - f.gradeBeamDepthIn;
   return {
     footprint_w_ft: num(b.w), footprint_d_ft: num(b.h), diagonal_ft_in: ftInFrac(Math.hypot(b.w, b.h)),
+    pier_shape_list: Object.entries(piers.reduce((a, p) => { const k = pierShapeLabel(p, f); a[k] = (a[k] || 0) + 1; return a; }, {})).map(([k, n]) => `${n} × ${k}`).join(', ') || 'none', pier_square_in: f.pierSquareIn || 12, precast_warning: precastFrostWarning(f),
     pier_count: piers.length, pier_diameter_in: piers[0] ? piers[0].props.diaIn : f.pierDiaIn, pier_depth_in: depth,
     frost_note: frostSet ? `Frost depth: ${f.frostDepthIn} in${m.site && m.site.zip && m.site.frostSource === 'lookup' ? ` (ZIP ${m.site.zip} lookup)` : ''}; piers go ${depth} in below grade (never less than 12 in).` : `Frost depth unknown. Piers are drawn at a conservative ${f.placeholderFrostIn} in PLACEHOLDER — ask your building department for the real value and enter it.`,
     pier_top_above_grade_in: pierTop, tube_length_in: piers[0] ? Math.round(piers[0].height * 12) + 2 : '—',
@@ -65,7 +66,7 @@ export function instructionVars(m, est, rules) {
     roof_squares: rep.roofAreaSqFt != null ? num(rep.roofAreaSqFt / 100, 1) : '—', shingle_bundles: shingles ? shingles.qty : '—',
     // conditions
     _cond: {
-      type: f.type, gbAbove: f.type === 'piers' && pierTop > 0, concreteYd: Number(rep.concreteYd) || 0, floorBeam: girders.length > 0,
+      type: f.type, gbAbove: f.type === 'piers' && pierTop > 0, shapes: piers.reduce((a, p) => { a[pierShapeOf(p, f).shape] = (a[pierShapeOf(p, f).shape] || 0) + 1; return a; }, {}), concreteYd: Number(rep.concreteYd) || 0, floorBeam: girders.length > 0,
       hangers: lines.some((l) => l.id === 'floor.hangers'), iceBarrier: !est || !est.raw || est.raw.lines.some((l) => l.id === 'roof.iceBarrier'),
     },
   };
@@ -79,14 +80,31 @@ function evalCond(c, C) {
   if (/^grade beam bottom above grade$/.test(s)) return C.gbAbove;
   if ((mm = /^concrete_yd\s*>\s*([\d.]+)$/.exec(s))) return C.concreteYd > Number(mm[1]);
   if (s === 'floor beam') return C.floorBeam;
+  if ((mm = /^pier shape (round|square|precast)$/.exec(s))) return !!(C.shapes && C.shapes[mm[1]]);
   if (s === 'hangers') return C.hangers;
   if (s === 'ice barrier') return C.iceBarrier;
   return true; // unknown condition: show the text rather than hide guidance
 }
 
 /** Returns [{ title, html }] — one entry per "## " section of the template. */
+const PIERS_ONLY_MD = `[if foundation.type == 'piersOnly']
+1. **Piers only: no grade beam, no footing, no continuous concrete.** You build \`{pier_count}\` individual piers ({pier_shape_list}). The sill or floor beam sits on the piers and spans from pier to pier, so it must be sized for that span (the app does not size or price it). Ask your building department or an engineer.
+[if pier shape round]
+2. Round piers: dig each hole a little wider than the \`{pier_diameter_in}\` in Sonotube and **{pier_depth_in} in below grade**, below frost on firm, undisturbed soil. \`{frost_note}\` Set and brace the tubes so the tops all sit at **{pier_top_above_grade_in} in above grade**.
+[/if]
+[if pier shape square]
+3. Square formed piers: build a 4-sided box form ({pier_square_in} × {pier_square_in} in inside) from boards or plywood, braced plumb, with the bottom at **{pier_depth_in} in below grade** (max(frost + margin, 12 in)). Square forms need a price (no Home Depot price in the price file).
+[/if]
+[if pier shape precast]
+4. **Precast pier/deck blocks are NOT frost-protected.** They sit on compacted gravel at the surface, and frost heave can lift and shift them. {precast_warning}
+[/if]
+5. Set the rebar in each poured pier (EXAMPLE: {pier_bars} #4 verticals), with 3 in of cover. No beam dowels are needed.
+6. **Pre-pour inspection** of the holes, forms and steel, then pour about **{concrete_yd} cu yd** (≈ {bags80} × 80 lb bags). Set a post base or anchor in each pier while it's wet, then keep it damp and covered for several days.
+[/if]
+`;
 export function renderInstructions(md, vars) {
   const C = vars._cond;
+  if (C.type === 'piersOnly' && !/foundation\.type == 'piersOnly'/.test(md)) md = md.replace(/\n\[if foundation\.type == 'slab'\]/, '\n' + PIERS_ONLY_MD + "[if foundation.type == 'slab']");
   let src = md.split(/\n###\s+Variable table/)[0];
   const out = []; const stack = [];
   src.split('\n').forEach((raw) => {

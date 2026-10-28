@@ -1,7 +1,7 @@
 // Regeneration engine (spec §6): footprint → exterior walls → foundation → floor → roof,
 // plus elevation stacking. Any layer whose content changes because of an upstream
 // edit gets a visible note ("Updated from walls").
-import { LUMBER, LUMBER_T_IN, HEADER_EXAMPLE, PIERS, pierDepthIn } from './config.js';
+import { LUMBER, LUMBER_T_IN, HEADER_EXAMPLE, PIERS, pierDepthIn, pierShapeOf, pierShapeLabel, precastFrostWarning, isPierType } from './config.js';
 import { offsetPolygon, bbox, scanline, isAxisRect, dist, distToSeg, pointInPoly, fmtFtIn } from './geom.js';
 import { piersAlongLines, pierSlotKey, gableGeometry, shedGeometry } from './homeplan-derived.js';
 import { shedFrame, wallIdForSide, edgeSide, wallEdge, fmtPitch, r2 as rr2 } from './roof-calc.js';
@@ -100,30 +100,45 @@ export function regenerate(m, source) {
   const manual = fnd.objects.filter((o) => o.type === 'pier' && !o.derivedFrom);
   const skipSlots = new Set(f.deletedAutoSlots || []);
   manual.forEach((o) => { if (o.props.autoSlot) skipSlots.add(o.props.autoSlot); });
-  if (type === 'piers') {
+  // Pier elevation by shape: round/square go to the frost-rule depth; a precast block sits ON the surface.
+  const pierZ = (o, topIn, depthIn) => {
+    const sh = pierShapeOf(o, f);
+    if (sh.shape === 'precast') { o.z = 0; o.height = sh.heightIn * IN; return; }
+    o.z = -depthIn * IN; o.height = Math.max(1 * IN, (topIn + depthIn) * IN);
+  };
+  if (isPierType(type)) {
     const spFt = (Number(f.pierSpacingIn) || 72) * IN;
     const piers = piersAlongLines(lines, spFt, f.pierSpacingMode === 'exact' ? 'exact' : 'max');
-    const gbBot = topZ - f.gradeBeamDepthIn * IN;
+    const gbBot = type === 'piers' ? topZ - f.gradeBeamDepthIn * IN : topZ;   // Piers only: the pier top carries the framing
     piers.forEach((p) => {
       const k = pierSlotKey(p.c);
       if (skipSlots.has(k)) return;
       if (manual.some((mp) => dist(mp.geometry.c, p.c) < PIERS.mergeFt)) return; // no tube on top of a manual one
-      fo.push({ id: `pa_${k.replace('|', '_')}`, type: 'pier', derivedFrom: p.wallId, geometry: { c: p.c }, z: footBot, height: gbBot - footBot, props: { diaIn: f.pierDiaIn, auto: true, label: `Sonotube Ø${f.pierDiaIn} in (auto)` } });
+      const o = { id: `pa_${k.replace('|', '_')}`, type: 'pier', derivedFrom: p.wallId, geometry: { c: p.c }, z: footBot, height: gbBot - footBot, props: { diaIn: f.pierDiaIn, auto: true } };
+      pierZ(o, gbBot / IN, -footBot / IN);
+      o.props.label = `${pierShapeLabel(o, f)} (auto)`;
+      fo.push(o);
     });
-    lines.forEach((ln, i) => fo.push({ id: `gbeam-${i}`, type: 'beam', derivedFrom: ln.wallId, geometry: { a: ln.a, b: ln.b }, z: gbBot, height: f.gradeBeamDepthIn * IN, props: { role: 'gradeBeam', widthIn: f.gradeBeamWidthIn, label: 'Grade beam' } }));
+    if (type === 'piers') lines.forEach((ln, i) => fo.push({ id: `gbeam-${i}`, type: 'beam', derivedFrom: ln.wallId, geometry: { a: ln.a, b: ln.b }, z: gbBot, height: f.gradeBeamDepthIn * IN, props: { role: 'gradeBeam', ckey: `gradeBeam:${ln.wallId}`, widthIn: f.gradeBeamWidthIn, label: 'Grade beam' } }));
+    if (type === 'piersOnly') flags.foundation.push('Piers only: no grade beam or footing. The sill/floor framing bears pier to pier, so it needs a beam sized for that span (not generated or priced). Have an engineer or your building department check it.');
   } else if (type === 'slab') {
-    fo.push({ id: 'slab', type: 'area', derivedFrom: 'footprint', geometry: { pts: fp.map((p) => p.slice()) }, z: topZ - f.slabIn * IN, height: f.slabIn * IN, props: { role: 'slab', label: `${f.slabIn} in slab` } });
-    lines.forEach((ln, i) => fo.push({ id: `footing-${i}`, type: 'footing', derivedFrom: ln.wallId, geometry: { a: ln.a, b: ln.b }, z: footBot, height: topZ - f.slabIn * IN - footBot, props: { widthIn: f.footingWidthIn, label: 'Thickened edge / footing' } }));
+    fo.push({ id: 'slab', type: 'area', derivedFrom: 'footprint', geometry: { pts: fp.map((p) => p.slice()) }, z: topZ - f.slabIn * IN, height: f.slabIn * IN, props: { role: 'slab', ckey: 'slab:footprint', label: `${f.slabIn} in slab` } });
+    lines.forEach((ln, i) => fo.push({ id: `footing-${i}`, type: 'footing', derivedFrom: ln.wallId, geometry: { a: ln.a, b: ln.b }, z: footBot, height: topZ - f.slabIn * IN - footBot, props: { ckey: `footing:${ln.wallId}`, widthIn: f.footingWidthIn, label: 'Thickened edge / footing' } }));
   } else {
     const wallTopZ = topZ;
     const wallBot = type === 'basement' ? topZ - f.basementWallFt : footTop;
     const fBot = type === 'basement' ? wallBot - f.footingDepthIn * IN : footBot;
     lines.forEach((ln, i) => {
-      fo.push({ id: `footing-${i}`, type: 'footing', derivedFrom: ln.wallId, geometry: { a: ln.a, b: ln.b }, z: fBot, height: f.footingDepthIn * IN, props: { widthIn: f.footingWidthIn, depthIn: f.footingDepthIn, label: `Footing ${f.footingWidthIn}x${f.footingDepthIn} in` } });
-      fo.push({ id: `stem-${i}`, type: 'footing', derivedFrom: ln.wallId, geometry: { a: ln.a, b: ln.b }, z: type === 'basement' ? wallBot : fBot + f.footingDepthIn * IN, height: wallTopZ - (type === 'basement' ? wallBot : fBot + f.footingDepthIn * IN), props: { role: 'stem', widthIn: f.stemWallIn, label: type === 'basement' ? 'Basement wall' : 'Stem wall' } });
+      fo.push({ id: `footing-${i}`, type: 'footing', derivedFrom: ln.wallId, geometry: { a: ln.a, b: ln.b }, z: fBot, height: f.footingDepthIn * IN, props: { ckey: `footing:${ln.wallId}`, widthIn: f.footingWidthIn, depthIn: f.footingDepthIn, label: `Footing ${f.footingWidthIn}x${f.footingDepthIn} in` } });
+      fo.push({ id: `stem-${i}`, type: 'footing', derivedFrom: ln.wallId, geometry: { a: ln.a, b: ln.b }, z: type === 'basement' ? wallBot : fBot + f.footingDepthIn * IN, height: wallTopZ - (type === 'basement' ? wallBot : fBot + f.footingDepthIn * IN), props: { role: 'stem', ckey: `stem:${ln.wallId}`, widthIn: f.stemWallIn, label: type === 'basement' ? 'Basement wall' : 'Stem wall' } });
     });
-    if (type === 'basement') fo.push({ id: 'bslab', type: 'area', derivedFrom: 'footprint', geometry: { pts: fp.map((p) => p.slice()) }, z: wallBot, height: 4 * IN, props: { role: 'slab', label: 'Basement slab' } });
+    if (type === 'basement') fo.push({ id: 'bslab', type: 'area', derivedFrom: 'footprint', geometry: { pts: fp.map((p) => p.slice()) }, z: wallBot, height: 4 * IN, props: { role: 'slab', ckey: 'bslab:footprint', label: 'Basement slab' } });
   }
+  // hotfix: continuous concrete the user deleted stays deleted through regeneration
+  const delC = new Set(f.deletedContinuous || []);
+  const nBefore = fo.length;
+  for (let i = fo.length - 1; i >= 0; i--) if (fo[i].props.ckey && delC.has(fo[i].props.ckey)) fo.splice(i, 1);
+  if (nBefore - fo.length) flags.foundation.push(`${nBefore - fo.length} continuous concrete element(s) deleted by you (kept out of the drawing and the price). Restore them from the Foundation card.`);
   // manual piers: elevation follows the layer defaults unless the user set top/depth; flag, never delete
   const defTopIn = (type === 'piers' ? topZ - f.gradeBeamDepthIn * IN : topZ) / IN;
   const defDepthIn = pierDepthIn(f);
@@ -132,8 +147,8 @@ export function regenerate(m, source) {
   manual.forEach((o) => {
     const top = o.props.topIn != null && o.props.topIn !== '' ? Number(o.props.topIn) : defTopIn;
     const depth = o.props.depthIn != null && o.props.depthIn !== '' ? Number(o.props.depthIn) : defDepthIn;
-    o.z = -depth * IN; o.height = Math.max(1 * IN, (top + depth) * IN);
-    o.props.label = `Sonotube Ø${o.props.diaIn} in`;
+    pierZ(o, top, depth);
+    o.props.label = pierShapeLabel(o, f);
     const c = o.geometry.c;
     const pf = [];
     const edge = Math.min(...fp.map((a, i) => distToSeg(c, a, fp[(i + 1) % fp.length]).d));
@@ -144,6 +159,8 @@ export function regenerate(m, source) {
   });
   if (nFlag) flags.foundation.push(`${nFlag} manual pier(s) FLAGGED after a footprint/wall change (outside the footprint or off a wall line). They were kept, not deleted — move or delete them.`);
   fnd.objects = fo.concat(fnd.objects.filter((o) => !o.derivedFrom));
+  const nPre = fnd.objects.filter((o) => o.type === 'pier' && pierShapeOf(o, f).shape === 'precast').length;
+  if (nPre) flags.foundation.unshift(`⚠ ${nPre} precast block(s): ${precastFrostWarning(f)}`);
   fnd.zBase = Math.min(footBot, ...fnd.objects.map((o) => o.z != null ? o.z : 0));
   fnd.zTop = topZ;
 
