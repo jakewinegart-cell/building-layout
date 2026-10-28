@@ -1,4 +1,4 @@
-// Wizard chat box (wizard-v1/wizard-spec.md): typed only (no mic / speech). Side panel on desktop,
+// Wizard chat box (wizard-v1/wizard-spec.md): typed only, no voice input. Side panel on desktop,
 // bottom sheet on phones. The proxy returns ONE tool call; app code converts, validates, previews
 // on a model copy (with the cost change), and applies only on Apply. Undo/redo: 20 steps (app.js).
 import { regenerate } from './generate.js';

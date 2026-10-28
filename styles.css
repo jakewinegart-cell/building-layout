@@ -433,3 +433,4 @@ body.wizardOpen .wizardBtn { background: var(--accent); color: #fff; box-shadow:
 .wizard.busy .wz-send { opacity: .5; }
 body.wizPreview #stage::after { content: 'Wizard preview — not applied'; position: absolute; top: 54px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #fff; font-weight: 800; font-size: 12px; padding: 4px 10px; border-radius: 10px; pointer-events: none; z-index: 6; }
 @media (max-width: 520px) { .wizardBtn { padding: 7px 8px; font-size: 13px; } }
+@media (max-width: 520px) { .topbar { gap: 4px; padding: 0 6px; } .wizardBtn { padding: 7px 7px; font-size: 12px; } .doneBtn { padding: 8px 7px; font-size: 12px; } .seg button { padding: 7px 9px; min-width: 40px; } .iconBtn { width: 34px; } }
