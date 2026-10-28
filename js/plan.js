@@ -4,6 +4,7 @@ import { PLAN, LUMBER, PIERS } from './config.js';
 import { stackOrder, layerDisplay, getLayer, findObject, uid } from './model.js';
 import { bbox, dist, distToSeg, offsetPolygon, inwardNormal, pointInPoly, fmtFtIn, lerp } from './geom.js';
 import { snapPier, pierDims, dropPier, movePier, isManual, originOf } from './piers.js';
+import { applyDrag, beginDrag, snapPoint, openingPts as openingPtsShared } from './edit-ops.js';
 
 const IN = 1 / 12;
 
@@ -45,6 +46,9 @@ export function createPlan(canvas, app) {
 
   // ---------- snapping
   function snap(p, opts = {}) {
+    return snapPoint(M(), p, 14 / view.scale, opts);
+  }
+  function snapOld(p, opts = {}) {
     const m = M();
     const tol = 14 / view.scale;
     const cands = m.footprint.slice();
@@ -569,37 +573,11 @@ export function createPlan(canvas, app) {
       if (drag.kind === 'pan') { if (moved) drag.tap = false; view.ox = drag.ox + sp[0] - drag.sx; view.oy = drag.oy + sp[1] - drag.sy; render(); return; }
       if (!moved && !drag.moved) return;
       drag.moved = true;
-      if (drag.kind === 'pier') {
-        const raw = [drag.c0[0] + w[0] - drag.w0[0], drag.c0[1] + w[1] - drag.w0[1]];
-        const sn = snapPier(m, raw, ((e.pointerType === 'touch') ? PIERS.snapPxTouch : PIERS.snapPx) / view.scale);
-        if (!drag.started) { drag.started = true; app.onPierDrag && app.onPierDrag(true); }
-        movePier(m, drag.obj, sn.c);   // first move converts an auto pier to manual
-        drag.snap = sn.snap;
-        render(); return;
-      }
-      if (drag.kind === 'vertex') {
-        const s = snap(w, { noPoints: true });
-        m.footprint = drag.start.map((p) => p.slice()); m.footprint[drag.i] = [s[0], s[1]];
-        app.preview('footprint');
-      } else if (drag.kind === 'edge') {
-        const fp = drag.start; const i = drag.i; const j = (i + 1) % fp.length;
-        const n = inwardNormal(fp, i);
-        const g = m.snapIn * IN;
-        let d = (w[0] - drag.w0[0]) * n[0] + (w[1] - drag.w0[1]) * n[1];
-        d = Math.round(d / g) * g;
-        m.footprint = fp.map((p) => p.slice());
-        m.footprint[i] = [fp[i][0] + n[0] * d, fp[i][1] + n[1] * d];
-        m.footprint[j] = [fp[j][0] + n[0] * d, fp[j][1] + n[1] * d];
-        app.preview('walls');
-      } else if (drag.kind === 'opening') {
-        const q = openingPts(m, drag.obj);
-        if (q) { const { t } = distToSeg(w, q.a, q.b); const g = m.snapIn * IN; drag.obj.geometry.t = Math.round((t * q.L) / g) * g; app.preview('walls'); }
-      } else if (drag.kind === 'move') {
-        const s = snap([drag.a0[0] + w[0] - drag.w0[0], drag.a0[1] + w[1] - drag.w0[1]], { noPoints: true });
-        const dx = s[0] - drag.a0[0], dy = s[1] - drag.a0[1];
-        drag.obj.geometry.a = [drag.a0[0] + dx, drag.a0[1] + dy]; drag.obj.geometry.b = [drag.b0[0] + dx, drag.b0[1] + dy];
-        app.preview(drag.layerId);
-      }
+      const tolFt = (drag.kind === 'pier' ? ((e.pointerType === 'touch') ? PIERS.snapPxTouch : PIERS.snapPx) : 14) / view.scale;
+      if (drag.kind === 'pier' && !drag.started) { drag.started = true; app.onPierDrag && app.onPierDrag(true); }
+      const src = applyDrag(m, drag, w, tolFt);   // shared with 3D (edit-ops.js)
+      if (drag.kind === 'pier') { render(); return; }
+      if (src) app.preview(src);
       return;
     }
     if (tool === 'pier') {
