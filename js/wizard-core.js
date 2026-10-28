@@ -3,7 +3,7 @@
 // converts units, resolves walls, builds ops and checks them. Nothing here writes the real model.
 import { getLayer } from './model.js';
 import { bbox, dist } from './geom.js';
-import { edgeSide, wallIdForSide, shedFrame, fmtPitch, roofChecks, r2, MIN_SLOPE, pitchFromDegrees } from './roof-calc.js';
+import { edgeSide, wallIdForSide, shedFrame, fmtPitch, roofChecks, r2, MIN_SLOPE, pitchFromDegrees, houseOf } from './roof-calc.js';
 import { SLOPE, DEFAULTS, PIER_SHAPES } from './config.js';
 import { fmtFtIn } from './geom.js';
 import { uid } from './model.js';
@@ -99,6 +99,16 @@ export function localCommand(text) {
     const sm = t.match(/\b(north|south|east|west|back|front|left|right|house)\b(?=[^\d]*?(?:wall|side|end)?[^\d]*?\d|.*?\bhigh)/);
     return { kind: 'edit', edits: [{ intent: 'roof.make_shed', slots: { highHeight: m[1].trim(), lowHeight: m[2].trim(), highSide: sm ? sm[1] : 'one end', heightMeaning: /ground|grade/.test(t) ? 'ground' : 'wall' } }] };
   }
+  // more slope phrases (v4 slope slider)
+  m = t.match(/^(?:make |set )?(?:the )?(?:roof )?(?:pitch|slope)\s*(?:to |at |=)?\s*(\d+(?:\.\d+)?)$|^(\d+(?:\.\d+)?)\s*pitch(?: roof)?$/);
+  if (m) return { kind: 'edit', edits: [{ intent: 'roof.set_pitch', slots: { pitch: (m[1] || m[2]) + ':12' } }] };
+  if (/\b(lowest|minimum|min|flattest)\b.*\b(slope|pitch)\b/.test(t)) return { kind: 'edit', edits: [{ intent: 'roof.set_pitch', slots: { pitch: 'min shingle' } }] };
+  m = t.match(/high (?:wall|side|end)\s*(?:at |to |is |=)?\s*([\d.]+\s*(?:ft|feet|foot|')?(?:\s*\d+\s*(?:in|"))?)[, ]*(?:and )?(?:the )?low (?:wall|side|end)\s*(?:at |to |is |=)?\s*([\d.]+\s*(?:ft|feet|foot|')?(?:\s*\d+\s*(?:in|"))?)/);
+  if (m) return { kind: 'edit', edits: [{ intent: 'roof.make_shed', slots: { highHeight: m[1].trim(), lowHeight: m[2].trim(), highSide: 'one end', heightMeaning: 'wall' } }] };
+  m = t.match(/\b(?:house|existing)(?:'s)? (?:roof )?(?:pitch|slope|roof)\b(?: is| to| =|:)?\s*(.+)$/);
+  if (m && !/eave/.test(t)) return { kind: 'edit', edits: [{ intent: 'house.set_roof', slots: { pitch: m[1].trim() } }] };
+  m = t.match(/\b(?:house|existing)(?:'s)? (?:roof )?eave(?: height)?\b(?: is| to| =|:| at)?\s*(.+)$/);
+  if (m) return { kind: 'edit', edits: [{ intent: 'house.set_roof', slots: { eave: m[1].trim() } }] };
   m = t.match(/^(?:make (?:the |it )?)?(?:roof )?(steeper|flatter|less steep|lower pitch|higher pitch)(?: by (\S+))?$/);
   if (m) return { kind: 'edit', edits: [{ intent: 'roof.set_pitch', slots: { relative: /steeper|higher/.test(m[1]) ? 'steeper' : 'flatter', pitch: m[2] || '1' } }] };
   return null;
@@ -141,11 +151,20 @@ export function compileEdits(m, edits) {
       }
       case 'roof.set_pitch': {
         let p = parsePitch(s.pitch); const cur = Number(R.pitch);
-        if (/min|code|shingle/i.test(String(s.pitch || ''))) { const cov = (R.roofing && R.roofing.covering) || 'asphalt_shingle'; p = Math.max(cur, (MIN_SLOPE[cov] || MIN_SLOPE.asphalt_shingle).min); s.relative = 'set'; }
+        if (/min|code|shingle/i.test(String(s.pitch || ''))) { const cov = (R.roofing && R.roofing.covering) || 'asphalt_shingle'; p = (MIN_SLOPE[cov] || MIN_SLOPE.asphalt_shingle).min; s.relative = 'set'; }
         if (s.relative === 'steeper') p = cur + (p == null ? 1 : p); else if (s.relative === 'flatter') p = cur - (p == null ? 1 : p);
         if (p == null || !isFinite(p)) return fail('I couldn\u2019t read that pitch. Try "3:12" or "4 in 12".');
         p = Math.round(p / SLOPE.step) * SLOPE.step;
         step(`Roof pitch ${fmtPitch(cur)} → ${fmtPitch(p)}${R.shape === 'shed' && R.shed ? ' (low wall kept, high wall moves)' : ''}`, 'roof', (mm) => setPitch(mm, p));
+        break;
+      }
+      case 'house.set_roof': {
+        const H = houseOf(m); if (!H) return fail('Pick \u201cBuilt against the house\u201d in the Roof card first, then I can set the house roof.');
+        let k, v, txt;
+        if (s.pitch != null) { k = 'pitch'; v = parsePitch(s.pitch); if (v == null && /^\d+(\.\d+)?$/.test(String(s.pitch))) v = Number(s.pitch); txt = v != null && `House roof pitch ${fmtPitch(H.roof.pitch)} → ${fmtPitch(v)} (entered)`; }
+        else { k = 'eaveUndersideFt'; v = parseLen(s.eave, 'ft'); txt = v != null && `House eave height ${H.roof.eaveUndersideFt} ft → ${Math.round(v * 100) / 100} ft (entered)`; }
+        if (v == null || !isFinite(v) || v < 0) return fail('I couldn\u2019t read that. Try "house roof is 5/12" or "house eave is 8 ft".');
+        step(txt, 'site', (mm) => { const h = houseOf(mm); const er = h.obj.props.existingRoof = h.obj.props.existingRoof || {}; er[k] = Math.round(v * 100) / 100; er.assumed = Object.assign({}, er.assumed, { [k]: false }); });
         break;
       }
       case 'roof.set_shape': {
@@ -284,7 +303,7 @@ export function findOpening(m, ref) {
 /** Set the pitch on any roof; a shed keeps its low wall and moves the high wall (wizard-spec roof.set_pitch keepSide). */
 export function setPitch(mm, p) {
   const rp = getLayer(mm, 'roof').params; rp.pitch = r2(p);
-  if (rp.shape === 'shed' && rp.shed) { const f = shedFrame(mm.footprint, rp.shed.highWallId, rp.shed.highPlateFt, rp.shed.lowPlateFt); rp.shed.highPlateFt = r2(rp.shed.lowPlateFt + p * f.run / 12); }
+  if (rp.shape === 'shed' && rp.shed) { const f = shedFrame(mm.footprint, rp.shed.highWallId, rp.shed.highPlateFt, rp.shed.lowPlateFt); rp.shed.highPlateFt = Math.round((rp.shed.lowPlateFt + p * f.run / 12) * 1e4) / 1e4; }
 }
 /** Shed: back-calculate the pitch from the high/low wall heights. */
 export function syncShedPitch(mm) {

@@ -434,3 +434,9 @@ body.wizardOpen .wizardBtn { background: var(--accent); color: #fff; box-shadow:
 body.wizPreview #stage::after { content: 'Wizard preview — not applied'; position: absolute; top: 54px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #fff; font-weight: 800; font-size: 12px; padding: 4px 10px; border-radius: 10px; pointer-events: none; z-index: 6; }
 @media (max-width: 520px) { .wizardBtn { padding: 7px 8px; font-size: 13px; } }
 @media (max-width: 520px) { .topbar { gap: 4px; padding: 0 6px; } .wizardBtn { padding: 7px 7px; font-size: 12px; } .doneBtn { padding: 8px 7px; font-size: 12px; } .seg button { padding: 7px 9px; min-width: 40px; } .iconBtn { width: 34px; } }
+/* v4 variable slope */
+.slope { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin: 6px 0; background: #fffaf5; }
+.slHead { display: flex; justify-content: space-between; font-size: 13px; } #slopeRead { font-weight: 800; color: #a54400; }
+.slRow { display: flex; align-items: center; gap: 8px; margin: 6px 0; } .slRow input[type=range] { flex: 1; accent-color: var(--accent); height: 28px; } .slRow input[type=number] { width: 70px; }
+.slChk { font-size: 12px; padding: 4px 7px; border-radius: 7px; margin: 3px 0; background: #eef3f8; } .slChk.warn { background: #fff4dc; } .slChk.block { background: #ffe3df; color: #8a1c0c; } .slChk.stale { background: #ffe9d6; font-weight: 700; }
+em.assumed { font-style: normal; font-size: 10px; font-weight: 800; background: #ffe3a3; color: #7a4b00; padding: 1px 5px; border-radius: 6px; } em.entered { font-style: normal; font-size: 10px; color: #2e6b2e; }

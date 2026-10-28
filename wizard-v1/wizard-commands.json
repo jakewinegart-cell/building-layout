@@ -229,7 +229,7 @@
                     "openings.set_props",
                     "foundation.set_type",
                     "foundation.set_params",
-                    "foundation.set_pier_shape",
+                    "foundation.set_pier_shape", "house.set_roof",
                     "foundation.add_pier",
                     "floor.set_framing",
                     "site.set_existing",
@@ -238,7 +238,7 @@
                 },
                 "slots": {
                   "type": "object",
-                  "description": "raw slot strings exactly as the user said them; see intents[].slots. roof.make_shed {highHeight, lowHeight, highSide, pitch}; roof.set_pitch {pitch, relative}; foundation.set_type {type: piersOnly|piers|crawlspace|slab|basement}; foundation.set_pier_shape {shape: round|square|precast, size: 12|16}"
+                  "description": "raw slot strings exactly as the user said them; see intents[].slots. roof.make_shed {highHeight, lowHeight, highSide, pitch}; roof.set_pitch {pitch, relative}; foundation.set_type {type: piersOnly|piers|crawlspace|slab|basement}; foundation.set_pier_shape {shape: round|square|precast, size: 12|16}; house.set_roof {pitch} or {eave} for the existing house roof"
                 }
               },
               "required": [

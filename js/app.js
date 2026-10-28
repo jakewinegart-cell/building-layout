@@ -11,6 +11,10 @@ import { createZipModal, siteSummary } from './zipmodal.js';
 import { frostKnown } from './config.js';
 import { loadRun, layerPriceState } from './pricecheck.js';
 import { createWizard } from './wizard.js';
+import { setPitch, syncShedPitch } from './wizard-core.js';
+import { roofChecks, houseOf, shedFrame, edgeSide, wallEdge, wallIdForSide, fmtPitch, degreesFromPitch, snapPitch, r2 as rr2 } from './roof-calc.js';
+import { modelSig } from './pricecheck.js';
+import { SLOPE, EXISTING_ROOF_ASSUMED } from './config.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -407,7 +411,7 @@ function layerParamsHTML(l) {
     case 'walls': return field('Exterior studs', sel('extSize', p.extSize, OPTS.lumber)) + field('Interior studs', sel('intSize', p.intSize, OPTS.lumber))
       + field('Plate height (ft)', num('plateHeightFt', p.plateHeightFt, 0.5)) + field('Stud spacing (in o.c.)', sel('studOcIn', p.studOcIn, OPTS.oc))
       + `<div class="muted">Plates: ${p.bottomPlates} bottom, ${p.topPlates} top. Drag a footprint corner or an exterior wall in Select to reshape (Walls must be active).</div>`;
-    case 'roof': return field('Shape', sel('shape', p.shape, [['gable', 'Gable'], ['shed', 'Shed (later)'], ['hip', 'Hip (later)']])) + field('Pitch (in 12)', num('pitch', p.pitch, 0.5))
+    case 'roof': return field('Shape', sel('shape', p.shape, [['gable', 'Gable'], ['shed', 'Shed (single slope)'], ['hip', 'Hip (later)']])) + slopeHTML(l)
       + field('Overhang (in)', num('overhangIn', p.overhangIn)) + field('Rafter size', sel('rafterSize', p.rafterSize, OPTS.lumber)) + field('Rafter spacing (in o.c.)', sel('rafterOcIn', p.rafterOcIn, OPTS.oc))
       + field('Ridge along', sel('ridge', p.ridge, [['long', 'Long side'], ['short', 'Short side']])) + field('Sheathing (3D)', chk('showSheathing', p.showSheathing));
     case 'custom': return field('Name', `<input type="text" data-L="name" value="${l.name}">`) + field('Bottom (ft)', `<input type="number" data-L="zBase" value="${l.zBase}" step="0.25">`)
@@ -415,6 +419,74 @@ function layerParamsHTML(l) {
       + '<div class="btnRow"><button class="btn danger" data-del-layer>Delete layer</button></div>';
     default: return '<div class="muted">Placeholder layer — coming in a later version.</div>';
   }
+}
+
+// ---------- v4 variable slope: slider + number box (0.5:12–12:12, 0.25 steps); shed high/low walls back-calculate the pitch;
+// house roof pitch + eave (ASSUMED until entered); live Plan/3D; IRC checks; Price check marked out of date.
+const SIDES = [['N', 'North (back)'], ['S', 'South (front)'], ['E', 'East'], ['W', 'West']];
+function priceOutOfDate() { const r = loadRun(); return !!(r && r.sig && r.sig !== modelSig(model)); }
+function slopeChecksHTML() {
+  const cs = roofChecks(model).filter((c) => c.severity !== 'info' || /^(V-ROOF-0[24]|RF-TIE-01)$/.test(c.id)).filter((c) => c.id !== 'RF-SNOW-01');
+  return cs.map((c) => `<div class="slChk ${c.severity}" data-id="${c.id}">${c.severity === 'block' ? '⛔' : c.severity === 'warn' ? '⚠' : 'ℹ'} ${c.msg}</div>`).join('')
+    + (priceOutOfDate() ? '<div class="slChk stale" id="slopeStale">Price check is out of date: re-run Price check.</div>' : '');
+}
+function slopeHTML(l) {
+  const p = l.params; const pv = rr2(Number(p.pitch) || 0); const shed = p.shape === 'shed' && p.shed;
+  let h = `<div class="slope" id="slopeCtl"><div class="slHead"><b>Roof slope</b> <span id="slopeRead">${fmtPitch(pv)} · ${degreesFromPitch(pv).toFixed(1)}°</span></div>
+    <div class="slRow"><input type="range" id="pitchSlider" min="${SLOPE.min}" max="${SLOPE.max}" step="${SLOPE.step}" value="${pv}" aria-label="Roof pitch (rise in 12)">
+    <input type="number" id="pitchNum" min="${SLOPE.min}" max="${SLOPE.max}" step="${SLOPE.step}" value="${pv}" aria-label="Pitch number"><span>:12</span></div>`;
+  if (shed) {
+    const f = shedFrame(model.footprint, p.shed.highWallId, p.shed.highPlateFt, p.shed.lowPlateFt);
+    h += field('High wall', `<select id="shedHighSide">${SIDES.map(([k, t]) => `<option value="${k}" ${k === f.highSide ? 'selected' : ''}>${t}</option>`).join('')}</select>`)
+      + field('High wall height (ft)', `<input type="number" id="shedHi" step="0.25" value="${rr2(p.shed.highPlateFt)}">`)
+      + field('Low wall height (ft)', `<input type="number" id="shedLo" step="0.25" value="${rr2(p.shed.lowPlateFt)}">`)
+      + `<div class="muted" id="shedRun">Run ${fmtFtIn(f.run)} (outside faces). Moving the slope moves the high wall; changing a height re-figures the slope.</div>`;
+  }
+  const att = model.attachToExistingWallId ? edgeSide(model.footprint, wallEdge(model.attachToExistingWallId)) : '';
+  h += field('Built against the house', `<select id="attachSide"><option value="">No (freestanding)</option>${SIDES.map(([k, t]) => `<option value="${k}" ${k === att ? 'selected' : ''}>${t} wall</option>`).join('')}</select>`);
+  const H = houseOf(model);
+  if (H) {
+    const tag = (k) => (H.isAssumed(k) ? '<em class="assumed">assumed</em>' : '<em class="entered">entered</em>');
+    h += field(`House roof pitch (in 12) ${tag('pitch')}`, `<input type="number" id="housePitch" step="0.25" min="0" value="${H.roof.pitch}">`)
+      + field(`House eave height (ft) ${tag('eaveUndersideFt')}`, `<input type="number" id="houseEave" step="0.05" min="0" value="${H.roof.eaveUndersideFt}">`)
+      + '<div class="muted">Eave height = floor of the addition to the underside of the house eave at the wall. Measure both to replace the assumed values.</div>';
+  }
+  return h + `<div id="slopeChecks">${slopeChecksHTML()}</div></div>`;
+}
+let slopeRaf = 0;
+function slopeLive() { // live Plan / 3D without rebuilding the panel (keeps the slider under the finger)
+  cancelAnimationFrame(slopeRaf); slopeRaf = requestAnimationFrame(() => {
+    regenerate(model, 'roof'); plan.render(); v3.build();
+    const p = getLayer(model, 'roof').params; const pv = rr2(Number(p.pitch)); const rd = $('#slopeRead'); if (rd) rd.textContent = `${fmtPitch(pv)} · ${degreesFromPitch(pv).toFixed(1)}°`;
+    const hi = $('#shedHi'); if (hi && p.shed && document.activeElement !== hi) hi.value = rr2(p.shed.highPlateFt);
+    const sc = $('#slopeChecks'); if (sc) sc.innerHTML = slopeChecksHTML();
+  });
+}
+function bindSlope(lc, al) {
+  if (al.id !== 'roof') return;
+  const sl = lc.querySelector('#pitchSlider'), nb = lc.querySelector('#pitchNum'); if (!sl) return;
+  const lockOk = () => { if (al.locked) { toast(`${al.name} is locked`); renderProps(); return false; } return true; };
+  const setP = (v, live) => { v = Math.min(SLOPE.max, Math.max(SLOPE.min, snapPitch(v))); setPitch(model, v); sl.value = v; nb.value = v; if (live) slopeLive(); else { nextLabel = `slope ${fmtPitch(v)}`; app.commit('roof'); } };
+  sl.addEventListener('input', () => { if (lockOk()) setP(Number(sl.value), true); });
+  sl.addEventListener('change', () => { if (lockOk()) setP(Number(sl.value), false); });
+  nb.addEventListener('input', () => { const v = Number(nb.value); if (lockOk() && v >= SLOPE.min && v <= SLOPE.max) { setPitch(model, snapPitch(v)); sl.value = snapPitch(v); slopeLive(); } });
+  nb.addEventListener('change', () => { if (lockOk() && nb.value !== '') setP(Number(nb.value), false); });
+  const sh = (id, fn) => { const e = lc.querySelector(id); if (e) e.addEventListener('change', () => { if (!lockOk()) return; fn(e); }); };
+  sh('#shedHi', (e) => { const v = Number(e.value); if (!(v > 0)) return renderProps(); al.params.shed.highPlateFt = rr2(v); syncShedPitch(model); nextLabel = 'shed high wall'; app.commit('roof'); });
+  sh('#shedLo', (e) => { const v = Number(e.value); if (!(v > 0)) return renderProps(); al.params.shed.lowPlateFt = rr2(v); syncShedPitch(model); nextLabel = 'shed low wall'; app.commit('roof'); });
+  sh('#shedHighSide', (e) => { al.params.shed.highWallId = wallIdForSide(model.footprint, e.value); syncShedPitch(model); nextLabel = 'shed high side'; app.commit('roof'); });
+  sh('#attachSide', (e) => {
+    const side = e.value; if (!side) { model.attachToExistingWallId = null; nextLabel = 'freestanding'; app.commit('site'); return; }
+    model.attachToExistingWallId = wallIdForSide(model.footprint, side);
+    if (!houseOf(model)) { // put an outline of the house on the site plan next to that wall (size is a placeholder; edit on the Site layer)
+      const fb = model.footprint.reduce((b, [x, y]) => ({ minX: Math.min(b.minX, x), maxX: Math.max(b.maxX, x), minY: Math.min(b.minY, y), maxY: Math.max(b.maxY, y) }), { minX: 1e9, maxX: -1e9, minY: 1e9, maxY: -1e9 });
+      const D = 24; const R = { N: [fb.minX - 4, fb.minY - D, fb.maxX + 4, fb.minY], S: [fb.minX - 4, fb.maxY, fb.maxX + 4, fb.maxY + D], W: [fb.minX - D, fb.minY - 4, fb.minX, fb.maxY + 4], E: [fb.maxX, fb.minY - 4, fb.maxX + D, fb.maxY + 4] }[side];
+      getLayer(model, 'site').objects.push({ id: uid('ex'), type: 'area', geometry: { pts: [[R[0], R[1]], [R[2], R[1]], [R[2], R[3]], [R[0], R[3]]] }, props: { role: 'existing', label: 'House', heightFt: 12, existingRoof: { assumed: { pitch: true, eaveUndersideFt: true } } } });
+    }
+    nextLabel = `attached to the house (${side})`; app.commit('site');
+  });
+  const hset = (id, k) => sh(id, (e) => { const H = houseOf(model); const v = Number(e.value); if (!H || !(v >= 0) || e.value === '') return renderProps(); const er = H.obj.props.existingRoof = H.obj.props.existingRoof || {}; er[k] = v; er.assumed = Object.assign({}, er.assumed, { [k]: false }); nextLabel = `house ${k === 'pitch' ? 'roof pitch' : 'eave height'}`; app.commit('roof'); });
+  hset('#housePitch', 'pitch'); hset('#houseEave', 'eaveUndersideFt');
 }
 
 // ---------- hotfix: Piers only + pier shape (round Sonotube / square formed pier / precast block)
@@ -656,6 +728,7 @@ function bindLayerCard(lc, al) {
   }));
   bindPierSpacing(lc, al);
   bindFoundationCard(lc, al);
+  bindSlope(lc, al);
   const dl = lc.querySelector('[data-del-layer]');
   if (dl) dl.addEventListener('click', () => { model.layers = model.layers.filter((x) => x !== al); model.activeLayerId = 'walls'; if (model.isolateLayerId === al.id) model.isolateLayerId = null; persist(); refresh({ all: true }); });
   const ex = lc.querySelector('[data-add="existing"]');
@@ -691,7 +764,7 @@ function refresh() {
   renderLayers(); renderProps(); renderPierPanel(); refreshStatus();
   if (plan.getTool() === 'pier' && !$('#pierOpts').hidden) renderPierOpts();
   plan.render();
-  if (model.view === '3d' || v3.isReady()) v3.build();
+  v3.build();
 }
 
 window.addEventListener('resize', () => { plan.resize(); v3.resize(); });
@@ -702,7 +775,7 @@ wizard = createWizard({
   getModel: (real) => (real ? model : previewModel || model),
   setPreview(clone) {
     previewModel = clone; document.body.classList.toggle('wizPreview', !!clone);
-    plan.render(); if (model.view === '3d' || v3.isReady()) v3.build();
+    plan.render(); v3.build();
   },
   applyModel(clone, label) {
     const view = model.view; model = clone; model.view = view; nextLabel = label; pendingSource = 'wizard'; app.commit('init');
