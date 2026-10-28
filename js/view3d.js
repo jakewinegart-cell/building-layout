@@ -68,8 +68,15 @@ export function createView3D(container, app) {
     el.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; });
     el.addEventListener('pointerup', (e) => {
       if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) { downAt = null; return; }
-      downAt = null; pick(e);
+      downAt = null;
+      if (app.isInspecting && app.isInspecting()) { inspectAt(e); return; }
+      pick(e);
     });
+    el.addEventListener('pointermove', (e) => {
+      if (!app.isInspecting || !app.isInspecting() || e.pointerType !== 'mouse' || e.buttons) return;
+      inspectAt(e);
+    });
+    el.addEventListener('pointerleave', () => { if (app.isInspecting && app.isInspecting()) { setHover(null); app.inspectHit && app.inspectHit(null); } });
     ready = true;
     resize();
     preset('aerial');
@@ -152,6 +159,24 @@ export function createView3D(container, app) {
   }
   const evPt = (e) => { const r = container.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
 
+  // ---------- $ price inspect: hover / tap → part under the pointer (no selection, no edits)
+  const HOVER_MAT = new THREE.MeshStandardMaterial({ color: '#1e9e5a', emissive: '#1e9e5a', emissiveIntensity: 0.6 });
+  let hover = null; // { mesh, mat }
+  function setHover(mesh) {
+    if (hover && hover.mesh === mesh) return;
+    if (hover) { hover.mesh.material = hover.mat; hover = null; }
+    if (mesh) { hover = { mesh, mat: mesh.material }; mesh.material = HOVER_MAT; }
+    needs = true;
+  }
+  function inspectAt(e) {
+    setRay(e);
+    const hits = meshHits();
+    const h = hits[0] || null;
+    if (!h) { setHover(null); app.inspectHit && app.inspectHit(null, e); return; }
+    setHover(h.object);
+    const ud = h.object.userData;
+    app.inspectHit && app.inspectHit({ layerId: ud.layerId, objectId: ud.objectId, part: ud.part || null, view: '3d' }, e);
+  }
   function pick(e) {
     setRay(e);
     const m = app.getModel();
@@ -213,6 +238,7 @@ export function createView3D(container, app) {
   }
   function onEditDown(e) {
     if (!ready) return;
+    if (app.isInspecting && app.isInspecting()) return; // $ inspect: never edit, a drag only orbits
     if (edit) { // a second finger: finish the edit and let the next gesture orbit
       if (e.pointerId !== edit.pointerId) { finishEdit(true); }
       return;
@@ -318,6 +344,7 @@ export function createView3D(container, app) {
     if (!ready) return;
     const m = app.getModel();
     const report = !!mode.report;
+    hover = null;
     while (root.children.length) { const c = root.children.pop(); c.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); }
     const order = stackOrder(m).filter((l) => !l.stub);
     // X-ray: layers stacked above the active one go see-through and stop catching taps.
@@ -495,7 +522,7 @@ export function createView3D(container, app) {
     return [p1[0] + (p2[0] - p1[0]) * t, p1[1] + (p2[1] - p1[1]) * t];
   }
 
-  function tag(mesh, o) { if (mesh) { mesh.userData.objectId = o.id; } return mesh; }
+  function tag(mesh, o, part) { if (mesh) { mesh.userData.objectId = o.id; if (part) mesh.userData.part = part; } return mesh; }
 
   function buildSite({ l, alpha, g, m }) {
     const lot = l.objects.find((o) => o.props.role === 'lot');
@@ -540,7 +567,7 @@ export function createView3D(container, app) {
         g.add(tag(cyl, o));
         const pad = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.8, r * 1.8, 0.67, 18), dark);
         pad.position.set(o.geometry.c[0], o.z + 0.33, o.geometry.c[1]);
-        pad.userData.objectType = 'pier';
+        pad.userData.objectType = 'pier'; pad.userData.part = { k: 'pierPad' };
         g.add(tag(pad, o));
       } else if (o.type === 'beam') {
         const w = o.props.widthIn * IN;
@@ -582,35 +609,35 @@ export function createView3D(container, app) {
         let cur = 0;
         myOps.forEach((op) => {
           const s0 = op.center - op.widthFt / 2, s1 = op.center + op.widthFt / 2;
-          if (s0 > cur) g.add(tag(lumberAlong(THREE, P(cur), P(s0), t, z0, z0 + H, wallMat), w));
+          if (s0 > cur) g.add(tag(lumberAlong(THREE, P(cur), P(s0), t, z0, z0 + H, wallMat), w, { k: 'wallSolid' }));
           if (op.sill > 0) g.add(tag(lumberAlong(THREE, P(s0), P(s1), t, z0, z0 + op.sill, wallMat), w));
           g.add(tag(lumberAlong(THREE, P(s0), P(s1), t, z0 + op.head, z0 + H, wallMat), w));
           cur = s1;
         });
-        if (cur < L2) g.add(tag(lumberAlong(THREE, P(cur), P(L2), t, z0, z0 + H, wallMat), w));
+        if (cur < L2) g.add(tag(lumberAlong(THREE, P(cur), P(L2), t, z0, z0 + H, wallMat), w, { k: 'wallSolid' }));
       } else {
         // plates: single bottom, double top (spec §6)
         const nb = l.params.bottomPlates || 1, nt = l.params.topPlates || 2;
-        for (let i = 0; i < nb; i++) g.add(tag(lumberAlong(THREE, A, B, t, z0 + i * pl, z0 + (i + 1) * pl, wood), w));
-        for (let i = 0; i < nt; i++) g.add(tag(lumberAlong(THREE, A, B, t, z0 + H - (i + 1) * pl, z0 + H - i * pl, wood), w));
+        for (let i = 0; i < nb; i++) g.add(tag(lumberAlong(THREE, A, B, t, z0 + i * pl, z0 + (i + 1) * pl, wood), w, { k: 'bottomPlate', lenFt: L2, wallId: w.id }));
+        for (let i = 0; i < nt; i++) g.add(tag(lumberAlong(THREE, A, B, t, z0 + H - (i + 1) * pl, z0 + H - i * pl, wood), w, { k: 'topPlate', lenFt: L2, wallId: w.id, ply: i }));
         const sBot = z0 + nb * pl, sTop = z0 + H - nt * pl;
         const lay = studLayout(L2, (w.props.studOcIn || 16) * IN, myOps);
-        const stud = (d, zb, zt, mm = wood) => { const c = d; g.add(tag(lumberAlong(THREE, P(c - pl / 2), P(c + pl / 2), t, zb, zt, mm), w)); };
+        const stud = (d, zb, zt, k = 'stud', mm = wood) => { const c = d; g.add(tag(lumberAlong(THREE, P(c - pl / 2), P(c + pl / 2), t, zb, zt, mm), w, { k, lenFt: zt - zb, wallId: w.id, at: c })); };
         lay.studs.forEach((d) => stud(d, sBot, sTop));
-        lay.kings.forEach((d) => stud(d, sBot, sTop));
+        lay.kings.forEach((d) => stud(d, sBot, sTop, 'king'));
         myOps.forEach((op) => {
           const s0 = op.center - op.widthFt / 2, s1 = op.center + op.widthFt / 2;
           const hd = LUMBER[(op.o.props.header || '2-2x8').replace(/^\d-/, '').split(' ')[0]] * IN || 7.25 * IN;
           const hz = z0 + op.head;
-          stud(s0 - pl / 2, sBot, hz); stud(s1 + pl / 2, sBot, hz);           // jacks
-          g.add(tag(lumberAlong(THREE, P(s0 - pl), P(s1 + pl), t, hz, Math.min(sTop, hz + hd), hdr), op.o)); // header (EXAMPLE size)
-          if (op.sill > 0) g.add(tag(lumberAlong(THREE, P(s0), P(s1), t, z0 + op.sill - pl, z0 + op.sill, wood), op.o));
+          stud(s0 - pl / 2, sBot, hz, 'jack'); stud(s1 + pl / 2, sBot, hz, 'jack');           // jacks
+          g.add(tag(lumberAlong(THREE, P(s0 - pl), P(s1 + pl), t, hz, Math.min(sTop, hz + hd), hdr), op.o, { k: 'header', lenFt: s1 - s0 + 2 * pl, wallId: w.id })); // header (EXAMPLE size)
+          if (op.sill > 0) g.add(tag(lumberAlong(THREE, P(s0), P(s1), t, z0 + op.sill - pl, z0 + op.sill, wood), op.o, { k: 'roughSill', lenFt: s1 - s0, wallId: w.id }));
         });
       }
       myOps.forEach((op) => {
         if (op.o.props.kind !== 'window') return;
         const s0 = op.center - op.widthFt / 2, s1 = op.center + op.widthFt / 2;
-        g.add(tag(lumberAlong(THREE, P(s0), P(s1), 0.06, z0 + op.sill, z0 + op.head, glass), op.o));
+        g.add(tag(lumberAlong(THREE, P(s0), P(s1), 0.06, z0 + op.sill, z0 + op.head, glass), op.o, { k: 'window' }));
       });
     });
   }
@@ -638,11 +665,11 @@ export function createView3D(container, app) {
       const zE = rafters[0].props.zA + d, zR = rafters[0].props.zB + d;
       const quad = (q) => { const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(q.flat(), 3)); geo.setIndex([0, 1, 2, 0, 2, 3]); geo.computeVertexNormals(); return new THREE.Mesh(geo, sheath); };
       if (c.ridgeAlongX) {
-        g.add(tag(quad([[b.minX, zE, b.minY], [b.maxX, zE, b.minY], [b.maxX, zR, b.cy], [b.minX, zR, b.cy]]), outline));
-        g.add(tag(quad([[b.minX, zE, b.maxY], [b.maxX, zE, b.maxY], [b.maxX, zR, b.cy], [b.minX, zR, b.cy]]), outline));
+        g.add(tag(quad([[b.minX, zE, b.minY], [b.maxX, zE, b.minY], [b.maxX, zR, b.cy], [b.minX, zR, b.cy]]), outline, { k: 'roofSide', side: 0 }));
+        g.add(tag(quad([[b.minX, zE, b.maxY], [b.maxX, zE, b.maxY], [b.maxX, zR, b.cy], [b.minX, zR, b.cy]]), outline, { k: 'roofSide', side: 1 }));
       } else {
-        g.add(tag(quad([[b.minX, zE, b.minY], [b.minX, zE, b.maxY], [b.cx, zR, b.maxY], [b.cx, zR, b.minY]]), outline));
-        g.add(tag(quad([[b.maxX, zE, b.minY], [b.maxX, zE, b.maxY], [b.cx, zR, b.maxY], [b.cx, zR, b.minY]]), outline));
+        g.add(tag(quad([[b.minX, zE, b.minY], [b.minX, zE, b.maxY], [b.cx, zR, b.maxY], [b.cx, zR, b.minY]]), outline, { k: 'roofSide', side: 0 }));
+        g.add(tag(quad([[b.maxX, zE, b.minY], [b.maxX, zE, b.maxY], [b.cx, zR, b.maxY], [b.cx, zR, b.minY]]), outline, { k: 'roofSide', side: 1 }));
       }
     }
   }
@@ -733,6 +760,16 @@ export function createView3D(container, app) {
       camera: () => camera.position.toArray(),
     },
     isReady: () => ready,
+    clearInspect() { setHover(null); },
+    /** page coords of the first mesh matching pred(userData) — for tests */
+    screenOfPart(pred) {
+      let hit = null;
+      root.traverse((o) => { if (!hit && o.isMesh && o.userData.objectId && pred(o.userData)) hit = o; });
+      if (!hit) return null;
+      hit.geometry.computeBoundingBox(); const v = new THREE.Vector3(); hit.geometry.boundingBox.getCenter(v); hit.localToWorld(v); v.project(camera);
+      const r = renderer.domElement.getBoundingClientRect();
+      return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height];
+    },
     /** page coords of the first mesh tagged with objectId (for tests) */
     screenOf(objectId) {
       let hit = null;

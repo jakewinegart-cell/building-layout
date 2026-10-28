@@ -3,7 +3,7 @@
 // plan sheets (A1, S1–S4), 3D views, build steps and the disclaimer. Printable (styles.css @media print).
 // Data: content-v3/ (Remodel Guide) when present and valid, otherwise content/ placeholders.
 // ============================================================================
-import { loadContent } from './content.js';
+import { getContentCached } from './content.js';
 import { runEstimate, estimateSettings, clearSpanAlternative, CLEAR_SPAN_TYPICAL_MAX_FT } from './estimate.js';
 import { modelSig, beamState, applyAnswers, saveRun, loadRun } from './pricecheck.js';
 import { instructionVars, renderInstructions } from './instructions.js';
@@ -11,8 +11,7 @@ import { allSheets } from './sheets.js';
 import { getLayer } from './model.js';
 import { bbox } from './geom.js';
 
-let contentP = null;
-export function getContent() { return (contentP = contentP || loadContent().catch((e) => { contentP = null; throw e; })); }
+export function getContent() { return getContentCached(); }
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const usd = (x) => (x == null ? '—' : '$' + Number(x).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));

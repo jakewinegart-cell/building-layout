@@ -76,3 +76,7 @@ export async function loadContent() {
   status.files = { rules: 'content/takeoff-rules.json', prices: 'content/prices-placeholder.json (PLACEHOLDER)', steps: 'content/build-steps.json' };
   return { mode: 'placeholder', rules, prices, steps, status };
 }
+
+// One shared load for Price check and $ inspect (same rules, prices and engine).
+let contentP = null;
+export function getContentCached() { return (contentP = contentP || loadContent().catch((e) => { contentP = null; throw e; })); }

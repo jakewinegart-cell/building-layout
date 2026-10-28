@@ -133,6 +133,7 @@ export function createPlan(canvas, app) {
     if (wallsD.shown || m.isolateLayerId === null) drawDims(m);
     drawNorth(m);
     drawDraft(m);
+    drawInspectMark();
     if (m.isolateLayerId) text(`Isolated: ${getLayer(m, m.isolateLayerId).name}`, Object.assign([cssW / 2, cssH - 16], { screen: true }), { size: 11, bg: '#2b2b2b', color: '#fff' });
   }
 
@@ -148,6 +149,26 @@ export function createPlan(canvas, app) {
     };
     drawStep(g, '#ebe7de', 1);
     drawStep(g < 1 ? 4 : g * 4, '#ddd7ca', 1);
+  }
+
+  // $ price inspect highlight (set by the inspector: a member segment, a pier circle or an area)
+  let inspectMark = null;
+  function drawInspectMark() {
+    const k = inspectMark; if (!k) return;
+    const G = '#1e9e5a';
+    ctx.save();
+    if (k.seg) { const [a, b] = k.seg; const [x1, y1] = toScreen(a), [x2, y2] = toScreen(b); ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(30,158,90,.35)'; ctx.lineWidth = Math.max(10, (k.wFt || 0.3) * view.scale + 8); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.strokeStyle = G; ctx.lineWidth = Math.max(3, (k.wFt || 0.12) * view.scale); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+    if (k.circle) { const [c, r] = k.circle; const [x, y] = toScreen(c); ctx.beginPath(); ctx.arc(x, y, Math.max(6, r * view.scale) + 4, 0, Math.PI * 2); ctx.fillStyle = 'rgba(30,158,90,.3)'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = G; ctx.stroke(); }
+    if (k.poly) { ctx.beginPath(); k.poly.forEach((p, i) => { const [x, y] = toScreen(p); if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); }); ctx.closePath(); ctx.fillStyle = 'rgba(30,158,90,.16)'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = G; ctx.stroke(); }
+    ctx.restore();
+  }
+  const inspecting = () => !!(app.isInspecting && app.isInspecting());
+  function inspectAt(e) {
+    const sp = evPt(e); const w = toWorld(sp[0], sp[1]);
+    const touch = e.pointerType === 'touch' || e.pointerType === 'pen';
+    const hp = hitPier(w, 2); // a Sonotube under the cursor wins over the wall drawn above it
+    const hit = hp ? { layerId: 'foundation', objectId: hp.id } : hitTest(w, touch ? 16 : 10);
+    app.inspectHit && app.inspectHit(hit ? Object.assign({ view: 'plan', world: w, part: null }, hit) : null, e);
   }
 
   function isSel(sel, l, o) { return sel && sel.layerId === l.id && sel.objectId === o.id; }
@@ -491,6 +512,7 @@ export function createPlan(canvas, app) {
     if (pointers.size > 2) return;
     const w = toWorld(sp[0], sp[1]);
     const m = M();
+    if (inspecting()) { drag = { kind: 'pan', sx: sp[0], sy: sp[1], ox: view.ox, oy: view.oy, tap: true, inspect: true }; return; } // $ inspect: pan or tap, never edit
     if (e.button === 1 || e.button === 2) { drag = { kind: 'pan', sx: sp[0], sy: sp[1], ox: view.ox, oy: view.oy }; return; }
 
     const touch = e.pointerType === 'touch' || e.pointerType === 'pen';
@@ -568,6 +590,7 @@ export function createPlan(canvas, app) {
     }
     const w = toWorld(sp[0], sp[1]);
     const m = M();
+    if (!drag && inspecting()) { if (e.pointerType === 'mouse') inspectAt(e); return; }
     if (drag) {
       const moved = Math.hypot(sp[0] - (drag.sx || 0), sp[1] - (drag.sy || 0)) > 4;
       if (drag.kind === 'pan') { if (moved) drag.tap = false; view.ox = drag.ox + sp[0] - drag.sx; view.oy = drag.oy + sp[1] - drag.sy; render(); return; }
@@ -606,6 +629,7 @@ export function createPlan(canvas, app) {
     const m = M();
     if (drag) {
       const d = drag; drag = null;
+      if (d.kind === 'pan' && d.tap && d.inspect) { inspectAt(e); return; }
       if (d.kind === 'pan' && d.tap) app.select(null);
       if (d.kind === 'pier') {
         app.onPierDrag && app.onPierDrag(false);
@@ -714,6 +738,8 @@ export function createPlan(canvas, app) {
       if (x < 30) view.ox += 30 - x; else if (x > cssW - 30) view.ox -= x - (cssW - 30);
       render();
     },
+    setInspectMark(k) { inspectMark = k || null; render(); },
+    getInspectMark: () => inspectMark,
     debug: { view, toScreen, toWorld },
   };
 }

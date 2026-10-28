@@ -6,6 +6,7 @@ import { regenerate, headerFor } from './generate.js';
 import { createPlan } from './plan.js';
 import { createView3D } from './view3d.js';
 import { fmtFtIn, dist } from './geom.js';
+import { createInspector } from './inspect.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -54,7 +55,10 @@ const app = {
     persist();
     refresh({ all: true });
     if (reportCtl && !$('#report').hidden) reportCtl.markStale();
+    if (inspector) inspector.invalidate();
   },
+  isInspecting: () => !!(inspector && inspector.isOn()),
+  inspectHit: (hit, ev) => { if (inspector && inspector.isOn()) inspector.show(hit, ev); },
   onPierDrag(on) { $('#stage').classList.toggle('pierDragging', !!on); },
   revealPier(o) { requestAnimationFrame(() => { const pp = $('#pierPanel'); plan.ensureVisible(o.geometry.c, pp && !pp.hidden ? pp.offsetHeight + 8 : 0); }); },
   onTool(t) {
@@ -70,6 +74,15 @@ const app = {
 // ---------- views
 const plan = createPlan($('#plan'), app);
 const v3 = createView3D($('#view3d'), app);
+// ---------- $ price inspect (off until the user turns it on; never edits the model)
+let inspector = null;
+inspector = createInspector({ app, plan, v3, button: $('#inspectBtn') });
+$('#inspectBtn').addEventListener('click', () => {
+  if (!inspector.isOn()) return;
+  if (v3.getAddMode()) setAdd3d(null);
+  if (plan.getTool() !== 'select') plan.setTool('select');
+  if (model.selection) app.select(null);
+}, false);
 
 function setView(v) {
   model.view = v;
@@ -553,7 +566,7 @@ function refresh() {
 }
 
 window.addEventListener('resize', () => { plan.resize(); v3.resize(); });
-window.__layout = { app, getModel: () => model, setView, plan, v3, openReport, closeReport, deleteSelected, regenerate: (s) => app.commit(s), assumptions: ASSUMPTIONS };
+window.__layout = { app, inspector, getModel: () => model, setView, plan, v3, openReport, closeReport, deleteSelected, regenerate: (s) => app.commit(s), assumptions: ASSUMPTIONS };
 
 // ---------- boot
 refresh();
