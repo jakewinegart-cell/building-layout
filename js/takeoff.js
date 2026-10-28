@@ -5,7 +5,7 @@
 //               which metric buys which item, waste %, pack size, rounding)
 // Nothing here knows a price; prices come from the price table (placeholder by default).
 // ============================================================================
-import { LUMBER, LUMBER_T_IN } from './config.js';
+import { LUMBER, LUMBER_T_IN, pierDepthIn } from './config.js';
 import { getLayer } from './model.js';
 import { dist, bbox, offsetPolygon, signedArea, pointInPoly, fmtFtIn } from './geom.js';
 import { studLayout } from './homeplan-derived.js';
@@ -41,7 +41,7 @@ export function measure(m) {
   M.corners = fp.length;
   M.foundationType = f.type;
   M.frostEntered = f.frostDepthIn != null && f.frostDepthIn !== '';
-  M.frostDepthIn = M.frostEntered ? Number(f.frostDepthIn) : f.placeholderFrostIn;
+  M.frostDepthIn = pierDepthIn(f);
 
   // ---- foundation
   const piers = fnd.objects.filter((o) => o.type === 'pier');

@@ -1,6 +1,6 @@
 // Piers / Sonotubes v2: snapping, live dimensions, manual vs auto, delete / duplicate /
 // reset. Pure model helpers shared by Plan, 3D and the pier panel. All coords in ft.
-import { PIERS, DEFAULTS } from './config.js';
+import { PIERS, DEFAULTS, pierDepthIn } from './config.js';
 import { getLayer, uid } from './model.js';
 import { dist, distToSeg, lerp, bbox } from './geom.js';
 import { pierSlotKey } from './homeplan-derived.js';
@@ -70,7 +70,7 @@ export function pierDefaults(m) {
   const topZ = (f.topAboveGradeIn[f.type] != null ? f.topAboveGradeIn[f.type] : 8);
   const topIn = f.type === 'piers' ? topZ - f.gradeBeamDepthIn : topZ;
   const frost = f.frostDepthIn != null && f.frostDepthIn !== '' ? Number(f.frostDepthIn) : null;
-  return { topIn, depthIn: frost != null ? frost : f.placeholderFrostIn, frostEntered: frost != null };
+  return { topIn, depthIn: pierDepthIn(f), frostEntered: frost != null };
 }
 
 function onWallId(m, c) { const w = nearestWall(m, c); return w && w.d < 0.05 ? w.id : null; }

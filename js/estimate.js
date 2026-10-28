@@ -16,10 +16,19 @@ export const GROUPS = [
   { id: 'site', name: 'Site layout' }, { id: 'foundation', name: 'Foundation' }, { id: 'floor', name: 'Floor framing' },
   { id: 'walls', name: 'Walls, doors & windows' }, { id: 'roof', name: 'Roof framing & roofing' }, { id: 'fasteners', name: 'Fasteners' },
 ];
+/** v4: the chosen ZIP's jurisdiction (null when no ZIP, an unknown ZIP, or v3 content). */
+export function siteJurisdiction(m, C) {
+  const site = m.site || {};
+  if (!C || !C.jdoc || !site.zip || !C.engine || typeof C.engine.resolveJurisdiction !== 'function') return null;
+  return C.engine.resolveJurisdiction(C.jdoc, site.zip, site.jurisdictionId) || null;
+}
 export function estimateSettings(m) { return Object.assign({}, ESTIMATE_DEFAULTS, m.estimate || {}); }
 export function engineOpts(m) {
   const e = estimateSettings(m); const rp = getLayer(m, 'roof').params;
-  const o = { taxRatePct: e.taxRatePct == null || e.taxRatePct === '' ? 0 : Number(e.taxRatePct), contingencyPct: Number(e.contingencyPct) || 0, deliveryUsd: Number(e.deliveryUsd) || 0, laborUsd: e.laborUsd == null || e.laborUsd === '' ? null : Number(e.laborUsd), concreteMode: e.concreteMode || 'auto', iceBarrier: e.iceBarrier !== false };
+  // v4: blank tax = null → the engine uses the ZIP lookup (verified only) or prices 0% and FLAGS it. No Denver default.
+  const o = { taxRatePct: e.taxRatePct == null || e.taxRatePct === '' ? null : Number(e.taxRatePct), contingencyPct: Number(e.contingencyPct) || 0, deliveryUsd: Number(e.deliveryUsd) || 0, laborUsd: e.laborUsd == null || e.laborUsd === '' ? null : Number(e.laborUsd), concreteMode: e.concreteMode || 'auto', iceBarrier: e.iceBarrier == null ? null : e.iceBarrier !== false,
+    frostMarginIn: Number(getLayer(m, 'foundation').params.frostMarginIn) || 0 };
+  if (o.iceBarrier == null) delete o.iceBarrier; // let the ZIP lookup decide (engine default ON)
   if (rp.ceilingJoistSize && rp.ceilingJoistSize !== 'auto') o.ceilingJoistSize = rp.ceilingJoistSize;
   return o;
 }
@@ -30,7 +39,8 @@ export function runEstimate(m, C, optsOverride = {}) {
   const set = estimateSettings(m);
   const taxSet = !(set.taxRatePct == null || set.taxRatePct === '');
   if (C.mode === 'hd') {
-    const opts = Object.assign(engineOpts(m), optsOverride);
+    const J = siteJurisdiction(m, C);
+    const opts = Object.assign(engineOpts(m), J ? { jurisdiction: J } : {}, optsOverride);
     const r = C.engine.takeoff(mm, C.rules, C.prices, opts);
     const P = C.prices.prices;
     const lines = r.lines.map((l) => {
@@ -48,7 +58,8 @@ export function runEstimate(m, C, optsOverride = {}) {
     return {
       mode: 'hd', lines, flags: r.flags, report: r.report, concreteAlternatives: r.concreteAlternatives, M: measure(m),
       groups: GROUPS.map((g) => ({ id: g.id, name: g.name, total: r2(r.groups[g.id === 'fasteners' ? 'all' : g.id] || 0), lines: lines.filter((l) => l.group === g.id) })).filter((g) => g.lines.length),
-      totals: { materials: t.materials, fromEstimates: t.materials_from_estimated_prices, unpriced: t.unpriced_lines, taxSet, taxRatePct: taxSet ? t.taxRatePct : null, tax: t.tax, contingencyPct: t.contingencyPct, contingency: t.contingency, delivery: t.delivery, labor: t.labor === 'not included' ? null : t.labor, total: t.total },
+      jurisdiction: J,
+      totals: { materials: t.materials, fromEstimates: t.materials_from_estimated_prices, unpriced: t.unpriced_lines, taxSet: t.taxSource ? t.taxSource !== 'unknown' : taxSet, taxSource: t.taxSource || (taxSet ? 'user' : 'unknown'), taxRatePct: (t.taxSource ? t.taxSource !== 'unknown' : taxSet) ? t.taxRatePct : null, tax: t.tax, contingencyPct: t.contingencyPct, contingency: t.contingency, delivery: t.delivery, labor: t.labor === 'not included' ? null : t.labor, total: t.total },
       snapshotDate: C.snapshotDate, raw: r,
     };
   }

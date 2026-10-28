@@ -1,0 +1,1353 @@
+{
+  "version": "v4-fasteners-1",
+  "updated": "2026-10-28",
+  "tz": "America/Denver",
+  "about": "Per-piece fastener schedule for the $ inspect hover mode and the takeoff. Code basis: 2024 IRC as adopted in Montana (DLI, effective 2026-09-26), Table R602.3(1) and the sections it points to; manufacturer instructions where the IRC defers. Counts are minimum code/manufacturer counts per installed piece. Purchases add extra_pct for bent/dropped nails. All dollar amounts derived from this file are EXAMPLE.",
+  "how_engine_uses_it": "reference/takeoff-reference.mjs takeoff(model, rules, prices, { fastenerSchedule }) builds pieces[] from model objects + derived studs, evaluates each connection rule, sums counts per fastener id, and buys the cheapest box mix from fasteners[id].options. purchase:\"line\" fasteners (anchor bolts, hangers, ties, clips, adhesive, tie wire) are already bought by their own takeoff line; pieces only show their unit price.",
+  "unit_price_rule": "unitPrice = box price / pack_qty of the box the purchase mix uses most of (bulk price when the line qualifies). Connectors: the each price. Adhesive: tube price / defaults.floor.adhesiveLfPerTube (40 lf). Tie wire: roll price / defaults.rebar.tiesPerRollEstimate (120).",
+  "rule_kinds": {
+    "fixed": "n per piece",
+    "per_end": "n x ends",
+    "spacing": "rows x (floor(lengthIn / oc_in) + 1) + plus",
+    "groups": "n x ceil(lengthIn / oc_in)",
+    "per_bearing": "n per bearing end of the piece",
+    "per_rim_end": "n per end that butts a rim",
+    "per_hanger": "n per hanger end",
+    "per_splice": "n per splice",
+    "per_lap": "n per lap carried by the piece",
+    "per_lf": "per_lf x length ft",
+    "sheet": "see sheet_rule",
+    "heel_table": "see heel_table, per joist end",
+    "anchor_bolts": "max(min_per_plate, ceil((L - 2 x max_from_end) / max_oc) + 1)",
+    "ridge_cap": "nails_per_piece x (ceil(ridge in / exposure) + 1)",
+    "underlayment": "see underlayment_rule",
+    "housewrap": "stud lines x (floor(height in / max_oc_in) + 1)",
+    "none": "counted elsewhere",
+    "note": "not counted"
+  },
+  "sheet_rule": "Panel w x l laid with l across supports at support_oc_in. Supports crossed = l/oc + 1; the 2 end supports are panel edges (edge_oc_in), the rest are intermediate (field_oc_in): nails = 2 x (w/edge + 1) + (supports - 2) x (w/field + 1). If long_edges_on_framing (wall sheets, vertical): long edges at edge_oc, plates at edge_oc, studs between at field_oc, corners not double counted. Results for 4x8: wall (studs 16, 6/12) = 62, subfloor (joists 16, 6/12) = 43, roof (rafters 24, 6/6) = 45.",
+  "underlayment_rule": "courses per plane = ceil(slope length in / (roll_w - side_lap)); lap lines = courses + 1 per plane at lap_oc_in along the eave length; + 1 centerline per course at center_oc_in.",
+  "heel_table": {
+    "slope": "4:12",
+    "note": "Table R802.5.2(1), 16d common per heel joint, rafter slope 4:12 only (other slopes: look up and add). Columns = ground snow load psf; values = [12 ft, 24 ft, 36 ft roof span]. Roof span between columns: the next larger column is used (no interpolation assumed). Not required when the ridge is supported by a load-bearing wall, header or ridge beam. Applies to roof live load <= 20 psf; ceiling joists at the bottom of the attic (HC/HR = 0).",
+    "spans_ft": [
+      12,
+      24,
+      36
+    ],
+    "by_spacing_in": {
+      "12": {
+        "20": [
+          3,
+          4,
+          6
+        ],
+        "30": [
+          3,
+          5,
+          7
+        ],
+        "50": [
+          4,
+          7,
+          10
+        ],
+        "70": [
+          5,
+          9,
+          13
+        ]
+      },
+      "16": {
+        "20": [
+          3,
+          5,
+          8
+        ],
+        "30": [
+          3,
+          6,
+          9
+        ],
+        "50": [
+          5,
+          9,
+          13
+        ],
+        "70": [
+          6,
+          12,
+          17
+        ]
+      },
+      "24": {
+        "20": [
+          4,
+          8,
+          11
+        ],
+        "30": [
+          5,
+          9,
+          13
+        ],
+        "50": [
+          7,
+          13,
+          19
+        ],
+        "70": [
+          9,
+          17,
+          26
+        ]
+      },
+      "19.2": {
+        "20": [
+          3,
+          6,
+          9
+        ],
+        "30": [
+          4,
+          7,
+          11
+        ],
+        "50": [
+          6,
+          11,
+          16
+        ],
+        "70": [
+          7,
+          14,
+          21
+        ]
+      }
+    },
+    "unknown_snow_psf_used": 70,
+    "unknown_snow_flag": "Site ground snow load UNVERIFIED - heel nails use the 70 psf column (the table maximum). If the site value is > 70 psf the table does not apply: heel joints must be engineered.",
+    "ten_d_factor": 1.2,
+    "source": "irc_t802_5_2_1"
+  },
+  "sources": {
+    "irc_t602_3_1": {
+      "title": "2024 IRC as adopted by Montana, Table R602.3(1) Fastening Schedule",
+      "url": "https://up.codes/viewer/montana/irc-2024/chapter/6/wall-construction",
+      "local_copy": "reference/sources/irc2024-mt-table-R602.3-1.txt",
+      "read": "2026-10-28",
+      "verified": true
+    },
+    "irc_t602_3_3": {
+      "title": "2024 IRC (MT) Table R602.3(3) wood structural panel wall sheathing for wind",
+      "url": "https://up.codes/viewer/montana/irc-2024/chapter/6/wall-construction",
+      "read": "2026-10-28",
+      "verified": true
+    },
+    "irc_t802_5_2_1": {
+      "title": "2024 IRC (MT) Table R802.5.2(1) rafter/ceiling-joist heel joint connections + footnotes",
+      "url": "https://up.codes/viewer/montana/irc-2024/chapter/8/roof-ceiling-construction",
+      "read": "2026-10-28",
+      "verified": true
+    },
+    "irc_r905": {
+      "title": "2024 IRC (MT) R905.1.1, R905.2.5, R905.2.6, R905.2.8.5 (underlayment, shingle fasteners, drip edge)",
+      "url": "https://up.codes/viewer/montana/irc-2024/chapter/9/roof-assemblies",
+      "read": "2026-10-28",
+      "verified": true
+    },
+    "irc_r502_r503": {
+      "title": "2024 IRC (MT) R502/R503 floor framing + sheathing fastened per Table R602.3(1)",
+      "url": "https://up.codes/viewer/montana/irc-2024/chapter/5/floors",
+      "read": "2026-10-28",
+      "verified": true
+    },
+    "irc_r703": {
+      "title": "2024 IRC (MT) R703.2 WRB, Table R703.3(1) siding attachment",
+      "url": "https://up.codes/viewer/montana/irc-2024/chapter/7/wall-covering",
+      "read": "2026-10-28",
+      "verified": true
+    },
+    "mt_adoption": {
+      "title": "Montana DLI Building Codes - current codes (2024 IRC effective 2026-09-26)",
+      "url": "https://bsd.dli.mt.gov/building-codes-permits/current-codes",
+      "verified": true
+    },
+    "simpson_h25a": {
+      "title": "Simpson Strong-Tie H2.5A hurricane tie: rafter to plates 5-0.131x2-1/2 + 5-0.131x2-1/2 (10 total); 0.131x1-1/2 only for 2x truss chords",
+      "url": "https://www.strongtie.com/seismicandhurricaneties_strapsandties/h25a_htie/p/h25a",
+      "read": "2026-10-28 (via search-index copy of the strongtie.com page; direct fetch returned an empty page)",
+      "verified": true
+    },
+    "simpson_lus": {
+      "title": "Simpson Strong-Tie LUS face-mount hanger: LUS210 8 header + 4 joist 0.148x3 (10d common); LUS28 6 + 4",
+      "url": "https://www.strongtie.com/facemounthangersssl_solidsawnlumberconnector/lus_hanger/p/lus",
+      "read": "2026-10-28 (via search-index copy)",
+      "verified": true
+    },
+    "gaf_hdz": {
+      "title": "GAF Timberline HDZ installation instructions (RESTL622): 3 bundles = 20+22+22 = 64 shingles = 98.4 sq ft; 4 nails standard, 6 enhanced; 10-12 ga zinc-coated nails, 3/8-7/16 head, 3/4 in into deck",
+      "url": "https://www.gaf.com/en-us/document-library/documents/installation-instructions-&-guides/timberline-layerlock-installation-instructions-trilingual-restl622.pdf",
+      "read": "2026-10-28",
+      "verified": true
+    },
+    "gaf_prostart": {
+      "title": "GAF Pro-Start starter strip: nails every 10-12 in, 1-1/2 to 3 in above eave; rakes same; 1 bundle ~120.33 lf",
+      "url": "https://www.gaf.com/en-us/document-library/documents/installation-instructions-&-guides/pro-start-installation-instructions-resgn853-(11-22).pdf",
+      "read": "2026-10-28",
+      "verified": true
+    },
+    "gaf_sar": {
+      "title": "GAF Seal-A-Ridge: 36 in piece -> 3 x 12 in pieces, 6-2/3 in exposure, 2 nails per piece (+ 2 in a starter piece)",
+      "url": "https://www.gaf.com/en-us/document-library/documents/installation-instructions-&-guides/seal-a-ridge-ridge-cap-shingles-installation-instructions-trilingual-reshr126.pdf",
+      "read": "2026-10-28",
+      "verified": true
+    },
+    "stinger_exo": {
+      "title": "Stinger EXO installation guide: 1 in cap nails 12 in o.c. at laps, 24 in o.c. along roll centerline (high wind: 6 in laps, 12 in grid); roll label 48 in x 250 ft",
+      "url": "https://stingerworld.com/wp-content/uploads/2026/08/EXO-Installation-Guide-1.pdf",
+      "also": "https://www.floridabuilding.org/upload/PR_Instl_Docs/FL42439_R1_II_EXO%2025%20Roll%20Label%20V13-092723.pdf",
+      "read": "2026-10-28",
+      "verified": true
+    },
+    "tyvek": {
+      "title": "DuPont Tyvek residential WRB installation guidelines (K22331): cap nails/staples no closer than 6 in and no farther than 18 in on vertical stud lines",
+      "url": "https://www.dupont.com/content/dam/dupont/amer/us/en/performance-building-solutions/public/documents/en/K22331_Residential-WRB_Install_Reside.pdf",
+      "read": "2026-10-28",
+      "verified": true
+    }
+  },
+  "fasteners": {
+    "gun_3x131": {
+      "label": "3-1/4 x 0.131 collated framing nail",
+      "short": "3-1/4x.131 nail",
+      "code_size": "3 in x 0.131 in nail (R602.3(1) \"3 x 0.131\")",
+      "kind": "nail",
+      "options": [
+        "nails_framing_16d_4000",
+        "nails_framing_16d_1000"
+      ],
+      "purchase": "aggregate",
+      "extra_pct": 0.1,
+      "nails_vs_screws": "nails (code). Screws only if approved under R104.2.2 / an ICC-ES report for that connection.",
+      "interpretation": "The table lists 3 x 0.131; 3-1/4 x 0.131 is the common 21-deg gun nail (same diameter, longer). Generally accepted as meeting the 3 x 0.131 row - confirm with the building official (Montana Building Codes Bureau (406) 841-2056)."
+    },
+    "common_16d": {
+      "label": "16d common 3-1/2 x 0.162 hand nail",
+      "short": "16d common",
+      "code_size": "16d common (3-1/2 x 0.162)",
+      "kind": "nail",
+      "options": [
+        "nails_common_16d_5lb"
+      ],
+      "purchase": "aggregate",
+      "extra_pct": 0.1,
+      "nails_vs_screws": "nails (code). Item 10 (built-up header) has no 0.131 gun-nail option; 16d box 3-1/2 x 0.135 @ 12 in each edge is the only other listed option."
+    },
+    "common_8d_hdg": {
+      "label": "8d common 2-1/2 x 0.131 HDG hand nail",
+      "short": "8d common HDG",
+      "code_size": "8d common (2-1/2 x 0.131)",
+      "kind": "nail",
+      "options": [
+        "nails_common_8d_hdg_5lb"
+      ],
+      "purchase": "aggregate",
+      "extra_pct": 0.1,
+      "nails_vs_screws": "nails. For connectors use only the nail size the manufacturer lists (Simpson: 0.131 x 2-1/2 for H2.5A on rafters). Simpson SD connector screws are a manufacturer-listed substitute (PRICE NEEDED, not priced)."
+    },
+    "roof_sheath_8d": {
+      "label": "8d common 2-1/2 x 0.131 x 0.281 head (roof sheathing)",
+      "short": "8d (2-1/2x.131) nail",
+      "code_size": "8d common 2-1/2 x 0.131 x 0.281 head, or RSRS-01 2-3/8 x 0.113 x 0.281 head",
+      "kind": "nail",
+      "options": [
+        "nails_common_8d_hdg_5lb",
+        "nails_gun_8d131_4000"
+      ],
+      "purchase": "aggregate",
+      "extra_pct": 0.1,
+      "nails_vs_screws": "nails (code).",
+      "interpretation": "The 2-3/8 x 0.113 ring-shank box in the price list may be RSRS-01 (0.281 head) - if the box says RSRS-01 / ASTM F1667 RSRS-01 you may use it for the roof too and skip this purchase. Gun-nail option: confirm head >= 0.281."
+    },
+    "ring_238x113": {
+      "label": "2-3/8 x 0.113 ring-shank collated nail (deformed, 0.266 head)",
+      "short": "2-3/8 ring nail",
+      "code_size": "deformed 2-3/8 x 0.113 x 0.266 head (items 31/32 wall and subfloor)",
+      "kind": "nail",
+      "options": [
+        "nails_sheathing_5000",
+        "nails_sheathing_2000"
+      ],
+      "purchase": "aggregate",
+      "extra_pct": 0.1,
+      "nails_vs_screws": "nails (code). Subfloor screws are allowed only per the panel/adhesive maker or an approved alternate (R104.2.2)."
+    },
+    "connector_148x3": {
+      "label": "0.148 x 3 HDG connector nail (10d common size)",
+      "short": "0.148x3 nail",
+      "code_size": "Simpson-listed 0.148 x 3 (10d common)",
+      "kind": "nail",
+      "options": [
+        "nails_connector_10d3_250"
+      ],
+      "purchase": "aggregate",
+      "extra_pct": 0.05,
+      "nails_vs_screws": "nails per Simpson; SD9212 screws are a Simpson-listed alternate for LUS (PRICE NEEDED)."
+    },
+    "roofing_114": {
+      "label": "1-1/4 in 11 ga EG roofing nail",
+      "short": "1-1/4 roofing nail",
+      "code_size": "R905.2.5: galvanized, >= 12 ga (0.105) shank, >= 3/8 head, ASTM F1667, >= 3/4 in into deck or through it",
+      "kind": "nail",
+      "options": [
+        "roofing_nails_5lb"
+      ],
+      "purchase": "aggregate",
+      "extra_pct": 0.05,
+      "nails_vs_screws": "nails only (staples not allowed for asphalt shingles by R905.2.5 text: \"fasteners ... shall be galvanized steel, stainless steel, aluminum or copper roofing nails\")."
+    },
+    "roofing_134": {
+      "label": "1-3/4 in EG roofing nail (ridge cap)",
+      "short": "1-3/4 roofing nail",
+      "code_size": "same as roofing_114, longer to get 3/4 in into the deck through the ridge layers",
+      "kind": "nail",
+      "options": [
+        "roofing_nails_134_5lb"
+      ],
+      "purchase": "aggregate",
+      "extra_pct": 0.05,
+      "nails_vs_screws": "nails only.",
+      "interpretation": "Length choice is ours, not GAF's: GAF only says \"long enough to penetrate 3/4 in into the deck\"."
+    },
+    "cap_1in": {
+      "label": "1 in 12 ga EG ring-shank plastic cap nail",
+      "short": "1 in cap nail",
+      "code_size": "Stinger EXO: 1 in x 0.105 EG ring shank with 1 in cap (HandDrive); Tyvek: Wrap Cap nails or equivalent",
+      "kind": "nail",
+      "options": [
+        "cap_nails_2000"
+      ],
+      "purchase": "aggregate",
+      "extra_pct": 0.1,
+      "nails_vs_screws": "cap nails or cap staples (manufacturer)."
+    },
+    "anchor_bolt": {
+      "label": "1/2 x 10 anchor bolt w/ nut + washer",
+      "short": "1/2x10 anchor bolt",
+      "kind": "connector",
+      "price_ref": "anchor_bolt_50pk",
+      "purchase": "line",
+      "line_id": "found.anchorBolts",
+      "nails_vs_screws": "bolt (R403.1.6). Screw anchors/wedge anchors only if approved."
+    },
+    "hanger": {
+      "label": "Simpson LUS face-mount joist hanger",
+      "short": "LUS hanger",
+      "kind": "connector",
+      "price_ref_by_size": {
+        "2x8": "hanger_lus28",
+        "2x10": "hanger_lus210"
+      },
+      "purchase": "line",
+      "line_id": "floor.hangers"
+    },
+    "tie_h25a": {
+      "label": "Simpson H2.5A hurricane tie",
+      "short": "H2.5A tie",
+      "kind": "connector",
+      "price_ref": "hurricane_h25a",
+      "purchase": "line",
+      "line_id": "roof.hurricaneTies"
+    },
+    "h_clip": {
+      "label": "7/16 H-clip (panel edge clip)",
+      "short": "H-clip",
+      "kind": "connector",
+      "price_ref": "h_clip_716_50",
+      "purchase": "line",
+      "line_id": "roof.sheathing"
+    },
+    "adhesive_lf": {
+      "label": "subfloor adhesive bead (lf)",
+      "short": "adhesive (lf)",
+      "kind": "adhesive",
+      "price_ref": "subfloor_adhesive_28oz",
+      "units_per_pack_rule": "defaults.floor.adhesiveLfPerTube",
+      "unit": "lf",
+      "purchase": "line",
+      "line_id": "floor.adhesive",
+      "nails_vs_screws": "adhesive is in addition to the code nailing, never instead of it."
+    },
+    "tie_wire": {
+      "label": "rebar tie (16.5 ga wire)",
+      "short": "wire tie",
+      "kind": "tie",
+      "price_ref": "tie_wire_roll",
+      "units_per_pack_rule": "defaults.rebar.tiesPerRollEstimate",
+      "unit": "ties",
+      "purchase": "line",
+      "line_id": "found.tieWire",
+      "units_note": "ties per roll = the takeoff estimate (D.rebar.tiesPerRollEstimate = 120); not a manufacturer figure"
+    }
+  },
+  "pieces": {
+    "stud": {
+      "label": "Common stud",
+      "connections": [
+        {
+          "to": "top + bottom plate",
+          "item": 17,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "per_end",
+            "n": 3,
+            "ends": 2
+          },
+          "method": "end nail",
+          "alt": "4-3x0.131 toe nail per end",
+          "source": "irc_t602_3_1"
+        }
+      ]
+    },
+    "king_stud": {
+      "label": "King stud",
+      "connections": [
+        {
+          "to": "plates",
+          "item": 17,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "per_end",
+            "n": 3,
+            "ends": 2
+          },
+          "method": "end nail",
+          "source": "irc_t602_3_1"
+        },
+        {
+          "to": "header end",
+          "item": 12,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "fixed",
+            "n": 4
+          },
+          "method": "end nail through king into header",
+          "source": "irc_t602_3_1"
+        }
+      ]
+    },
+    "jack_stud": {
+      "label": "Jack (trimmer) stud",
+      "connections": [
+        {
+          "to": "bottom plate",
+          "item": 17,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "fixed",
+            "n": 3
+          },
+          "method": "end nail",
+          "source": "irc_t602_3_1"
+        },
+        {
+          "to": "king stud",
+          "item": 8,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "spacing",
+            "oc_in": 16,
+            "rows": 1
+          },
+          "method": "face nail 16 in o.c.",
+          "note": "item 8 (not at braced wall panel); use item 9 (12 in) if the opening is inside a braced wall panel",
+          "source": "irc_t602_3_1"
+        }
+      ]
+    },
+    "corner_stud": {
+      "label": "Corner / backer stud (extraStudsPerCorner)",
+      "connections": [
+        {
+          "to": "plates",
+          "item": 17,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "per_end",
+            "n": 3,
+            "ends": 2
+          },
+          "method": "end nail",
+          "source": "irc_t602_3_1"
+        },
+        {
+          "to": "adjacent stud",
+          "item": 9,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "spacing",
+            "oc_in": 12,
+            "rows": 1
+          },
+          "method": "face nail 12 in o.c. (corners at braced wall panels)",
+          "source": "irc_t602_3_1"
+        }
+      ]
+    },
+    "cripple_above": {
+      "label": "Cripple above header",
+      "connections": [
+        {
+          "to": "top plate",
+          "item": 17,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "fixed",
+            "n": 3
+          },
+          "method": "end nail",
+          "source": "irc_t602_3_1"
+        },
+        {
+          "to": "header",
+          "item": "17 (analog)",
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "fixed",
+            "n": 4
+          },
+          "method": "toe nail",
+          "interpretation": "cripple-to-header is not its own table row; item 17 toe-nail count used",
+          "source": "irc_t602_3_1"
+        }
+      ]
+    },
+    "cripple_below": {
+      "label": "Cripple below rough sill",
+      "connections": [
+        {
+          "to": "bottom plate",
+          "item": 17,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "fixed",
+            "n": 3
+          },
+          "method": "end nail",
+          "source": "irc_t602_3_1"
+        },
+        {
+          "to": "rough sill",
+          "item": "17 (analog)",
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "fixed",
+            "n": 3
+          },
+          "method": "end nail down through sill",
+          "interpretation": "not its own row; item 17 end-nail count used",
+          "source": "irc_t602_3_1"
+        }
+      ]
+    },
+    "rough_sill": {
+      "label": "Window rough sill",
+      "connections": [
+        {
+          "to": "jack/king each end",
+          "item": "17 (analog)",
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "per_end",
+            "n": 3,
+            "ends": 2
+          },
+          "method": "end nail",
+          "interpretation": "not its own row; item 17 end-nail count used",
+          "source": "irc_t602_3_1"
+        }
+      ]
+    },
+    "bottom_plate": {
+      "label": "Bottom plate",
+      "connections": [
+        {
+          "to": "floor (rim/joists through subfloor)",
+          "item": 16,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "groups",
+            "n": 4,
+            "oc_in": 16
+          },
+          "method": "4 nails every 16 in, face nail",
+          "when": "exterior / braced wall lines",
+          "alt_item": "15: 3x0.131 @ 12 in o.c. where not a braced wall panel (interior)",
+          "source": "irc_t602_3_1"
+        },
+        {
+          "to": "concrete (slab foundations only)",
+          "fastener": "anchor_bolt",
+          "item": "R403.1.6",
+          "rule": {
+            "kind": "note"
+          },
+          "note": "on a slab the anchor bolts go through the PT bottom plate instead of a sill"
+        }
+      ]
+    },
+    "top_plate_lower": {
+      "label": "Top plate (lower)",
+      "connections": [
+        {
+          "to": "studs",
+          "item": 17,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "none"
+          },
+          "note": "stud end nails are counted on each stud"
+        }
+      ]
+    },
+    "top_plate_upper": {
+      "label": "Top plate (upper / double)",
+      "connections": [
+        {
+          "to": "lower top plate",
+          "item": 13,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "spacing",
+            "oc_in": 12,
+            "rows": 1
+          },
+          "method": "face nail 12 in o.c.",
+          "source": "irc_t602_3_1"
+        },
+        {
+          "to": "corner / intersection lap",
+          "item": 18,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "per_lap",
+            "n": 3
+          },
+          "method": "face nail at the lap (one corner lap carried by each wall run)",
+          "source": "irc_t602_3_1"
+        },
+        {
+          "to": "splice (when the run needs >1 piece)",
+          "item": 14,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "per_splice",
+            "n": 24
+          },
+          "method": "12 each side of the end joint, 24 in lap each side",
+          "source": "irc_t602_3_1"
+        }
+      ]
+    },
+    "header_ply_first": {
+      "label": "Header, first ply",
+      "connections": [
+        {
+          "to": "king studs (continuous header to stud)",
+          "item": 11,
+          "fastener": "common_8d_hdg",
+          "rule": {
+            "kind": "per_end",
+            "n": 4,
+            "ends": 2
+          },
+          "method": "toe nail",
+          "alt": "5-8d box or 4-10d box; there is NO 3x0.131 option in item 11",
+          "source": "irc_t602_3_1"
+        }
+      ]
+    },
+    "header_ply_added": {
+      "label": "Header, each added ply",
+      "connections": [
+        {
+          "to": "previous ply",
+          "item": 10,
+          "fastener": "common_16d",
+          "rule": {
+            "kind": "spacing",
+            "oc_in": 16,
+            "rows": 2
+          },
+          "method": "face nail 16 in o.c. each edge",
+          "alt": "16d box 3-1/2x0.135 @ 12 in each edge; no 0.131 gun-nail option",
+          "source": "irc_t602_3_1"
+        }
+      ]
+    },
+    "sill_plate": {
+      "label": "PT sill plate",
+      "connections": [
+        {
+          "to": "grade beam / foundation",
+          "item": "R403.1.6",
+          "fastener": "anchor_bolt",
+          "rule": {
+            "kind": "anchor_bolts",
+            "max_oc_ft": 6,
+            "max_from_end_in": 12,
+            "min_per_plate": 2
+          },
+          "note": "1/2 in bolts, 7 in embed, <= 6 ft o.c., <= 12 in from each end, >= 2 per plate. R602.11.1: 3 x 3 x 0.229 plate washers in Seismic Design Category D0-D2 - SDC for 59833 is UNVERIFIED (not priced).",
+          "source": "irc_r502_r503"
+        }
+      ]
+    },
+    "rim_joist": {
+      "label": "Rim joist",
+      "connections": [
+        {
+          "to": "sill",
+          "item": 23,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "spacing",
+            "oc_in": 6,
+            "rows": 1
+          },
+          "method": "toe nail 6 in o.c.",
+          "source": "irc_t602_3_1"
+        },
+        {
+          "to": "subfloor adhesive bead",
+          "fastener": "adhesive_lf",
+          "rule": {
+            "kind": "per_lf",
+            "per_lf": 1
+          },
+          "note": "adhesive is in addition to nailing"
+        }
+      ]
+    },
+    "floor_joist": {
+      "label": "Floor joist (or joist piece)",
+      "connections": [
+        {
+          "to": "sill (bearing end)",
+          "item": 22,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "per_bearing",
+            "n": 3
+          },
+          "method": "toe nail",
+          "source": "irc_t602_3_1"
+        },
+        {
+          "to": "rim (through rim into joist end)",
+          "item": 27,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "per_rim_end",
+            "n": 4
+          },
+          "method": "end nail",
+          "source": "irc_t602_3_1"
+        },
+        {
+          "to": "flush beam (hanger)",
+          "fastener": "hanger",
+          "rule": {
+            "kind": "per_hanger",
+            "n": 1
+          },
+          "note": "size follows the joist: LUS28 for 2x8, LUS210 for 2x10",
+          "source": "simpson_lus"
+        },
+        {
+          "to": "hanger nails",
+          "fastener": "connector_148x3",
+          "rule": {
+            "kind": "per_hanger",
+            "n_by_size": {
+              "2x8": 10,
+              "2x10": 12
+            }
+          },
+          "note": "LUS210: 8 into the beam + 4 into the joist (joist nails driven at an angle). LUS28: 6 + 4.",
+          "source": "simpson_lus"
+        },
+        {
+          "to": "subfloor adhesive bead",
+          "fastener": "adhesive_lf",
+          "rule": {
+            "kind": "per_lf",
+            "per_lf": 1
+          }
+        }
+      ]
+    },
+    "beam_ply_first": {
+      "label": "Built-up beam/girder, first ply",
+      "connections": [
+        {
+          "to": "subfloor adhesive bead",
+          "fastener": "adhesive_lf",
+          "rule": {
+            "kind": "per_lf",
+            "per_lf": 1
+          }
+        }
+      ]
+    },
+    "beam_ply_added": {
+      "label": "Built-up beam/girder, each added ply",
+      "connections": [
+        {
+          "to": "previous ply",
+          "item": 28,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "spacing",
+            "oc_in": 24,
+            "rows": 2,
+            "plus": 6
+          },
+          "method": "24 in o.c. top and bottom, staggered, + 3 at each end (and 3 at each splice)",
+          "alt": "20d common 4x0.192 @ 32 in + 2 at ends",
+          "screws": "FastenMaster HeadLOK / Simpson SDW structural screws only per their ICC-ES report (manufacturer-approved substitute, flagged; v3 priced HeadLOK - v4 uses the code nails)",
+          "source": "irc_t602_3_1"
+        }
+      ]
+    },
+    "subfloor_sheet": {
+      "label": "23/32 T&G subfloor sheet",
+      "connections": [
+        {
+          "to": "joists",
+          "item": 32,
+          "fastener": "ring_238x113",
+          "rule": {
+            "kind": "sheet",
+            "w_in": 48,
+            "l_in": 96,
+            "support_oc_in": 16,
+            "edge_oc_in": 6,
+            "field_oc_in": 12,
+            "long_edges_on_framing": false
+          },
+          "method": "6 in at supported panel ends, 12 in at intermediate joists; T&G long edges need no blocking (footnote h)",
+          "source": "irc_t602_3_1"
+        }
+      ]
+    },
+    "wall_sheet": {
+      "label": "7/16 OSB wall sheet",
+      "connections": [
+        {
+          "to": "studs + plates",
+          "item": "R602.3(3) / 31",
+          "fastener": "ring_238x113",
+          "rule": {
+            "kind": "sheet",
+            "w_in": 48,
+            "l_in": 96,
+            "support_oc_in": 16,
+            "edge_oc_in": 6,
+            "field_oc_in": 12,
+            "long_edges_on_framing": true,
+            "short_edges_on_framing": true
+          },
+          "method": "vertical, 6 in edges / 12 in field",
+          "note": "Table R602.3(3): 6d common (2 x 0.113) for 24/0 3/8 panels on studs <= 16 in, good to Vult 140 mph Exp B / 115 C; 2-3/8 x 0.113 deformed nail is longer than that. Site wind speed/exposure UNVERIFIED.",
+          "source": "irc_t602_3_3"
+        }
+      ]
+    },
+    "roof_sheet": {
+      "label": "7/16 OSB roof sheet",
+      "connections": [
+        {
+          "to": "rafters",
+          "item": 31,
+          "fastener": "roof_sheath_8d",
+          "rule": {
+            "kind": "sheet",
+            "w_in": 48,
+            "l_in": 96,
+            "support_oc_in": 24,
+            "edge_oc_in": 6,
+            "field_oc_in": 6,
+            "long_edges_on_framing": false
+          },
+          "method": "6 in at panel ends and 6 in at intermediate rafters (2024 item 31 roof: 6/6)",
+          "note": "Footnote f also: framing specific gravity 0.35-0.42 requires RSRS-03 (2-1/2 x 0.131 x 0.281) nails; DF-L/hem-fir framing is above 0.42 - confirm species. Footnote f: 4 in o.c. within 48 in of edges/ridge only when Vult > 130 mph Exp B or > 110 mph Exp C - site wind UNVERIFIED.",
+          "source": "irc_t602_3_1"
+        },
+        {
+          "to": "panel edge between rafters",
+          "fastener": "h_clip",
+          "rule": {
+            "kind": "fixed",
+            "n": 4
+          },
+          "note": "H-clips per the takeoff (D.roof.sheathingClipsPerSheet); not an IRC nail item"
+        }
+      ]
+    },
+    "rafter": {
+      "label": "Common rafter (bearing on wall)",
+      "connections": [
+        {
+          "to": "top plate",
+          "item": "6 + footnote i",
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "fixed",
+            "n": 2
+          },
+          "method": "2 toe nails one side (rafter nailed to a parallel ceiling joist, so the opposite toe nail is not required)",
+          "alt": "without a parallel ceiling joist: 4-3x0.131 toe nails (table text: 2 toe nails on one side and 1 on the opposite side applies to the 3-nail options)",
+          "note": "Footnote i text: where a rafter is fastened to an adjacent parallel ceiling joist, provide two toe nails on one side of the rafter; the toe nail on the opposite side is not required.",
+          "source": "irc_t602_3_1"
+        },
+        {
+          "to": "ridge board",
+          "item": 7,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "fixed",
+            "n": 4
+          },
+          "method": "toe nail",
+          "alt": "3-3x0.131 end nail",
+          "source": "irc_t602_3_1"
+        },
+        {
+          "to": "plates (uplift)",
+          "fastener": "tie_h25a",
+          "rule": {
+            "kind": "fixed",
+            "n": 1
+          },
+          "source": "simpson_h25a"
+        },
+        {
+          "to": "H2.5A nails",
+          "fastener": "common_8d_hdg",
+          "rule": {
+            "kind": "fixed",
+            "n": 10
+          },
+          "method": "5 into rafter + 5 into plates, 0.131 x 2-1/2",
+          "note": "v3 used 0.131 x 1-1/2 N8 nails - Simpson allows those only on 2x truss chords; corrected",
+          "source": "simpson_h25a"
+        }
+      ]
+    },
+    "rafter_barge": {
+      "label": "Barge (fly) rafter",
+      "connections": [
+        {
+          "to": "ridge board",
+          "item": 7,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "fixed",
+            "n": 4
+          },
+          "method": "toe nail",
+          "source": "irc_t602_3_1"
+        },
+        {
+          "to": "lookouts",
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "none"
+          },
+          "note": "counted on each lookout"
+        }
+      ]
+    },
+    "ridge_board": {
+      "label": "Ridge board",
+      "connections": [
+        {
+          "to": "rafters",
+          "item": 7,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "none"
+          },
+          "note": "rafter-to-ridge nails are counted on the rafters"
+        },
+        {
+          "to": "splice",
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "none"
+          },
+          "note": "ridge splice nailing is not in Table R602.3(1); splice over a rafter pair or add a scab per your plans - UNVERIFIED, not counted"
+        }
+      ]
+    },
+    "ceiling_joist": {
+      "label": "Ceiling joist / rafter tie",
+      "connections": [
+        {
+          "to": "top plate",
+          "item": 2,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "per_bearing",
+            "n": 3
+          },
+          "method": "toe nail, per joist at each bearing",
+          "source": "irc_t602_3_1"
+        },
+        {
+          "to": "lap splice over a bearing (when one piece cannot span)",
+          "item": 3,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "per_lap",
+            "n": 4
+          },
+          "method": "face nail",
+          "source": "irc_t602_3_1"
+        },
+        {
+          "to": "rafter (heel joint)",
+          "item": "4 -> Table R802.5.2(1)",
+          "fastener": "common_16d",
+          "rule": {
+            "kind": "heel_table"
+          },
+          "method": "face nail, each end",
+          "alt": "10d common 3 x 0.148 at 1.2 x the 16d count, rounded up",
+          "source": "irc_t802_5_2_1"
+        }
+      ]
+    },
+    "collar_tie": {
+      "label": "Collar tie",
+      "connections": [
+        {
+          "to": "each rafter",
+          "item": 5,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "per_end",
+            "n": 4,
+            "ends": 2
+          },
+          "method": "face nail each rafter",
+          "source": "irc_t602_3_1"
+        }
+      ]
+    },
+    "lookout": {
+      "label": "Rake lookout",
+      "connections": [
+        {
+          "to": "barge rafter",
+          "item": "1 (analog)",
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "fixed",
+            "n": 3
+          },
+          "method": "end nail through barge",
+          "interpretation": "lookouts are not their own row; item 1 end-nail count used",
+          "source": "irc_t602_3_1"
+        },
+        {
+          "to": "gable framing / end rafter",
+          "item": "1 (analog)",
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "fixed",
+            "n": 3
+          },
+          "method": "toe/end nail",
+          "interpretation": "as above",
+          "source": "irc_t602_3_1"
+        }
+      ]
+    },
+    "gable_stud": {
+      "label": "Gable-end stud",
+      "connections": [
+        {
+          "to": "top plate",
+          "item": 17,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "fixed",
+            "n": 4
+          },
+          "method": "toe nail",
+          "source": "irc_t602_3_1"
+        },
+        {
+          "to": "end rafter",
+          "item": "17 (analog)",
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "fixed",
+            "n": 3
+          },
+          "method": "toe nail",
+          "interpretation": "not its own row",
+          "source": "irc_t602_3_1"
+        }
+      ]
+    },
+    "blocking": {
+      "label": "Blocking / bridging (schedule only - not in the 20x16 takeoff)",
+      "schedule_only": true,
+      "connections": [
+        {
+          "to": "top plate (roof blocking)",
+          "item": 1,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "fixed",
+            "n": 3
+          },
+          "method": "toe nail",
+          "source": "irc_t602_3_1"
+        },
+        {
+          "to": "rafter, not at plate",
+          "item": 1,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "per_end",
+            "n": 2,
+            "ends": 2
+          },
+          "method": "toe nail each end (or 3 end nail)",
+          "source": "irc_t602_3_1"
+        },
+        {
+          "to": "floor joists (bridging/blocking)",
+          "item": 30,
+          "fastener": "gun_3x131",
+          "rule": {
+            "kind": "per_end",
+            "n": 2,
+            "ends": 2
+          },
+          "method": "toe nail each end",
+          "source": "irc_t602_3_1"
+        }
+      ]
+    },
+    "pier": {
+      "label": "Concrete pier",
+      "connections": [
+        {
+          "to": "grade beam",
+          "fastener": "tie_wire",
+          "rule": {
+            "kind": "fixed",
+            "n": 2
+          },
+          "note": "pier verticals are lapped/dowelled into the grade beam (rebar line). No metal post base: Jake's rule puts piers only under wall lines with a grade beam, so ABU/post bases do not apply. 2 ties per pier = the takeoff estimate, not a code count."
+        }
+      ]
+    },
+    "grade_beam": {
+      "label": "Grade beam",
+      "connections": [
+        {
+          "to": "rebar intersections",
+          "fastener": "tie_wire",
+          "rule": {
+            "kind": "per_lf_bars"
+          },
+          "note": "ties = bars x length / 2 ft + 4 per corner (takeoff estimate; no IRC tie count). Steel layout is EXAMPLE - engineer/plans govern."
+        },
+        {
+          "to": "sill plate",
+          "fastener": "anchor_bolt",
+          "rule": {
+            "kind": "none"
+          },
+          "note": "anchor bolts are counted on the sill plates"
+        }
+      ]
+    },
+    "shingle_bundle": {
+      "label": "Shingle bundle (Timberline HDZ)",
+      "connections": [
+        {
+          "to": "deck",
+          "item": "R905.2.6 + GAF",
+          "fastener": "roofing_114",
+          "rule": {
+            "kind": "fixed",
+            "n": 85.33
+          },
+          "method": "64 shingles per 3 bundles (20+22+22) x 4 nails = 256 per 3 bundles = 85.33 per bundle",
+          "note": "Enhanced (6-nail) pattern = 128 per bundle where local code or warranty requires it. R905.2.6: not less than 4 per strip shingle.",
+          "source": "gaf_hdz"
+        }
+      ]
+    },
+    "starter_bundle": {
+      "label": "Starter strip bundle (Pro-Start)",
+      "connections": [
+        {
+          "to": "deck",
+          "fastener": "roofing_114",
+          "rule": {
+            "kind": "per_lf",
+            "per_lf": 1
+          },
+          "method": "1 nail per 10-12 in; 12 in used = 1 per lf installed",
+          "source": "gaf_prostart"
+        }
+      ]
+    },
+    "ridge_cap_bundle": {
+      "label": "Ridge cap bundle (Seal-A-Ridge)",
+      "connections": [
+        {
+          "to": "ridge",
+          "fastener": "roofing_134",
+          "rule": {
+            "kind": "ridge_cap",
+            "exposure_in": 6.667,
+            "nails_per_piece": 2
+          },
+          "method": "2 nails per 12 in piece at 6-2/3 in exposure (+1 starter piece per ridge run)",
+          "source": "gaf_sar"
+        }
+      ]
+    },
+    "drip_edge": {
+      "label": "Drip edge piece (10 ft)",
+      "connections": [
+        {
+          "to": "deck",
+          "item": "R905.2.8.5",
+          "fastener": "roofing_114",
+          "rule": {
+            "kind": "spacing",
+            "oc_in": 12,
+            "rows": 1
+          },
+          "method": "roofing nails <= 12 in o.c.; 2 in laps",
+          "source": "irc_r905"
+        }
+      ]
+    },
+    "underlayment": {
+      "label": "Synthetic underlayment (Stinger EXO25, 48 in x 250 ft)",
+      "connections": [
+        {
+          "to": "deck",
+          "item": "R905.1.1 + Stinger",
+          "fastener": "cap_1in",
+          "rule": {
+            "kind": "underlayment",
+            "roll_w_in": 48,
+            "side_lap_in": 3,
+            "lap_oc_in": 12,
+            "center_oc_in": 24
+          },
+          "method": "12 in o.c. along each horizontal lap line, 24 in along the roll centerline",
+          "note": "High-wind pattern (6 in laps, 12 in grid) not used; R905.1.1 requires it only where wind design is required - site wind UNVERIFIED.",
+          "source": "stinger_exo"
+        }
+      ]
+    },
+    "ice_barrier": {
+      "label": "Ice & water barrier (GAF WeatherWatch)",
+      "connections": [
+        {
+          "fastener": "roofing_114",
+          "rule": {
+            "kind": "none"
+          },
+          "note": "self-adhered; R905.1.2 requires it in Montana. Any back-nailing per GAF WeatherWatch instructions - UNVERIFIED, not counted."
+        }
+      ]
+    },
+    "housewrap": {
+      "label": "House wrap (Tyvek HomeWrap)",
+      "connections": [
+        {
+          "to": "studs / sheathing",
+          "item": "R703.2 + DuPont",
+          "fastener": "cap_1in",
+          "rule": {
+            "kind": "housewrap",
+            "stud_oc_in": 16,
+            "max_oc_in": 18
+          },
+          "method": "cap nails on vertical stud lines, no closer than 6 in and no farther than 18 in (18 used)",
+          "source": "tyvek"
+        }
+      ]
+    },
+    "siding": {
+      "label": "Siding (schedule only - not in the takeoff)",
+      "schedule_only": true,
+      "variants": [
+        {
+          "type": "fiber-cement lap",
+          "fastener": "6d common 2 x 0.113 face nail, or 0.120 x 1-1/2 galvanized roofing nail blind",
+          "count": "1 per stud per course (face) or 1 per stud through the top edge (blind)",
+          "source": "irc_r703",
+          "price": "PRICE NEEDED (product not chosen)"
+        },
+        {
+          "type": "vinyl",
+          "fastener": "0.120 shank x 0.313 head nail or 16 ga staple, 3/8-1/2 crown",
+          "count": "16 in o.c. or per manufacturer",
+          "source": "irc_r703",
+          "price": "PRICE NEEDED"
+        },
+        {
+          "type": "wood bevel / lap",
+          "fastener": "6d box or siding nail 2 x 0.099 (8d box 2-1/2 x 0.113 direct to studs)",
+          "count": "1 nail per bearing up to 6 in wide; 2 per bearing at 8 in and wider",
+          "source": "irc_r703",
+          "price": "PRICE NEEDED"
+        },
+        {
+          "type": "WSP panel siding (T1-11)",
+          "fastener": "2-1/2 x 0.113 siding nail over sheathing",
+          "count": "6 in edges / 12 in intermediate supports",
+          "source": "irc_r703",
+          "price": "PRICE NEEDED"
+        }
+      ],
+      "nails_vs_screws": "nails/staples per R703.3(1); screws only where the siding maker lists them."
+    },
+    "trim": {
+      "label": "Exterior trim (schedule only)",
+      "schedule_only": true,
+      "connections": [
+        {
+          "fastener": null,
+          "rule": {
+            "kind": "note"
+          },
+          "note": "Not in IRC Table R602.3(1)/R703.3(1). Use the trim maker's schedule (typically galvanized or stainless finish/siding nails each edge at 16 in into framing). UNVERIFIED, PRICE NEEDED."
+        }
+      ]
+    }
+  },
+  "not_covered": [
+    "Interior walls, blocking, bridging: none in the 20x16 example model - schedule rows given (blocking) but nothing priced.",
+    "Siding and trim: product not chosen - schedule only, PRICE NEEDED.",
+    "Plate washers 3x3x0.229 (R602.11.1, SDC D0-D2) - Seismic Design Category for 59833 UNVERIFIED.",
+    "Wall bracing (R602.10) beyond the panel nail schedule; hold-downs; any engineered connections for the FLAGGED mid beam supports."
+  ]
+}

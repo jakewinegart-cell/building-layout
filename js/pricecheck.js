@@ -51,8 +51,12 @@ export function removeBeamPiers(m) { const fnd = getLayer(m, 'foundation'); fnd.
  * Returns the regenerate sources needed.
  */
 export function applyAnswers(m, ans) {
-  m.estimate = Object.assign({}, m.estimate || {}, { location: ans.location || '', taxRatePct: ans.taxSkipped ? null : ans.taxRatePct });
+  // v4: a blank tax box means "use the ZIP lookup" (or unknown → 0% flagged); a number is the user's override.
+  m.estimate = Object.assign({}, m.estimate || {}, { location: ans.location || '', taxRatePct: ans.taxRatePct == null ? null : ans.taxRatePct });
   getLayer(m, 'foundation').params.frostDepthIn = ans.frostSkipped ? null : ans.frostDepthIn;
+  m.site = Object.assign({}, m.site || {});
+  m.site.taxSource = ans.taxRatePct != null ? 'user' : (ans.taxSkipped ? 'unknown' : 'lookup');
+  m.site.frostSource = ans.frostSkipped ? 'fallback' : (ans.lookupFrostIn != null && ans.frostDepthIn === ans.lookupFrostIn ? 'lookup' : 'user');
   const src = ['foundation'];
   if (ans.beam === 'piers') { addBeamPiers(m); }
   else if (ans.beam === 'skip') { removeBeamPiers(m); }

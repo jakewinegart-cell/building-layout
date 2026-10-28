@@ -322,3 +322,39 @@ body.inspecting #plan, body.inspecting #view3d, body.inspecting #view3d canvas {
 .inspectPop .ip-x { position: absolute; top: 4px; right: 6px; border: 0; background: none; font-size: 22px; line-height: 1; color: #666; cursor: pointer; padding: 4px 8px; }
 .inspectPop .ph.est { background: #fde9c8; color: #8a5300; border-radius: 6px; padding: 0 5px; font-size: 11px; font-weight: 700; }
 .inspectFab::before { content: '$'; } /* glyph via CSS: no price text in the DOM until inspect is used */
+
+/* ---------- v4 startup ZIP pop-up */
+.zipModal { position: fixed; inset: 0; z-index: 200; background: rgba(20, 28, 38, .55); display: flex; align-items: center; justify-content: center; padding: 12px; }
+.zipModal[hidden] { display: none; }
+.zm-card { background: #fff; color: #1d2733; border-radius: 14px; box-shadow: 0 18px 50px rgba(0,0,0,.3); width: min(460px, 100%); max-height: calc(100dvh - 24px); overflow: auto; padding: 18px 18px 12px; font-size: 14px; line-height: 1.4; }
+.zm-card.zm-wide { width: min(720px, 100%); }
+.zm-card h2 { margin: 0 0 8px; font-size: 20px; }
+.zm-copy { margin: 0 0 8px; }
+.zm-em { color: #4b5866; font-size: 13px; }
+.zm-lab { display: block; font-weight: 600; margin: 10px 0 4px; }
+.zm-card input[type=text], .zm-card input[type=number] { font-size: 16px; padding: 9px 10px; border: 1px solid #b8c2cc; border-radius: 8px; width: 100%; box-sizing: border-box; }
+.zm-zip { letter-spacing: 1px; }
+.zm-err { color: #b3261e; font-size: 13px; margin-top: 4px; }
+.zm-help { color: #5b6773; font-size: 12.5px; margin-top: 3px; }
+.zm-btns { display: flex; gap: 8px; margin: 14px 0 6px; flex-wrap: wrap; }
+.zm-btns button { font: inherit; padding: 9px 14px; border-radius: 8px; border: 1px solid #b8c2cc; background: #fff; cursor: pointer; }
+.zm-btns .zm-primary { background: #f26b1d; border-color: #f26b1d; color: #fff; font-weight: 700; }
+.zm-btns button:disabled { opacity: .45; cursor: default; }
+.zm-foot { position: sticky; bottom: -12px; background: #fff; border-top: 1px solid #e3e7eb; padding: 8px 0 10px; color: #5b6773; font-size: 12px; }
+.zm-rows { border-top: 1px solid #e3e7eb; }
+.zm-row { display: grid; grid-template-columns: 150px 1fr; gap: 10px; padding: 8px 0; border-bottom: 1px solid #eef1f4; margin: 0; border-left: 0; border-right: 0; border-top: 0; }
+.zm-k { font-weight: 600; padding: 0; }
+.zm-meta { color: #5b6773; font-size: 12px; margin-top: 2px; }
+.zm-badge { display: inline-block; font-size: 11.5px; padding: 1px 6px; border-radius: 10px; margin-right: 4px; }
+.zm-badge.ok { background: #e3f4e8; color: #19633a; }
+.zm-badge.bad { background: #fff1d6; color: #8a5300; }
+.zm-src { font-size: 12px; }
+.zm-radio { display: flex; gap: 6px; align-items: flex-start; margin: 3px 0; }
+.zm-inl input { width: 90px !important; display: inline-block; }
+.zm-warn { color: #8a5300; background: #fff1d6; border-radius: 6px; padding: 4px 8px; margin-top: 4px; font-size: 12.5px; }
+.zm-callbd { margin-top: 12px; background: #f3f6f8; border-radius: 8px; padding: 8px 10px; }
+@media (max-width: 560px) { .zm-row { grid-template-columns: 1fr; gap: 2px; } .zm-card { padding: 14px 14px 10px; } }
+.zipBanner { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 30; background: #1d2733; color: #fff; border-radius: 20px; padding: 6px 8px 6px 14px; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+.zipBanner button { font: inherit; border: 0; border-radius: 12px; padding: 3px 10px; cursor: pointer; }
+.locLine { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 8px; margin: 0 0 8px; background: #f3f6f8; border-radius: 8px; font-size: 12.5px; }
+.frostFlag { margin-top: 4px; background: #fde4e1; color: #a1271b; border-radius: 6px; padding: 3px 6px; font-size: 11.5px; font-weight: 600; text-align: left; }

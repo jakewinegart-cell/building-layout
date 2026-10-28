@@ -5,7 +5,7 @@
 // elevations · S4 roof framing (+ section). 3D views (A2) come from view3d.snapshot().
 // Nothing here is engineered — every sheet carries "NOT FOR CONSTRUCTION".
 // ============================================================================
-import { LUMBER, LUMBER_T_IN } from './config.js';
+import { LUMBER, LUMBER_T_IN, pierDepthIn } from './config.js';
 import { getLayer } from './model.js';
 import { dist, lerp, bbox, inwardNormal, offsetPolygon, fmtFtIn, signedArea } from './geom.js';
 import { studLayout } from './homeplan-derived.js';
@@ -153,7 +153,7 @@ export function sheetFoundation(m) {
   });
   s += northArrow(b, mg);
   const top = (fnd.zTop || 0) / IN;
-  const frost = f.frostDepthIn != null && f.frostDepthIn !== '' ? `${f.frostDepthIn} in` : `${f.placeholderFrostIn} in — PLACEHOLDER, enter your frost depth`;
+  const frost = f.frostDepthIn != null && f.frostDepthIn !== '' ? `${pierDepthIn(f)} in (frost ${f.frostDepthIn} in)` : `${f.placeholderFrostIn} in — conservative PLACEHOLDER (frost depth unknown), enter your frost depth`;
   const notes = [`Foundation type: ${f.type}. Bottom of footings/piers: ${frost} below grade.`, `Top of foundation ${r3(top)} in above grade.`];
   if (f.type === 'piers') {
     const dias = Array.from(new Set(piers.map((p) => p.props.diaIn))).join(', ');

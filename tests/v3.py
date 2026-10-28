@@ -5,6 +5,15 @@ from playwright.sync_api import sync_playwright
 sys.path.insert(0, os.path.dirname(__file__))
 from verify import Touch
 
+def zip_skip(pg):
+    """v4: dismiss the startup ZIP pop-up (Skip for now) so older suites run unchanged."""
+    try:
+        pg.wait_for_selector('#zipModal #zmSkip', timeout=2500)
+        pg.click('#zipModal #zmSkip'); pg.wait_for_timeout(250)
+    except Exception:
+        pass
+
+
 BASE = sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:8850/'
 SH = 'screenshots/v3/'
 os.makedirs(SH, exist_ok=True)
@@ -23,12 +32,18 @@ def new_page(p, b):
     pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' else None)
     pg.on('pageerror', lambda e: errs.append('pageerror: ' + str(e)))
     pg.goto(BASE); pg.wait_for_timeout(1000)
+    zip_skip(pg)
     return ctx, pg, errs
 
+def set_zip(pg, z):
+    pg.evaluate("() => window.__layout.zipModal.open()"); pg.wait_for_selector('#zmZip')
+    pg.fill('#zmZip', z); pg.click('#zmContinue'); pg.wait_for_selector('#zmUse'); pg.click('#zmUse'); pg.wait_for_timeout(400)
+
 def load_example(pg, name):
-    pg.evaluate("""async (n) => { const m = await (await fetch('content-v3/reference/' + n, {cache:'no-store'})).json();
+    pg.evaluate("""async (n) => { const m = await (await fetch('content-v4/reference/' + n, {cache:'no-store'})).json();
         localStorage.setItem('buildingLayout.model.v1', JSON.stringify(m)); localStorage.removeItem('layout-app.priceCheck.v3'); }""", name)
     pg.reload(); pg.wait_for_timeout(1000)
+    zip_skip(pg)
 
 def precheck(pg, loc=None, tax=None, frost=None, beam=None, skip=()):
     pg.click('#doneBtn'); pg.wait_for_selector('#pcRun', timeout=15000)
@@ -131,8 +146,8 @@ with sync_playwright() as p:
     check('skip marks each item skipped', pg.locator('.pc-card.skipped').count() == 3)
     total_skip = run_check(pg)
     check('report shows a total after running', total_skip > 0, total_skip)
-    check('skipped tax → flag + 0% used', pg.locator('#rpFlagTax[data-skipped="tax"]').count() == 1 and 'rate not set' in pg.inner_text('#rpTaxRow'))
-    check('skipped frost → 24 in placeholder flag', pg.locator('#rpFrost[data-skipped="frost"]').count() == 1 and '24 in' in pg.inner_text('#rpFrost'))
+    check('skipped tax → flag + 0% used', pg.locator('#rpFlagTax[data-skipped="tax"]').count() == 1 and 'rate unknown' in pg.inner_text('#rpTaxRow'))
+    check('skipped frost → 48 in conservative placeholder flag (v4 unknown-ZIP fallback)', pg.locator('#rpFrost[data-skipped="frost"]').count() == 1 and '48 in' in pg.inner_text('#rpFrost'))
     check('skipped beam → unsupported-beam FLAGGED', pg.locator('#rpBeam[data-skipped="beam"]').count() == 1 and 'FLAGGED' in pg.inner_text('#rpBeam'))
     check('no piers silently added under the beam', pg.evaluate(f"{M}.layers.find(l=>l.id==='foundation').objects.filter(o=>o.props&&o.props.beamSupport).length") == 0)
     for sid in ['rp-total', 'rp-check', 'rp-mat', 'rp-A1', 'rp-S1', 'rp-S2', 'rp-S3', 'rp-S4', 'rp-3d', 'rp-steps', 'rp-disc']:
@@ -190,39 +205,35 @@ with sync_playwright() as p:
     check('no console errors (report section)', not errs, errs[:3])
     ctx.close()
 
-    # ================================================================ 3. beam choice + frost + Remodel Guide reference cross-check (tax 9.15)
+    # ================================================================ 3. beam choice + Remodel Guide v4 reference cross-check (ZIP 59833: 0% tax, 36 in frost)
     ctx, pg, errs = new_page(p, b)
-    load_example(pg, 'example-20x16.model.json')
-    precheck(pg, tax=9.15, skip=('frost', 'beam'))
+    load_example(pg, 'example-20x16.model.json'); set_zip(pg, '59833')
+    precheck(pg, skip=('beam',))
     base = run_check(pg)
-    check('REFERENCE base 20x16 piers (tax 9.15) = $9,628.92', abs(base - 9628.92) < 0.005, base)
+    check('REFERENCE v4 base 20x16 piers, ZIP 59833 = $9,017.45', abs(base - 9017.45) < 0.005, base)
     br = {r.get_attribute('data-group'): money(r.locator('td.n').inner_text()) for r in pg.locator('#rpBreak tr[data-group]').all()}
-    exp = pg.evaluate("async () => (await (await fetch('content-v3/reference/example-20x16.takeoff.json')).json())")
+    exp = pg.evaluate("async () => (await (await fetch('content-v4/reference/example-20x16.takeoff.json')).json())")
     eg = exp['base']['groups']
     check('per-layer groups match the reference', all(abs(br.get('fasteners' if k == 'all' else k, -1) - v) < 0.005 for k, v in eg.items()), (br, eg))
     rows = pg.inner_text('#rpBreak')
-    check('materials $8,019.75 · tax $733.81 · contingency $875.36', all(x in rows for x in ['$8,019.75', '$733.81', '$875.36']))
+    check('materials $8,197.68 · tax $0.00 (0%, ZIP lookup) · contingency $819.77', all(x in rows for x in ['$8,197.68', '$0.00', '$819.77']) and 'zip 59833 lookup' in rows, rows[-400:])
     # quantities line by line through the app pipeline
     q = pg.evaluate("""async () => { const [{getContent}, {runEstimate}] = await Promise.all([import('./js/report.js'), import('./js/estimate.js')]);
-        const C = await getContent(); const e = runEstimate(window.__layout.getModel(), C, { taxRatePct: 9.15 });
+        const C = await getContent(); const e = runEstimate(window.__layout.getModel(), C);
         return { lines: e.lines.map(l => [l.id, l.qty, l.total]), report: e.report, mode: C.mode, status: C.status.remodelGuide }; }""")
     check('Remodel Guide content wired (mode hd)', q['mode'] == 'hd' and q['status'] == 'wired', (q['mode'], q['status']))
     el = [[l['id'], l['buy'], l['ext']] for l in exp['base']['lines']]   # ids repeat (e.g. two site.layout lines) → compare in order
     mism = [(a, b_) for a, b_ in zip(q['lines'], el) if a != b_]
     check('takeoff quantities + line totals match the reference line-by-line', not mism and len(q['lines']) == len(el), mism[:3])
     rep = q['report']
-    check('takeoff quantities for 20x16: 14 piers, 4.43 yd, 16 bolts, 11/22/15 sheets', (rep['pierCount'], rep['concreteYd'], rep['anchorBolts'], rep['floorSheets'], rep['wallSheets'], rep['roofSheets']) == (14, 4.43, 16, 11, 22, 15), rep)
+    check('takeoff quantities for 20x16 @ 59833: 14 piers 36 in deep, 4.87 yd, 16 bolts, 11/22/15 sheets', (rep['pierCount'], rep['pierBottomBelowGradeIn'], rep['requiredPierDepthIn'], rep['concreteYd'], rep['anchorBolts'], rep['floorSheets'], rep['wallSheets'], rep['roofSheets']) == (14, 36, 36, 4.87, 16, 11, 22, 15), rep)
     pg.select_option('#rpConc', 'bags80'); pg.wait_for_timeout(300)
-    check('REFERENCE bags80 = $10,222.04', abs(money(pg.inner_text('#rpTotal')) - exp['deltas']['bagged80lbInsteadOfReadyMix']['total']) < 0.005, pg.inner_text('#rpTotal'))
+    check('REFERENCE v4 bags80 = $9,620.69', abs(money(pg.inner_text('#rpTotal')) - exp['deltas']['bagged80lbInsteadOfReadyMix']['total']) < 0.005, pg.inner_text('#rpTotal'))
     pg.select_option('#rpConc', 'auto'); pg.wait_for_timeout(200)
     close_report(pg)
-    precheck(pg, tax=9.15, frost=36, skip=('beam',))
-    f36 = run_check(pg)
-    check('REFERENCE frost 36 in = $9,842.55', abs(f36 - exp['deltas']['frost36']['total']) < 0.005, f36)
-    check('frost entered → no placeholder flag', pg.locator('#rpFrost[data-skipped]').count() == 0 and '36 in' in pg.inner_text('#rpFrost'))
-    close_report(pg)
+    check('frost from ZIP → no placeholder flag, 36 in (zip 59833 lookup)', pg.locator('#rpFrost[data-skipped]').count() == 0 and '36 in' in pg.inner_text('#rpFrost') and 'zip 59833' in pg.inner_text('#rpFrost'))
     # beam choice: piers
-    precheck(pg, tax=9.15, skip=('frost',), beam='piers')
+    precheck(pg, beam='piers')
     tp = run_check(pg)
     nbp = pg.evaluate(f"{M}.layers.find(l=>l.id==='foundation').objects.filter(o=>o.props&&o.props.beamSupport).length")
     check('beam choice "Add piers under the beam" adds piers and changes the takeoff', nbp >= 2 and tp > base and pg.locator('#rpBeam[data-choice="piers"]').count() == 1, (nbp, tp))
@@ -233,22 +244,22 @@ with sync_playwright() as p:
     pg.screenshot(path=SH + '09-report-beam-piers.png')
     close_report(pg)
     # beam choice: 2x12 clear span (starting again from the example)
-    load_example(pg, 'example-20x16.model.json')
-    precheck(pg, tax=9.15, skip=('frost',), beam='clearspan')
+    load_example(pg, 'example-20x16.model.json'); set_zip(pg, '59833')
+    precheck(pg, beam='clearspan')
     tc = run_check(pg)
-    check('REFERENCE 2x12 clear-span choice = $9,434.28', abs(tc - exp['deltas']['clearSpan2x12NoBeam']['total']) < 0.005, tc)
+    check('REFERENCE v4 2x12 clear-span choice = $8,839.14', abs(tc - exp['deltas']['clearSpan2x12NoBeam']['total']) < 0.005, tc)
     fl = pg.evaluate(f"(() => {{ const f = {M}.layers.find(l=>l.id==='floor'); return [f.params.joistSize, f.objects.filter(o=>o.props&&o.props.role==='girder').length]; }})()")
     check('clear-span choice: 2x12 joists, no mid beam', fl == ['2x12', 0], fl)
     check('beam question skipped when the model has no mid beam', (close_report(pg), pg.click('#doneBtn'), pg.wait_for_selector('#pcRun'), pg.locator('#pcBeam').count() == 0)[-1])
     pg.click('#pcCancel'); pg.wait_for_timeout(200)
     # the clear-span example model itself, loaded from Remodel Guide's file
-    load_example(pg, 'example-20x16-2x12-clearspan.model.json')
-    precheck(pg, tax=9.15, skip=('frost',))
-    check('REFERENCE clear-span example model = $9,434.28', abs(run_check(pg) - 9434.28) < 0.005)
+    load_example(pg, 'example-20x16-2x12-clearspan-frost36.model.json'); set_zip(pg, '59833')
+    precheck(pg)
+    check('REFERENCE v4 clear-span example model = $8,839.14', abs(run_check(pg) - 8839.14) < 0.005)
     close_report(pg)
-    load_example(pg, 'example-20x16-frost36.model.json')
-    precheck(pg, tax=9.15, frost=36, skip=('beam',))
-    check('REFERENCE frost36 example model = $9,842.55', abs(run_check(pg) - 9842.55) < 0.005)
+    load_example(pg, 'example-20x16-frost36.model.json'); set_zip(pg, '59833')
+    precheck(pg, skip=('beam',))
+    check('REFERENCE v4 frost36 example model = $9,017.45', abs(run_check(pg) - 9017.45) < 0.005)
     check('no console errors (cross-check section)', not errs, errs[:3])
     ctx.close()
     b.close()

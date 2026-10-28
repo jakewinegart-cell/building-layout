@@ -130,7 +130,7 @@ function wallSummary(X, w) {
 
 /** hit = { layerId, objectId, part, view, world } → popup data, or { none: reason } */
 export function inspectInfo(X, hit) {
-  if (X.C.mode !== 'hd') return { none: 'Home Depot price content (content-v3) is not loaded — only placeholder prices are available, so nothing is priced here.' };
+  if (X.C.mode !== 'hd') return { none: 'Home Depot price content (content-v4/v3) is not loaded — only placeholder prices are available, so nothing is priced here.' };
   const m = X.m; const o = findObject(m, hit); const l = getLayer(m, hit.layerId);
   if (!o || !l) return { none: 'Nothing priced here' };
   const part = hit.part || {}; let k = part.k; let mark = null;
@@ -257,7 +257,8 @@ export function inspectInfo(X, hit) {
       ];
       mark = { circle: [o.geometry.c, (dia / 12) / 2] };
       const fo = l.params;
-      const depthNote = X.depthNote ? X.depthNote(o) : (fo.frostDepthIn ? `frost depth ${fo.frostDepthIn} in` : `frost depth not entered — drawn at the ${fo.placeholderFrostIn} in placeholder`);
+      const site = (X.est.raw && X.est.raw.report) || {};
+      const depthNote = X.depthNote ? X.depthNote(o) : (fo.frostDepthIn ? `bottom ${Math.round(-o.z * 12)} in below grade · frost ${fo.frostDepthIn} in${site.frostSource ? ` (${site.frostSource})` : ''}` : `frost depth unknown — drawn at the ${fo.placeholderFrostIn} in conservative placeholder (FLAGGED)`);
       return out(`Ø${dia} in Sonotube pier, ${fmtLen(h)} tall`, rows, { sub: `${o.props.manual ? 'Manual' : 'Auto'} pier · ${depthNote}` });
     }
     if (o.type === 'beam' && o.props.role === 'gradeBeam') {
@@ -311,6 +312,8 @@ export function finishInfo(X, info) {
   info.est = info.rows.some((r) => r.est) || info.rows.some((r) => r.amount == null);
   const g = X.est.groups.find((x) => x.id === info.layerId);
   if (g) info.layerSubtotal = { name: g.name, total: g.total };
+  const T = X.est.totals || {};
+  info.taxNote = T.taxSet ? `Before sales tax (${T.taxRatePct}%, ${T.taxSource === 'user' ? 'your rate' : T.taxSource})` : 'Before sales tax (rate unknown — enter your ZIP)';
   info.snapshot = X.C.snapshotDate ? `Home Depot online price, checked ${niceDate(X.C.snapshotDate)}, not localized` : 'PLACEHOLDER prices — not real Home Depot prices';
   return info;
 }
@@ -325,7 +328,7 @@ export function infoHTML(info) {
 ${info.wallTotal != null ? `<div class="ip-meta">This whole wall's studs + plates + nails ≈ ${usd(info.wallTotal)}</div>` : ''}
 ${info.layerSubtotal ? `<div class="ip-meta">${esc(info.layerSubtotal.name)} in Price check: ${usd(info.layerSubtotal.total)}</div>` : ''}
 ${info.typical ? '<div class="ip-meta">Nail counts are typical (EXAMPLE schedule, cf. IRC Table R602.3(1)) — verify.</div>' : ''}
-<div class="ip-src">${esc(info.snapshot)}. Fasteners: box price ÷ count.</div>`;
+<div class="ip-src">${esc(info.snapshot)}. Fasteners: box price ÷ count.${info.taxNote ? ' ' + esc(info.taxNote) + '.' : ''}</div>`;
 }
 
 // ---------- UI controller

@@ -7,6 +7,8 @@ import { createPlan } from './plan.js';
 import { createView3D } from './view3d.js';
 import { fmtFtIn, dist } from './geom.js';
 import { createInspector } from './inspect.js';
+import { createZipModal, siteSummary } from './zipmodal.js';
+import { frostKnown } from './config.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -23,6 +25,8 @@ const ICON = {
 
 let model = load();
 const fresh = !model;
+// v4 migration: the old 24 in drawing placeholder becomes the 48 in unknown-ZIP fallback (content-v4)
+if (model) { const fp0 = (model.layers.find((l) => l.id === 'foundation') || {}).params; if (fp0 && Number(fp0.placeholderFrostIn) === 24) fp0.placeholderFrostIn = 48; }
 if (!model) { model = createDefaultModel(); regenerate(model, 'init'); } else regenerate(model, 'init'); // v2: re-lay auto piers with stable ids
 let pending = new Set();
 let pendingSource = null;
@@ -192,6 +196,7 @@ $('#menuBtn').addEventListener('click', (e) => { e.stopPropagation(); $('#menu')
 document.addEventListener('click', () => { $('#menu').hidden = true; });
 $$('#menu [data-menu]').forEach((b) => b.addEventListener('click', () => {
   if (b.dataset.menu === 'fit') plan.fit();
+  if (b.dataset.menu === 'zip') zipModal.open({ zip: (model.site || {}).zip });
   if (b.dataset.menu === 'done') openReport();
   if (b.dataset.menu === 'reset' && confirm('Start over with the 32×24 sample? This clears the saved model on this device.')) { clear(); model = createDefaultModel(); regenerate(model, 'init'); save(model); refresh({ all: true }); setView('plan'); plan.fit(); }
 }));
@@ -236,6 +241,10 @@ function zRange(l) {
 }
 function timeStr(t) { return new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); }
 
+function locationLine() {
+  const S = siteSummary(model, zipModal && zipModal.getJdoc());
+  return `<div class="locLine" id="locLine"><span>📍 <b>${S.zip ? 'ZIP ' + S.zip : 'No ZIP'}</b>${S.known ? ' · ' + S.label : S.zip ? ' · no local data yet' : ' · frost + tax unknown'}</span><button class="btn" id="locChange" type="button">${S.zip ? 'Change' : 'Enter ZIP'}</button></div>`;
+}
 function renderLayers() {
   const pane = $('#layersPane');
   const all = stackOrder(model);
@@ -243,6 +252,7 @@ function renderLayers() {
   const rows = all.filter((l) => !l.stub).reverse().concat(all.filter((l) => l.stub));
   pane.innerHTML = `
     ${model.isolateLayerId ? '<div class="paneHead"><span>Isolating one layer</span><button class="btn" id="clearIso">Show all</button></div>' : ''}
+    ${locationLine()}
     <div id="lrows"></div>
     <div class="paneHead"><label><input type="checkbox" id="autoGhost" ${model.autoGhost ? 'checked' : ''}> Ghost non-active layers (~30%)</label></div>
     <div class="legend">Icons per row: show/hide · lock · <b>ghost</b> (fade to ~30%) · <b>isolate</b> (show only this) · <b>active</b> (new drawing goes here). Tap a name to make it active.</div>
@@ -256,6 +266,7 @@ function renderLayers() {
       <div class="btnRow"><button class="btn primary" id="nlAdd">Add layer</button></div>
     </div>`;
   const host = $('#lrows', pane);
+  const lc = $('#locChange', pane); if (lc) lc.addEventListener('click', () => zipModal.open({ zip: (model.site || {}).zip }));
   rows.forEach((l) => {
     const isAct = l.id === model.activeLayerId;
     const iso = model.isolateLayerId === l.id;
@@ -269,7 +280,7 @@ function renderLayers() {
       <button class="ib ${l.locked ? 'on' : 'off'}" data-act="lock" title="${l.locked ? 'Unlock' : 'Lock'} ${l.name}" aria-label="${l.locked ? 'Unlock' : 'Lock'} ${l.name}" aria-pressed="${l.locked}" ${l.stub ? 'disabled' : ''}>${l.locked ? ICON.lock : ICON.unlock}</button>
       <button class="name" data-act="active" aria-label="Make ${l.name} active">
         <div class="t"><span class="dot" style="background:${l.color}"></span>${l.name}${l.stub ? ' <span class="muted">(stub)</span>' : ''}</div>
-        <div class="z">${zRange(l)}</div>${note}
+        <div class="z">${zRange(l)}</div>${note}${l.id === 'foundation' && !frostKnown(l.params) ? `<div class="frostFlag" id="frostFlag">Frost depth unknown. Piers drawn at ${l.params.placeholderFrostIn} in as a conservative placeholder. Enter your local value.</div>` : ''}
       </button>
       <button class="ib ${l.ghost ? 'on' : 'off'}" data-act="ghost" title="Ghost ${l.name} (~30%)" aria-label="Ghost ${l.name}" aria-pressed="${l.ghost}" ${l.stub ? 'disabled' : ''}>${ICON.ghost}</button>
       <button class="ib ${iso ? 'on' : 'off'}" data-act="iso" title="Isolate ${l.name}" aria-label="Isolate ${l.name}" aria-pressed="${iso}" ${l.stub ? 'disabled' : ''}>${ICON.isolate}</button>
@@ -566,9 +577,13 @@ function refresh() {
 }
 
 window.addEventListener('resize', () => { plan.resize(); v3.resize(); });
-window.__layout = { app, inspector, getModel: () => model, setView, plan, v3, openReport, closeReport, deleteSelected, regenerate: (s) => app.commit(s), assumptions: ASSUMPTIONS };
+window.__layout = { app, inspector, zipModal: null, getModel: () => model, setView, plan, v3, openReport, closeReport, deleteSelected, regenerate: (s) => app.commit(s), assumptions: ASSUMPTIONS };
 
 // ---------- boot
 refresh();
 setView(model.view || 'plan');
 requestAnimationFrame(() => { plan.resize(); plan.fit(); if (fresh) toast('Sample 32×24 footprint loaded — drag ▭ Footprint to draw your own'); });
+// ---------- v4 startup ZIP pop-up (content-v4/zip-popup-spec.md)
+var zipModal = createZipModal({ getModel: () => model, commit: (s) => app.commit(s), persist, toast });
+window.__layout.zipModal = zipModal;
+zipModal.maybeShowOnStart().then((r) => { window.__layout.zipStart = r || 'none'; renderLayers(); });

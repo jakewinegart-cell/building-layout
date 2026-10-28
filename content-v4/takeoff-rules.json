@@ -1,0 +1,944 @@
+{
+ "version": "content-v4 / 2026-10-28",
+ "about": "Material takeoff rules for the Building Layout app's 'I'm done' estimate. Quantities come from the regenerated model (js/generate.js objects and layer params). price_ref keys match homedepot-prices.json. Lengths in ft and sizes in in unless noted. Every structural number marked EXAMPLE must be verified. v4: tax rate and frost depth come from the startup zip lookup (jurisdictions.json, see zip-popup-spec.md), not from a Denver example.",
+ "model_paths": {
+  "footprint": "m.footprint  [[x,y],...] ft, outside face of framing",
+  "foundation": "getLayer(m,'foundation').params + .objects (type pier | beam role gradeBeam | footing (role stem) | area role slab)",
+  "floor": "getLayer(m,'floor').params + .objects (beam role sill | joist role rim | joist | beam role girder | area role subfloor); params.computed {runAxis, spanFt}",
+  "walls": "getLayer(m,'walls').params + .objects (wall {geometry a,b; props exterior,bearing,size,thicknessIn,studOcIn} | opening {geometry wallId,t(center, ft along wall); props kind,widthIn,heightIn,sillIn,header})",
+  "roof": "getLayer(m,'roof').params + .objects (rafter {geometry a,b; props zA,zB,size} | beam role ridge); params.computed {ridgeAlongX, rise, ridgeZ}",
+  "helpers": "len(o)=hypot(b-a) in plan; rafterLen(o)=hypot(len(o), zB-zA); polygonArea(footprint); perimeter(footprint)"
+ },
+ "defaults": {
+  "waste": {
+   "framing": 0.1,
+   "sheathing": 0.1,
+   "concrete": 0.1,
+   "shingles": 0.1,
+   "shingles_complex_roof": 0.15,
+   "rebar": 0.1,
+   "wrap": 0.1,
+   "none": 0
+  },
+  "stock": {
+   "lengthsFt": [
+    8,
+    10,
+    12,
+    14,
+    16,
+    20
+   ],
+   "maxSinglePieceFt": 20,
+   "splitPieceFt": 16,
+   "rule": "If L <= maxSinglePieceFt, buy one piece of the smallest stock length >= L. If longer, split into n = ceil(L/splitPieceFt) equal pieces and buy n of the smallest stock >= L/n. If a size/length has no price_ref, take the next stock length up that has one.",
+   "precutStuds": {
+    "8": "stud",
+    "9": "stud104",
+    "10": "stud116"
+   },
+   "precutNote": "8 ft plate height: framed wall = 96 in, minus 3 plates (4.5 in) = 91.5 in studs; precut 92-5/8 studs are sold for this and trimmed 1-1/8 in (or used with a 97-1/8 in wall). The app's plateHeightFt is the overall framed height."
+  },
+  "concrete": {
+   "bagYieldCuFt": {
+    "60": 0.45,
+    "80": 0.6
+   },
+   "readyMixThresholdYd": 1,
+   "mode": "auto",
+   "modeHelp": "auto = ready-mix when the total (with waste) is over readyMixThresholdYd, else 80 lb bags. Always REPORT bags80, bags60 and cu yd."
+  },
+  "formTube": {
+   "stockLengthIn": 48,
+   "extraIn": 2,
+   "diameterPriceRef": {
+    "8": "form_tube_8x48",
+    "10": "form_tube_10x48",
+    "12": "form_tube_12x48",
+    "16": "form_tube_16x48"
+   }
+  },
+  "rebar": {
+   "bar": "#4",
+   "stockFt": 20,
+   "lapIn": 24,
+   "coverIn": 3,
+   "pierVerticalsEXAMPLE": [
+    {
+     "maxDiaIn": 10,
+     "bars": 2
+    },
+    {
+     "maxDiaIn": 99,
+     "bars": 4
+    }
+   ],
+   "pierDowelIntoBeamIn": 9,
+   "gradeBeamBarsEXAMPLE": {
+    "top": 2,
+    "bottom": 2
+   },
+   "cornerBarsPerCorner": 4,
+   "cornerBarLegIn": 24,
+   "footingBarsEXAMPLE": 2,
+   "stemBarsEXAMPLE": 2,
+   "tiesPerRollEstimate": 120,
+   "flag": "EXAMPLE reinforcement only - pier and grade-beam steel must be specified by the plans or an engineer.",
+   "cornerBarsNote": "One L-bar per longitudinal bar line (2 top + 2 bottom) at each corner; legs cornerBarLegIn each way. EXAMPLE."
+  },
+  "anchorBolts": {
+   "diaIn": 0.5,
+   "lengthIn": 10,
+   "maxOcFt": 6,
+   "maxFromEndIn": 12,
+   "minPerPlate": 2,
+   "rule": "per sill/bottom-plate segment of length L: n = max(minPerPlate, ceil((L - 2*maxFromEndIn/12) / maxOcFt) + 1). Add 2 per door opening in a plate that sits directly on concrete (slab), one each side."
+  },
+  "floor": {
+   "subfloorSheetSqFt": 32,
+   "adhesiveLfPerTube": 40,
+   "adhesiveNote": "28 oz tube, ~3/8 in bead, about 40 lf of joist/rim/beam top",
+   "sheathingNailsPerSheet": 60
+  },
+  "walls": {
+   "extraStudsPerCorner": 2,
+   "extraStudsPerIntersection": 2,
+   "kingPerOpening": 2,
+   "jackPerOpening": 2,
+   "headerBearingIn": 1.5,
+   "roughSillPlies": 1,
+   "headerPliesDefault": 2,
+   "headerPliesNote": "2 plies of 1.5 in = 3 in; a 2x6 wall (5.5 in) needs a 3rd ply or 2.5 in of rigid foam/plywood filler. headerPlies is a missing field.",
+   "sheathingNailsPerSheet": 50,
+   "bandIncludesFloor": true
+  },
+  "roof": {
+   "ridgeOneSizeUp": {
+    "2x4": "2x6",
+    "2x6": "2x8",
+    "2x8": "2x10",
+    "2x10": "2x12",
+    "2x12": "2x12"
+   },
+   "ceilingJoistOcIn": 24,
+   "ceilingJoistTableEXAMPLE": [
+    {
+     "maxSpanFt": 13,
+     "size": "2x6"
+    },
+    {
+     "maxSpanFt": 17,
+     "size": "2x8"
+    },
+    {
+     "maxSpanFt": 21,
+     "size": "2x10"
+    },
+    {
+     "maxSpanFt": 99,
+     "size": "2x12 (verify - engineer)"
+    }
+   ],
+   "ceilingJoistNote": "EXAMPLE for an attic without storage, 24 in o.c. Verify against your local span table. Ceiling joists double as rafter ties - required unless the ridge is a structural (supported) beam.",
+   "collarTie": {
+    "size": "2x4",
+    "everyNthPair": 2,
+    "lengthFraction": 0.34
+   },
+   "hurricaneTiesPerBearing": 1,
+   "lookoutOcIn": 24,
+   "lookoutLenFt": 2,
+   "sheathingClipsPerSheet": 4,
+   "squareSqFt": 100,
+   "bundlesPerSquare": 3,
+   "starterOnRakes": true,
+   "iceBarrierWidthFt": 3,
+   "roofingNailsLbPerSquare": 2.5,
+   "capNailsPerSquare": 150,
+   "sheathingNailsPerSheet": 40
+  },
+  "envelope": {
+   "wrapLapFactor": 1.1,
+   "tapeSqFtPerRoll": 600,
+   "flashingTapeFactor": 1.25
+  },
+  "fastenerSchedule": {
+   "file": "fastener-schedule.json",
+   "how": "Pass as takeoff(..., { fastenerSchedule }). Per-piece code/manufacturer counts (2024 IRC MT Table R602.3(1) + Simpson/GAF/Stinger/DuPont) replace the EXAMPLE nails-per-piece tally, roofing-nail lb/square, cap nails per square, N8 tie nails, hanger-nail line and the girder screw line. Output: pieces[] (hover data) + fasteners summary + fast.<fastenerId> purchase lines (layer all).",
+   "legacy_when_absent": "framingNailsPerPieceEXAMPLE, *.sheathingNailsPerSheet, roof.roofingNailsLbPerSquare, roof.capNailsPerSquare are used ONLY when no schedule is passed (flagged)."
+  },
+  "framingNailsPerPieceEXAMPLE": {
+   "_legacy": "LEGACY - used only when opts.fastenerSchedule is absent. Not code counts.",
+   "stud": 4,
+   "king": 10,
+   "jack": 8,
+   "cripple": 4,
+   "plateLf": 1.5,
+   "headerPly": 10,
+   "joist": 6,
+   "rim_lf": 2,
+   "rafter": 6,
+   "ceilingJoist": 6,
+   "collarTie": 6,
+   "ridge_lf": 1,
+   "beamPly_lf": 1.5,
+   "gableStud": 4,
+   "lookout": 4,
+   "extraPct": 0.15
+  },
+  "frost": {
+   "source_of_frostDepthIn": "jurisdictions.json -> zips[zip].jurisdictions[id].design.frost_depth_in.value (only when verified:true), written to foundation.params.frostDepthIn by the zip pop-up before regenerate(). User may override.",
+   "requiredPierDepthIn": "max(frostDepthIn + extraMarginIn, minBelowUndisturbedIn)",
+   "extraMarginIn": 0,
+   "extraMarginNote": "Code adds no margin: the bottom of the pier/footing must be AT or below the frost depth (IRC R403.1.4.1; MT ARM 24.301.142(9) 'minimum depth from finished grade to the bottom of footings'). The user may add a margin (e.g. dig 2-4 in extra for loose spoil) - it is a setting, not a code value.",
+   "minBelowUndisturbedIn": 12,
+   "minBelowUndisturbedSource": "IRC R403.1.4 (https://up.codes/viewer/montana/irc-2021/chapter/4/foundations)",
+   "unknownZipConservativeDrawIn": 48,
+   "unknownZipNote": "Drawing/pricing default only when zip is unknown and the user skips entry; always FLAGGED. See jurisdictions.json fallback.",
+   "piersRule": "Jake's rule: piers only under wall lines and corners with a grade beam on those lines; never mid-span. Depth changes never add piers."
+  },
+  "tax": {
+   "source": "opts.taxRatePct (user) > jurisdictions.json zips[zip].tax.combined_pct (verified only) > unknown",
+   "unknownBehavior": "price at 0% and FLAG 'tax rate unknown'; never invent a rate",
+   "example_59833_pct": 0,
+   "example_59833_note": "Montana has no general sales tax; Florence/Ravalli/Missoula are not resort-tax areas. Sources in jurisdictions.json."
+  }
+ },
+ "items": [
+  {
+   "id": "conc.piers",
+   "layer": "foundation",
+   "label": "Pier concrete",
+   "when": "foundation.params.type == 'piers'",
+   "formula": {
+    "description": "Sum over pier objects of pi * (diaIn/24)^2 * height. height is the pier object's height in ft (frost or placeholder depth up to the bottom of the grade beam).",
+    "params": [
+     "objects[type=pier].props.diaIn",
+     "objects[type=pier].height",
+     "foundation.params.frostDepthIn (from zip lookup, else user) ?? placeholderFrostIn"
+    ]
+   },
+   "unit": "cu ft",
+   "waste": "concrete",
+   "price_ref": "concrete (see conc.total)"
+  },
+  {
+   "id": "conc.gradeBeam",
+   "layer": "foundation",
+   "label": "Grade beam concrete",
+   "when": "piers",
+   "formula": {
+    "description": "Sum over beam objects with role gradeBeam: len * props.widthIn/12 * gradeBeamDepthIn/12",
+    "params": [
+     "objects[role=gradeBeam]",
+     "foundation.params.gradeBeamWidthIn",
+     "foundation.params.gradeBeamDepthIn"
+    ]
+   },
+   "unit": "cu ft",
+   "waste": "concrete",
+   "price_ref": "concrete (see conc.total)"
+  },
+  {
+   "id": "conc.footings",
+   "layer": "foundation",
+   "label": "Footing / stem wall / thickened-edge concrete",
+   "when": "type in slab|crawlspace|basement",
+   "formula": {
+    "description": "Sum over type footing (includes role stem): len * props.widthIn/12 * object height",
+    "params": [
+     "objects[type=footing]",
+     "footingWidthIn",
+     "footingDepthIn",
+     "stemWallIn"
+    ]
+   },
+   "unit": "cu ft",
+   "waste": "concrete",
+   "price_ref": "concrete (see conc.total)"
+  },
+  {
+   "id": "conc.slab",
+   "layer": "foundation",
+   "label": "Slab concrete",
+   "when": "type == slab or basement",
+   "formula": {
+    "description": "Sum over area role slab: polygonArea(pts) * object height (slabIn/12; basement slab 4 in)",
+    "params": [
+     "foundation.params.slabIn",
+     "m.footprint"
+    ]
+   },
+   "unit": "cu ft",
+   "waste": "concrete",
+   "price_ref": "concrete (see conc.total)"
+  },
+  {
+   "id": "conc.total",
+   "layer": "foundation",
+   "label": "Concrete total",
+   "formula": {
+    "description": "V = sum(conc.*) * (1 + waste.concrete). Report: yd = V/27; bags80 = ceil(V/0.60); bags60 = ceil(V/0.45). Mode auto: yd > readyMixThresholdYd -> ready-mix, priced as ceil-to-0.5 yd * readymix_cy + readymix_short_load; else bags80 * concrete_80lb.",
+    "params": [
+     "defaults.concrete"
+    ]
+   },
+   "unit": "cu yd",
+   "waste": "concrete",
+   "price_ref": [
+    "concrete_80lb",
+    "concrete_60lb",
+    "readymix_cy",
+    "readymix_short_load"
+   ]
+  },
+  {
+   "id": "found.formTubes",
+   "layer": "foundation",
+   "label": "Sonotube / form tubes",
+   "when": "piers",
+   "formula": {
+    "description": "Group piers by diaIn. Tube length needed per pier = height*12 + extraIn (in). If needed <= 48: piecesPerTube = floor(48/needed), tubes = ceil(count/piecesPerTube). Else tubes = count * ceil(needed/48). Report count, diameter and needed length per pier.",
+    "params": [
+     "objects[type=pier].props.diaIn",
+     "objects[type=pier].height"
+    ]
+   },
+   "unit": "each (48 in tube)",
+   "waste": "none",
+   "price_ref": "defaults.formTube.diameterPriceRef[diaIn]",
+   "flags": [
+    "Tubes are rated to about 3 ft above grade. Above-grade portions over ~2 ft need bracing."
+   ]
+  },
+  {
+   "id": "found.rebar",
+   "layer": "foundation",
+   "label": "#4 rebar",
+   "formula": {
+    "description": "Pier verticals: bars(diaIn) * (height*12 - coverIn + pierDowelIntoBeamIn)/12 lf per pier. Grade beam: (top+bottom) bars along every grade beam, plus a lap of lapIn per extra 20 ft bar, plus cornerBarsPerCorner L-bars (2*cornerBarLegIn) at each corner. Footings/stems: footingBars/stemBars continuous with laps. Buy ceil(total_lf * (1+waste.rebar) / 20) bars of 20 ft.",
+    "params": [
+     "objects[type=pier]",
+     "objects[role=gradeBeam]",
+     "defaults.rebar"
+    ]
+   },
+   "unit": "20 ft bar",
+   "waste": "rebar",
+   "price_ref": "rebar_4_20",
+   "flags": [
+    "EXAMPLE steel - engineer/plans govern. No stirrups priced."
+   ]
+  },
+  {
+   "id": "found.tieWire",
+   "layer": "foundation",
+   "label": "Rebar tie wire",
+   "formula": {
+    "description": "ties ~= 2 per pier + 1 per 2 ft of each grade-beam bar line + 4 per corner; rolls = max(1, ceil(ties / tiesPerRollEstimate))"
+   },
+   "unit": "roll",
+   "waste": "none",
+   "price_ref": "tie_wire_roll"
+  },
+  {
+   "id": "found.anchorBolts",
+   "layer": "foundation",
+   "label": "1/2 in x 10 in anchor (J) bolts",
+   "formula": {
+    "description": "Per floor sill segment (piers/crawl/basement) or per exterior wall bottom plate (slab): n = max(2, ceil((L - 2)/6) + 1) i.e. <= 6 ft o.c. and within 12 in of each end. Slab: +2 per door. Buy ceil(n/50) 50-packs.",
+    "params": [
+     "floor objects role sill (len)",
+     "defaults.anchorBolts"
+    ]
+   },
+   "unit": "each -> 50-pack",
+   "waste": "none",
+   "price_ref": "anchor_bolt_50pk"
+  },
+  {
+   "id": "found.gradeBeamForms",
+   "layer": "foundation",
+   "label": "Grade-beam forms (elevated beam)",
+   "when": "piers and grade beam bottom is above grade",
+   "formula": {
+    "description": "Sides: 2 * total grade-beam lf of 2x12 (12 in deep beam); bottom: 1 * lf of 2x12; reusable as scrap after. Buy as 16 ft pieces. Stakes/kickers: 1 per 2 ft per side -> 24-packs.",
+    "params": [
+     "gradeBeamDepthIn",
+     "gradeBeamWidthIn",
+     "topAboveGradeIn.piers"
+    ]
+   },
+   "unit": "each",
+   "waste": "framing",
+   "price_ref": [
+    "lumber_2x12_16",
+    "grade_stakes_24in_24pk"
+   ],
+   "flags": [
+    "The model's grade beam bottom is 18 in above grade (topAboveGradeIn.piers 30 minus gradeBeamDepthIn 12). An elevated grade beam needs a shored bottom form - unusual for DIY. Consider pouring the beam on/below grade instead. Engineer review."
+   ]
+  },
+  {
+   "id": "found.vaporRetarder",
+   "layer": "foundation",
+   "label": "6 mil poly",
+   "when": "type == slab or crawlspace",
+   "formula": {
+    "description": "slab: footprint area * 1.10 / 1000 sq ft per 10x100 roll; crawlspace: footprint area * 1.15 (run up stem walls)"
+   },
+   "unit": "roll",
+   "waste": "none",
+   "price_ref": "poly_6mil_10x100"
+  },
+  {
+   "id": "site.layout",
+   "layer": "site",
+   "label": "Batter boards and stakes",
+   "formula": {
+    "description": "4 corners * (3 stakes + 2 boards of 2x4x8). Stakes as 24-packs, boards as pt_2x4_8 or lumber_2x4_8."
+   },
+   "unit": "each",
+   "waste": "none",
+   "price_ref": [
+    "grade_stakes_24in_24pk",
+    "lumber_2x4_8"
+   ]
+  },
+  {
+   "id": "floor.sill",
+   "layer": "floor",
+   "label": "PT sill plate",
+   "formula": {
+    "description": "For each floor object role sill: stock rule on len, size floor.params.sillSize, treated.",
+    "params": [
+     "floor.params.sill",
+     "floor.params.sillSize"
+    ]
+   },
+   "unit": "each",
+   "waste": "framing",
+   "price_ref": "pt_<sillSize>_<len>"
+  },
+  {
+   "id": "floor.sillGasket",
+   "layer": "floor",
+   "label": "Sill gasket 5-1/2 in",
+   "formula": {
+    "description": "sum(sill len) -> 2-packs of 50 ft: ceil(lf/100)"
+   },
+   "unit": "2-pack",
+   "waste": "none",
+   "price_ref": "sill_gasket_2pk"
+  },
+  {
+   "id": "floor.rim",
+   "layer": "floor",
+   "label": "Rim joists",
+   "formula": {
+    "description": "For each joist role rim: stock rule on len, size floor.params.joistSize"
+   },
+   "unit": "each",
+   "waste": "framing",
+   "price_ref": "lumber_<joistSize>_<len>"
+  },
+  {
+   "id": "floor.joists",
+   "layer": "floor",
+   "label": "Floor joists",
+   "formula": {
+    "description": "Count = joist objects (no role) [the app places them at joistOcIn: about span/oc + 1 minus the two rims]. If a flush girder (z within 0.1 ft of the joists) crosses them, each joist is cut at the beam: 2 pieces each of (len - girderWidth)/2. Plus doubles: +1 per interior wall running parallel to joists, +2 per floor opening (none modeled yet). Stock rule on piece length.",
+    "params": [
+     "floor.params.joistSize",
+     "floor.params.joistOcIn",
+     "floor.params.computed.spanFt"
+    ]
+   },
+   "unit": "each",
+   "waste": "framing",
+   "price_ref": "lumber_<joistSize>_<len>"
+  },
+  {
+   "id": "floor.girder",
+   "layer": "floor",
+   "label": "Mid beam (FLAGGED)",
+   "when": "floor object role girder exists (span > beamFlagSpanFt)",
+   "formula": {
+    "description": "plies = round(widthIn/1.5) (app uses 4.5 in = 3 plies) of joist depth (EXAMPLE - size by engineer), stock rule on len, plus 1 screw per ply-pair per 16 in (structural screws).",
+    "params": [
+     "objects[role=girder].props.widthIn",
+     "floor.params.beamFlagSpanFt"
+    ]
+   },
+   "unit": "each",
+   "waste": "framing",
+   "price_ref": [
+    "lumber_<joistSize>_<len>",
+    "screws_structural_12pk"
+   ],
+   "flags": [
+    "Supports (posts/piers) are NOT generated or priced. Mid-span support conflicts with the 'piers only under walls' rule - see alternative: deeper joists that clear-span (verify)."
+   ],
+   "fastener_schedule_note": "With fastener-schedule.json the screws_structural_12pk part is dropped: plies are nailed per Table R602.3(1) item 28 (fast.gun_3x131). Structural screws are a manufacturer-approved alternative only (flagged)."
+  },
+  {
+   "id": "floor.hangers",
+   "layer": "floor",
+   "label": "Joist hangers",
+   "formula": {
+    "description": "2 per joist that frames into a flush girder (one each side); 1 per joist end at a ledger (attachToExistingWallId, missing field). Joists bearing on the sill and end-nailed through the rim need none. Nails: 10 per LUS2x10 (0.148x3 into header, 0.148x1.5 allowed into joist per Simpson - verify)."
+   },
+   "unit": "each",
+   "waste": "none",
+   "price_ref": [
+    "hanger_lus<joist>",
+    "nails_connector_10d3_250"
+   ],
+   "fastener_schedule_note": "With fastener-schedule.json the nails_connector_10d3_250 part moves to fast.connector_148x3 (12 per LUS210, 10 per LUS28); hangers stay here."
+  },
+  {
+   "id": "floor.subfloor",
+   "layer": "floor",
+   "label": "3/4 (23/32) T&G subfloor",
+   "formula": {
+    "description": "ceil(polygonArea(footprint) * (1+waste.sheathing) / 32)"
+   },
+   "unit": "sheet",
+   "waste": "sheathing",
+   "price_ref": "subfloor_2332_tg"
+  },
+  {
+   "id": "floor.adhesive",
+   "layer": "floor",
+   "label": "Subfloor adhesive 28 oz",
+   "formula": {
+    "description": "ceil((sum joist lf + rim lf + girder lf) / adhesiveLfPerTube)"
+   },
+   "unit": "tube",
+   "waste": "none",
+   "price_ref": "subfloor_adhesive_28oz"
+  },
+  {
+   "id": "walls.studs",
+   "layer": "walls",
+   "label": "Studs (precut)",
+   "formula": {
+    "description": "Per wall (centerline len): studLayout(len, studOcIn/12, openings) from js/homeplan-derived.js -> studs (ends + o.c., skipping opening spans) + kings + jacks. Add extraStudsPerCorner per exterior corner and extraStudsPerIntersection per interior wall tee. Cripples: at each o.c. position inside an opening, one above the header and (windows) one below the rough sill; cut from precuts, buy ceil(total cripple length / stud length).",
+    "params": [
+     "walls.params.studOcIn",
+     "walls.params.extSize",
+     "walls.params.intSize",
+     "walls.params.plateHeightFt",
+     "openings"
+    ]
+   },
+   "unit": "each",
+   "waste": "framing",
+   "price_ref": "lumber_<size>_stud"
+  },
+  {
+   "id": "walls.plates",
+   "layer": "walls",
+   "label": "Plates: 1 bottom + 2 top",
+   "formula": {
+    "description": "Per wall: bottomPlates + topPlates runs of len, stock rule. Bottom plate is pressure treated when it sits on concrete (foundation type slab, or basement walls on slab). Top-plate splices must be staggered 4 ft min.",
+    "params": [
+     "walls.params.bottomPlates",
+     "walls.params.topPlates"
+    ]
+   },
+   "unit": "each",
+   "waste": "framing",
+   "price_ref": [
+    "lumber_<size>_<len>",
+    "pt_<size>_<len>"
+   ]
+  },
+  {
+   "id": "walls.headers",
+   "layer": "walls",
+   "label": "Headers (EXAMPLE table)",
+   "formula": {
+    "description": "Per opening: header string from the model (HEADER_EXAMPLE by width, e.g. '2-2x6') -> plies x (widthIn + 2*headerBearingIn) in. Pack pieces into the smallest stock lengths. Window rough sill: 1 flat piece of wall size, widthIn long.",
+    "params": [
+     "opening.props.header",
+     "HEADER_EXAMPLE in js/config.js"
+    ]
+   },
+   "unit": "each",
+   "waste": "framing",
+   "price_ref": "lumber_<size>_<len>",
+   "flags": [
+    "EXAMPLE header table - verify. Long spans (2-2x12 'verify') need an engineer."
+   ]
+  },
+  {
+   "id": "walls.sheathing",
+   "layer": "walls",
+   "label": "7/16 OSB wall sheathing",
+   "formula": {
+    "description": "area = perimeter(footprint) * (plateHeightFt + band) + gableArea - openingsArea; band = (joist depth + subfloor)/12 when sheathing laps the rim (bandIncludesFloor). gableArea = 2 * (span * rise / 2) for a gable. openingsArea = sum(widthIn*heightIn)/144. sheets = ceil(area*(1+waste)/32)."
+   },
+   "unit": "sheet",
+   "waste": "sheathing",
+   "price_ref": "osb_716_4x8"
+  },
+  {
+   "id": "walls.wrap",
+   "layer": "walls",
+   "label": "House wrap + seam tape",
+   "formula": {
+    "description": "gross wall area (no opening deduction) * wrapLapFactor -> rolls of 1350 sq ft; tape rolls = ceil(gross / tapeSqFtPerRoll); cap nails share cap_nails_2000."
+   },
+   "unit": "roll",
+   "waste": "wrap",
+   "price_ref": [
+    "housewrap_tyvek_9x150",
+    "housewrap_tape"
+   ]
+  },
+  {
+   "id": "walls.flashingTape",
+   "layer": "walls",
+   "label": "Window/door flashing tape",
+   "formula": {
+    "description": "sum over openings of 2*(w+h)/12 * flashingTapeFactor (doors: sides + head only) -> 75 ft rolls"
+   },
+   "unit": "roll",
+   "waste": "none",
+   "price_ref": "flashing_tape_4x75"
+  },
+  {
+   "id": "walls.doors",
+   "layer": "walls",
+   "label": "Exterior doors (prehung)",
+   "formula": {
+    "description": "count of openings kind door, matched by widthIn x heightIn (36x80 -> door_ext_36x80)"
+   },
+   "unit": "each",
+   "waste": "none",
+   "price_ref": "door_ext_<w>x<h>",
+   "flags": [
+    "Product choice is a missing field (doorProduct); jamb depth must match wall (2x6 -> 6-9/16)."
+   ]
+  },
+  {
+   "id": "walls.windows",
+   "layer": "walls",
+   "label": "Windows",
+   "formula": {
+    "description": "count of openings kind window, matched by widthIn x heightIn (36x48 -> window_36x48)"
+   },
+   "unit": "each",
+   "waste": "none",
+   "price_ref": "window_<w>x<h>"
+  },
+  {
+   "id": "roof.rafters",
+   "layer": "roof",
+   "label": "Rafters (incl. barge/fly rafters at the rakes)",
+   "formula": {
+    "description": "Count = rafter objects. Length = hypot(planLen, zB - zA) [= (span/2 + overhang) * sqrt(1 + (pitch/12)^2), measured to the ridge centerline]. Stock rule on length; size roof.params.rafterSize.",
+    "params": [
+     "roof.params.pitch",
+     "roof.params.overhangIn",
+     "roof.params.rafterOcIn",
+     "roof.params.rafterSize"
+    ]
+   },
+   "unit": "each",
+   "waste": "framing",
+   "price_ref": "lumber_<rafterSize>_<len>"
+  },
+  {
+   "id": "roof.ridge",
+   "layer": "roof",
+   "label": "Ridge board",
+   "formula": {
+    "description": "len of beam role ridge (includes overhangs), one size deeper than rafters (ridgeOneSizeUp), stock rule."
+   },
+   "unit": "each",
+   "waste": "framing",
+   "price_ref": "lumber_<ridgeSize>_<len>"
+  },
+  {
+   "id": "roof.ceilingJoists",
+   "layer": "roof",
+   "label": "Ceiling joists / rafter ties",
+   "formula": {
+    "description": "One per rafter pair that bears on walls at 24 in o.c. (= rafter pairs minus the 2 barge pairs). Length = span between wall centerlines; size from ceilingJoistTableEXAMPLE by span unless the missing field ceilingJoistSize is set. Stock rule.",
+    "params": [
+     "roof.params.computed",
+     "walls"
+    ]
+   },
+   "unit": "each",
+   "waste": "framing",
+   "price_ref": "lumber_<size>_<len>",
+   "flags": [
+    "EXAMPLE size - verify span table."
+   ]
+  },
+  {
+   "id": "roof.collarTies",
+   "layer": "roof",
+   "label": "Collar ties",
+   "formula": {
+    "description": "every 2nd bearing rafter pair; length = span * 0.34 (upper third); 2x4; pack into stock."
+   },
+   "unit": "each",
+   "waste": "framing",
+   "price_ref": "lumber_2x4_<len>"
+  },
+  {
+   "id": "roof.hurricaneTies",
+   "layer": "roof",
+   "label": "Hurricane ties H2.5A",
+   "formula": {
+    "description": "1 per bearing rafter at each wall + 1 per ceiling joist end is not needed when the tie catches the rafter-joist heel. Count = bearing rafters. Nails: 10 per tie (N8 0.131 x 1-1/2)."
+   },
+   "unit": "each",
+   "waste": "none",
+   "price_ref": [
+    "hurricane_h25a",
+    "nails_connector_n8_150"
+   ],
+   "fastener_schedule_note": "With fastener-schedule.json the nails_connector_n8_150 (0.131 x 1-1/2) part is dropped - Simpson lists 0.131 x 2-1/2 for rafters; 10 per tie bought on fast.common_8d_hdg+roof_sheath_8d. Ties stay here."
+  },
+  {
+   "id": "roof.gableFraming",
+   "layer": "roof",
+   "label": "Gable-end studs (not modeled by the app)",
+   "formula": {
+    "description": "Per gable end: n = floor(span*12/studOcIn) - 1 studs, average length = rise/2. Total lf = 2 * n * rise/2, cut from 8 ft stock of the exterior wall size, plus 10%."
+   },
+   "unit": "each",
+   "waste": "framing",
+   "price_ref": "lumber_<extSize>_8",
+   "flags": [
+    "Gable-end wall framing is not generated yet (app flag)."
+   ]
+  },
+  {
+   "id": "roof.lookouts",
+   "layer": "roof",
+   "label": "Rake lookouts (ladder) for the barge rafters",
+   "formula": {
+    "description": "per rake: ceil(rafterLen*12/lookoutOcIn)+1 lookouts of lookoutLenFt, 2x4, packed into 8 ft stock"
+   },
+   "unit": "each",
+   "waste": "framing",
+   "price_ref": "lumber_2x4_8"
+  },
+  {
+   "id": "roof.sheathing",
+   "layer": "roof",
+   "label": "Roof sheathing 7/16 OSB + H-clips",
+   "formula": {
+    "description": "roofArea = 2 * rafterLen * ridgeLen (gable). sheets = ceil(roofArea*(1+waste)/32). Clips: sheathingClipsPerSheet per sheet at 24 in o.c. -> 50-packs."
+   },
+   "unit": "sheet",
+   "waste": "sheathing",
+   "price_ref": [
+    "osb_716_4x8",
+    "h_clip_716_50"
+   ],
+   "flags": [
+    "At 24 in o.c. the panel must be rated 24/16 (or use 15/32 / 1/2 in). The priced SKU lists 16/0 - check the stamp."
+   ]
+  },
+  {
+   "id": "roof.underlayment",
+   "layer": "roof",
+   "label": "Synthetic underlayment",
+   "formula": {
+    "description": "ceil(roofArea * 1.10 / 1000) rolls; cap nails capNailsPerSquare per square"
+   },
+   "unit": "roll",
+   "waste": "none",
+   "price_ref": [
+    "underlayment_synth_1000",
+    "cap_nails_2000"
+   ],
+   "fastener_schedule_note": "With fastener-schedule.json the cap_nails_2000 part moves to fast.cap_1in (Stinger EXO pattern + Tyvek 18 in o.c.); the roll stays here."
+  },
+  {
+   "id": "roof.iceBarrier",
+   "layer": "roof",
+   "label": "Ice & water barrier at eaves (cold climates)",
+   "when": "iceBarrier setting; default from jurisdictions.json design.ice_barrier_required (true for Montana: ARM 24.301.154(23)); else ON",
+   "formula": {
+    "description": "eave lf * iceBarrierWidthFt -> 150 sq ft rolls"
+   },
+   "unit": "roll",
+   "waste": "none",
+   "price_ref": "ice_water_150"
+  },
+  {
+   "id": "roof.shingles",
+   "layer": "roof",
+   "label": "Architectural shingles",
+   "formula": {
+    "description": "squares = roofArea/100; bundles = ceil(squares * (1+waste.shingles) * 3). Use waste 15% for hips/valleys/dormers."
+   },
+   "unit": "bundle",
+   "waste": "shingles",
+   "price_ref": "shingles_bundle"
+  },
+  {
+   "id": "roof.dripEdge",
+   "layer": "roof",
+   "label": "Drip edge",
+   "formula": {
+    "description": "eaves (2 * ridgeLen) + rakes (4 * rafterLen) -> ceil(lf * 1.10 / 10) pieces"
+   },
+   "unit": "10 ft piece",
+   "waste": "sheathing",
+   "price_ref": "drip_edge_10"
+  },
+  {
+   "id": "roof.starter",
+   "layer": "roof",
+   "label": "Starter strip",
+   "formula": {
+    "description": "eaves (+ rakes if starterOnRakes) * 1.10 / 120 lf bundle"
+   },
+   "unit": "bundle",
+   "waste": "none",
+   "price_ref": "starter_bundle"
+  },
+  {
+   "id": "roof.ridgeCap",
+   "layer": "roof",
+   "label": "Ridge cap",
+   "formula": {
+    "description": "ceil(ridgeLen * 1.05 / 25) bundles"
+   },
+   "unit": "bundle",
+   "waste": "none",
+   "price_ref": "ridge_cap_bundle"
+  },
+  {
+   "id": "roof.nails",
+   "layer": "roof",
+   "label": "Roofing nails 1-1/4 in",
+   "formula": {
+    "description": "lb = squares*(1+waste) * roofingNailsLbPerSquare (4-nail pattern; 6-nail ~ +50%) -> 5 lb boxes"
+   },
+   "unit": "5 lb box",
+   "waste": "none",
+   "price_ref": "roofing_nails_5lb",
+   "legacy_only_without_fastener_schedule": true
+  },
+  {
+   "id": "fast.<fastenerId>",
+   "layer": "all",
+   "label": "Fasteners from fastener-schedule.json (one line per box product)",
+   "formula": {
+    "description": "for each fastener type with purchase:aggregate: installed = sum over pieces of the connection counts; buy = ceil(installed * (1 + extra_pct)); cheapest mix of fasteners[id].options box sizes; fastener types whose cheapest choice is the same single box are bought together (e.g. 8d HDG for H2.5A + roof sheathing). unitPrice shown on a piece = bought cost / bought count."
+   },
+   "unit": "box",
+   "waste": "extra_pct per fastener type",
+   "price_ref": "fastener-schedule.json fasteners[*].options"
+  },
+  {
+   "id": "fast.framingNails",
+   "layer": "all",
+   "label": "Framing nails 3-1/4 x .131",
+   "formula": {
+    "description": "sum(pieces * framingNailsPerPieceEXAMPLE) * (1 + extraPct) -> 4000-ct boxes if > 2000 else 1000-ct boxes"
+   },
+   "unit": "box",
+   "waste": "none",
+   "price_ref": [
+    "nails_framing_16d_4000",
+    "nails_framing_16d_1000"
+   ],
+   "legacy_only_without_fastener_schedule": true
+  },
+  {
+   "id": "fast.sheathingNails",
+   "layer": "all",
+   "label": "Sheathing nails 2-3/8 x .113 ring",
+   "formula": {
+    "description": "floor sheets*60 + wall sheets*50 + roof sheets*40 -> 5000-ct box (or 2000-ct if fewer)"
+   },
+   "unit": "box",
+   "waste": "none",
+   "price_ref": [
+    "nails_sheathing_5000",
+    "nails_sheathing_2000"
+   ],
+   "legacy_only_without_fastener_schedule": true
+  }
+ ],
+ "missing_fields": [
+  {
+   "proposed": "roof.params.ceilingJoistSize / ceilingJoistOcIn",
+   "why": "rafter ties are required; app does not model them"
+  },
+  {
+   "proposed": "roof.params.collarTies (bool) + collarTieSize",
+   "why": "upper ties not modeled"
+  },
+  {
+   "proposed": "roof.params.ridgeSize",
+   "why": "ridge size is derived one size up from rafters"
+  },
+  {
+   "proposed": "roof gable-end framing objects (gableStud)",
+   "why": "app flags gable framing as not generated"
+  },
+  {
+   "proposed": "roof.params.iceBarrier (bool), roof.params.roofing {underlayment, shingleProduct}",
+   "why": "sheathing/roof-covering layer is a stub"
+  },
+  {
+   "proposed": "sheathing.params {wallPanel:'7/16 OSB', roofPanel, wrap:'Tyvek'}",
+   "why": "sheathing layer is a stub"
+  },
+  {
+   "proposed": "foundation.params.pierBars, gradeBeamTopBars, gradeBeamBottomBars, rebarSize, stirrupOcIn",
+   "why": "reinforcement not modeled"
+  },
+  {
+   "proposed": "floor girder: props.plies, props.size, supports[] (post/pier ids)",
+   "why": "mid beam is flagged and has no supports"
+  },
+  {
+   "proposed": "walls.params.headerPlies (2 or 3) / headerFiller",
+   "why": "2-ply header is 3 in in a 5.5 in wall"
+  },
+  {
+   "proposed": "walls.params.studPrecut ('auto' | '92-5/8' | '104-5/8' | 'cut')",
+   "why": "precut vs stock choice"
+  },
+  {
+   "proposed": "opening.props.product (price_ref), swing ('in'|'out'), handing ('L'|'R'), jambIn",
+   "why": "door/window product and jamb depth"
+  },
+  {
+   "proposed": "m.attachToExistingWallId + ledger {size, fastener}",
+   "why": "attaching to an existing house (ledger, flashing, permit/engineer trigger)"
+  },
+  {
+   "proposed": "m.estimate {taxRatePct (null = use zip lookup), taxSource, contingencyPct, deliveryUsd, laborUsd, concreteMode, frostMarginIn, priceSnapshotDate, storeLabel}",
+   "why": "pricing settings"
+  },
+  {
+   "proposed": "walls interior tees count (derived from interior wall endpoints)",
+   "why": "extra studs at intersections"
+  },
+  {
+   "proposed": "foundation.params.soilType ('expansive'|'normal'|'unknown')",
+   "why": "expansive or unstable soils trigger engineered/deeper piers (MT ARM 24.301.142(9) notes this too)"
+  },
+  {
+   "proposed": "m.site {zip, jurisdictionId, confirmedAt, frostSource, taxSource}",
+   "why": "startup zip pop-up result (see zip-popup-spec.md); drives frost depth, tax, code edition, contacts"
+  }
+ ],
+ "reference_implementation": "reference/takeoff-reference.mjs (run reference/run-example.mjs)",
+ "jurisdiction_lookup": "jurisdictions.json (see zip-popup-spec.md); reference/takeoff-reference.mjs resolveJurisdiction() + requiredPierDepthIn()",
+ "updated_fasteners": "2026-10-28 (America/Denver): fastener-schedule.json added; legacy nail tallies kept only as fallback."
+}

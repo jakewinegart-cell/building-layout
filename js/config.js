@@ -51,8 +51,9 @@ export const DEFAULTS = {
     type: 'crawlspace',                // slab | crawlspace | basement | piers
     footingWidthIn: 16,
     footingDepthIn: 8,
-    frostDepthIn: null,                // user enters it; app never guesses local code
-    placeholderFrostIn: 24,            // DRAWING ONLY until frost depth is entered
+    frostDepthIn: null,                // from the startup ZIP lookup (verified only) or the user; never guessed
+    placeholderFrostIn: 48,            // v4: unknown/skipped ZIP → conservative 48 in, DRAWING ONLY + FLAGGED (content-v4 fallback)
+    frostMarginIn: 0,                  // optional user margin ("dig 3 in extra"); code adds none
     topAboveGradeIn: { slab: 8, crawlspace: 24, basement: 8, piers: 30 }, // spec min 8 in
     stemWallIn: 8,
     basementWallFt: 8,
@@ -100,7 +101,7 @@ export const ESTIMATE_DEFAULTS = {
   deliveryUsd: 0,         // user-entered; never invented
   laborUsd: null,         // null = not included
   concreteMode: 'auto',   // auto | readymix | bags80 | bags60
-  iceBarrier: true,
+  iceBarrier: null,      // v4: null = from the ZIP lookup (engine default ON)
 };
 
 /** Sonotube / pier editing (v2). */
@@ -125,3 +126,11 @@ export const LAYER_COLORS = {
   site: '#5d8a4e', foundation: '#8b8f94', floor: '#c08a4a', walls: '#d9a45b',
   roof: '#a5553a', sheathing: '#6d7fa3', mep: '#7a5ea8', custom: '#2f8fb0',
 };
+
+/** v4 pier/footing bottom depth below grade (in): max(frost + margin, 12) when the frost depth is known
+ *  (IRC R403.1.4 / R403.1.4.1), else the flagged unknown-ZIP placeholder (48 in). */
+export const MIN_PIER_DEPTH_IN = 12;
+export function frostKnown(f) { return f.frostDepthIn != null && f.frostDepthIn !== '' && Number(f.frostDepthIn) > 0; }
+export function pierDepthIn(f) {
+  return frostKnown(f) ? Math.max(Number(f.frostDepthIn) + (Number(f.frostMarginIn) || 0), MIN_PIER_DEPTH_IN) : (Number(f.placeholderFrostIn) || 48);
+}

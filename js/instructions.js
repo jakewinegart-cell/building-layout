@@ -5,6 +5,7 @@
 //   [if cond] … [/if]      → inline or block conditional; an [if] with no [/if] on its line runs to end of line
 // ============================================================================
 import { getLayer } from './model.js';
+import { pierDepthIn } from './config.js';
 import { bbox } from './geom.js';
 
 const LUMBER_D = { '2x4': 3.5, '2x6': 5.5, '2x8': 7.25, '2x10': 9.25, '2x12': 11.25 };
@@ -37,12 +38,12 @@ export function instructionVars(m, est, rules) {
   const cj = line('roof.ceilingJoists')[0]; const cjSize = cj ? (/(2x\d+)/.exec(cj.desc) || [])[1] : (rp.ceilingJoistSize !== 'auto' ? rp.ceilingJoistSize : null);
   const shingles = line('roof.shingles')[0];
   const frostSet = f.frostDepthIn != null && f.frostDepthIn !== '';
-  const depth = frostSet ? Number(f.frostDepthIn) : f.placeholderFrostIn;
+  const depth = pierDepthIn(f);
   const pierTop = (f.topAboveGradeIn.piers || 0) - f.gradeBeamDepthIn;
   return {
     footprint_w_ft: num(b.w), footprint_d_ft: num(b.h), diagonal_ft_in: ftInFrac(Math.hypot(b.w, b.h)),
     pier_count: piers.length, pier_diameter_in: piers[0] ? piers[0].props.diaIn : f.pierDiaIn, pier_depth_in: depth,
-    frost_note: frostSet ? `Frost depth entered: ${f.frostDepthIn} in.` : `Frost depth not entered. This uses a ${f.placeholderFrostIn} in PLACEHOLDER — ask your building department for the real value and enter it.`,
+    frost_note: frostSet ? `Frost depth: ${f.frostDepthIn} in${m.site && m.site.zip && m.site.frostSource === 'lookup' ? ` (ZIP ${m.site.zip} lookup)` : ''}; piers go ${depth} in below grade (never less than 12 in).` : `Frost depth unknown. Piers are drawn at a conservative ${f.placeholderFrostIn} in PLACEHOLDER — ask your building department for the real value and enter it.`,
     pier_top_above_grade_in: pierTop, tube_length_in: piers[0] ? Math.round(piers[0].height * 12) + 2 : '—',
     pier_bars: bars, grade_beam_bars: D.rebar ? D.rebar.gradeBeamBarsEXAMPLE.top + D.rebar.gradeBeamBarsEXAMPLE.bottom : 4,
     grade_beam_width_in: f.gradeBeamWidthIn, grade_beam_depth_in: f.gradeBeamDepthIn, grade_beam_lf: num(gbLf, 1),

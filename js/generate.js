@@ -1,7 +1,7 @@
 // Regeneration engine (spec §6): footprint → exterior walls → foundation → floor → roof,
 // plus elevation stacking. Any layer whose content changes because of an upstream
 // edit gets a visible note ("Updated from walls").
-import { LUMBER, LUMBER_T_IN, HEADER_EXAMPLE, PIERS } from './config.js';
+import { LUMBER, LUMBER_T_IN, HEADER_EXAMPLE, PIERS, pierDepthIn } from './config.js';
 import { offsetPolygon, bbox, scanline, isAxisRect, dist, distToSeg, pointInPoly, fmtFtIn } from './geom.js';
 import { piersAlongLines, pierSlotKey, gableGeometry } from './homeplan-derived.js';
 import { getLayer } from './model.js';
@@ -90,8 +90,8 @@ export function regenerate(m, source) {
   const type = f.type;
   const topZ = (f.topAboveGradeIn[type] != null ? f.topAboveGradeIn[type] : 8) * IN;
   const frostIn = f.frostDepthIn != null && f.frostDepthIn !== '' ? Number(f.frostDepthIn) : null;
-  if (frostIn == null) flags.foundation.push('Frost depth not entered — footings drawn at a placeholder depth. Enter your local code value.');
-  const footBot = -((frostIn != null ? frostIn : f.placeholderFrostIn) * IN);
+  if (frostIn == null) flags.foundation.push(`Frost depth unknown — piers/footings drawn at a conservative ${f.placeholderFrostIn} in placeholder. Enter your ZIP or your local value.`);
+  const footBot = -(pierDepthIn(f) * IN);
   const footTop = footBot + f.footingDepthIn * IN;
   const lines = bearingLines(walls);
   const fo = [];
@@ -125,7 +125,7 @@ export function regenerate(m, source) {
   }
   // manual piers: elevation follows the layer defaults unless the user set top/depth; flag, never delete
   const defTopIn = (type === 'piers' ? topZ - f.gradeBeamDepthIn * IN : topZ) / IN;
-  const defDepthIn = frostIn != null ? frostIn : f.placeholderFrostIn;
+  const defDepthIn = pierDepthIn(f);
   const wl = walls.objects.filter((o) => o.type === 'wall');
   let nFlag = 0;
   manual.forEach((o) => {

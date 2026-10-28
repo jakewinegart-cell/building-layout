@@ -4,12 +4,22 @@ from playwright.sync_api import sync_playwright
 sys.path.insert(0, 'tests')
 from verify import world_to_page, mdrag, check, results, M, BASE
 
+def zip_skip(pg):
+    """v4: dismiss the startup ZIP pop-up (Skip for now) so older suites run unchanged."""
+    try:
+        pg.wait_for_selector('#zipModal #zmSkip', timeout=2500)
+        pg.click('#zipModal #zmSkip'); pg.wait_for_timeout(250)
+    except Exception:
+        pass
+
+
 with sync_playwright() as p:
     b = p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'])
     pg = b.new_page(viewport={'width': 1280, 'height': 800}); errs = []
     pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' else None)
     pg.on('pageerror', lambda e: errs.append(str(e)))
     pg.goto(BASE); pg.wait_for_timeout(800)
+    zip_skip(pg)
     pg.click('[data-tool="poly"]')
     for pt in [(0, 0), (30, 0), (30, 16), (18, 16), (18, 26), (0, 26)]:
         pg.mouse.click(*world_to_page(pg, *pt)); pg.wait_for_timeout(60)

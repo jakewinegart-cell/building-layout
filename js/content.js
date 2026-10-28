@@ -8,7 +8,9 @@
 //     Only used when content-v3 is missing or invalid; every price then says
 //     "placeholder, not a real Home Depot price".
 // ============================================================================
-const RG = 'content-v3/';
+// v4 first (ZIP-driven tax/frost, jurisdictions.json); v3 kept as a fallback content set.
+const RG_LIST = ['content-v4/', 'content-v3/'];
+let RG = RG_LIST[0];
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 async function getJSON(url) {
@@ -39,6 +41,9 @@ export function validateHdPrices(doc) {
 }
 
 async function loadRemodelGuide() {
+  for (const dir of RG_LIST) { RG = dir; const r = await loadRemodelGuideFrom(); if (r.present && r.usable) return r; if (dir === RG_LIST[RG_LIST.length - 1]) return r; }
+}
+async function loadRemodelGuideFrom() {
   const [rules, prices, md] = await Promise.all([getJSON(RG + 'takeoff-rules.json'), getJSON(RG + 'homedepot-prices.json'), getText(RG + 'instructions.md')]);
   if (!rules && !prices && !md) return { present: false };
   const issues = [];
@@ -65,7 +70,9 @@ export async function loadContent() {
     if (rg.usable) {
       status.remodelGuide = rg.instructionsMd ? 'wired' : 'partial';
       status.files = { rules: RG + 'takeoff-rules.json', prices: RG + 'homedepot-prices.json', steps: rg.instructionsMd ? RG + 'instructions.md' : 'content/build-steps.json', engine: RG + 'reference/takeoff-reference.mjs' };
-      const out = { mode: 'hd', rules: rg.rules, prices: rg.prices, instructionsMd: rg.instructionsMd, engine: rg.engine, snapshotDate: rg.prices.meta.snapshot_date, status };
+      const jdoc = RG === 'content-v4/' ? await getJSON(RG + 'jurisdictions.json') : null;
+      if (jdoc) status.files.jurisdictions = RG + 'jurisdictions.json';
+      const out = { mode: 'hd', contentDir: RG, jdoc, rules: rg.rules, prices: rg.prices, instructionsMd: rg.instructionsMd, engine: rg.engine, snapshotDate: rg.prices.meta.snapshot_date, status };
       if (!rg.instructionsMd) out.steps = await getJSON('content/build-steps.json');
       return out;
     }
@@ -80,3 +87,9 @@ export async function loadContent() {
 // One shared load for Price check and $ inspect (same rules, prices and engine).
 let contentP = null;
 export function getContentCached() { return (contentP = contentP || loadContent().catch((e) => { contentP = null; throw e; })); }
+
+// v4 ZIP lookup (content-v4/jurisdictions.json), loaded on its own so the startup pop-up doesn't wait on the engine.
+let jdocP = null;
+export function getJurisdictions() {
+  return (jdocP = jdocP || getJSON('content-v4/jurisdictions.json').then((d) => { if (!d || !d.zips) { jdocP = null; return null; } return d; }));
+}

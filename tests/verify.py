@@ -3,6 +3,15 @@
 import sys, json, math
 from playwright.sync_api import sync_playwright
 
+def zip_skip(pg):
+    """v4: dismiss the startup ZIP pop-up (Skip for now) so older suites run unchanged."""
+    try:
+        pg.wait_for_selector('#zipModal #zmSkip', timeout=2500)
+        pg.click('#zipModal #zmSkip'); pg.wait_for_timeout(250)
+    except Exception:
+        pass
+
+
 BASE = sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:8850/'
 SHOTS = 'screenshots/'
 results = []
@@ -50,6 +59,7 @@ def run(p, label, vp, phone):
     pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' else None)
     pg.on('pageerror', lambda e: errs.append('pageerror: ' + str(e)))
     pg.goto(BASE); pg.wait_for_timeout(1000)
+    zip_skip(pg)
     touch = Touch(pg) if phone else None
     drag = (lambda a, c: touch.drag(a, c)) if phone else (lambda a, c: mdrag(pg, a, c))
     tap = (lambda a: touch.tap(a)) if phone else (lambda a: pg.mouse.click(*a))
@@ -201,6 +211,7 @@ def run(p, label, vp, phone):
 
     # persistence
     pg.reload(); pg.wait_for_timeout(1000)
+    zip_skip(pg)
     ft = pg.evaluate(f"{M}.layers.find(l=>l.id==='foundation').params.type")
     check(f'{label}: model persists in localStorage', ft == 'piers' and pg.evaluate(f'{M}.view') == '3d', ft)
     check(f'{label}: no console errors', not errs, errs)

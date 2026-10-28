@@ -1,0 +1,200 @@
+{
+ "meta": {
+  "version": "content-v4 / 2026-10-28",
+  "checked_date": "2026-10-28",
+  "checked_tz": "America/Denver",
+  "about": "Jurisdiction lookup for the startup zip pop-up. Keyed by 5-digit ZIP. Every value carries a source URL and a verified flag. verified:true = read on the cited official/primary page on checked_date. verified:false = not found or only from a secondary source; the app must show it as UNVERIFIED and point the user to the contact. Never fill a missing value with a guess.",
+  "zip_caveat": "A ZIP is a postal area, not a code jurisdiction. One ZIP can cross county and city lines. The pop-up must ask the user to confirm which jurisdiction their address is in when a ZIP has more than one entry in 'jurisdictions'.",
+  "schema": {
+   "zip": "string, 5 digits",
+   "place": "{ name, type ('city'|'town'|'CDP'|'unincorporated'), state, primary_county, other_counties[], inside_city_limits (true|false|null), sources[] }",
+   "jurisdictions[]": "one per code authority that can apply inside this ZIP. { id, label, applies_when, building_authority {name, phone, email, url, certified (bool)}, residential_building_permit_required (true|false|'ask'), code {residential, edition, effective, amendments_url}, design {frost_depth_in, frost_rule, footing_min_below_undisturbed_in, ground_snow_load_psf, min_roof_snow_load_psf, wind_mph, seismic, weathering, ice_barrier_required, air_freezing_index, climate_zone} (each value: {value, unit, verified, source, note}), other_permits[], contacts[] }",
+   "tax": "{ state_sales_tax_pct, local_tax_pct, combined_pct, resort_tax_applies, verified, sources[], note }",
+   "store": "{ retailer, store_number, name, address, phone, url, verified, price_localization {possible, status, note} }",
+   "defaults_used_in_takeoff": "{ frostDepthIn, taxRatePct, iceBarrier, jurisdiction_id } - what the pop-up writes into the model when the user accepts"
+  }
+ },
+ "zips": {
+  "59833": {
+   "zip": "59833",
+   "place": {
+    "name": "Florence",
+    "type": "CDP",
+    "state": "MT",
+    "primary_county": "Ravalli",
+    "other_counties": ["Missoula"],
+    "inside_city_limits": false,
+    "note": "Florence is a census-designated place (unincorporated), so there are no Florence city limits and no Florence building department. Parts of ZIP 59833 lie in Missoula County (north of County Line Rd); one source also lists Granite County. Ask the user which county the address is in.",
+    "verified": true,
+    "sources": [
+     "https://en.wikipedia.org/wiki/Florence,_Montana",
+     "https://dojmt.gov/wp-content/uploads/2011/05/mvmtcitiescountieszips.pdf",
+     "https://www.zip-codes.com/zip-code/59833/zip-code-59833.asp",
+     "https://www.zipdatamaps.com/59833"
+    ]
+   },
+   "jurisdictions": [
+    {
+     "id": "mt-state-ravalli-unincorporated",
+     "label": "Ravalli County, outside city/town limits (State of Montana jurisdiction)",
+     "applies_when": "Address is in Ravalli County and NOT inside Hamilton, Stevensville or Darby city limits (Florence is not a city). Default for 59833.",
+     "building_authority": {
+      "name": "Montana DLI Building & Commercial Measurements Bureau (State Building Codes)",
+      "phone": "(406) 841-2056",
+      "email": "buildingcodes@mt.gov",
+      "url": "https://bsd.dli.mt.gov/building-codes-permits/permit-applications/building-permits/",
+      "certified_local_program": false,
+      "verified": true,
+      "sources": [
+       "https://bsd.dli.mt.gov/_docs/building-codes-permits/certified-city.pdf",
+       "https://bsd.dli.mt.gov/building-codes-permits/certified-government"
+      ],
+      "note": "Ravalli County is not on the 10/07/2026 certified list ('All other areas are under the jurisdiction of the State Building Codes Bureau'). Hamilton, Stevensville and Darby are certified for their city limits only."
+     },
+     "residential_building_permit_required": false,
+     "residential_building_permit_note": "State law exempts 'residential buildings containing less than five dwelling units' from state building permits, and the DLI FAQ says a single-family residence needs no building permit unless a local jurisdiction requires one. So an addition to a single-family home here has no building permit and no building inspection, but the work should still meet the adopted code. Electrical work needs a state permit (homeowner permit allowed for your own home). Confirm with the Bureau.",
+     "residential_building_permit_sources": [
+      "https://bsd.dli.mt.gov/building-codes-permits/permit-applications/building-permits/",
+      "https://bsd.dli.mt.gov/building-codes-permits/permit-applications/building-permits/building-permit-faq"
+     ],
+     "code": {
+      "residential": "International Residential Code",
+      "edition": "2024",
+      "effective": "2026-09-26",
+      "amended_by": "ARM Title 24, Chapter 301",
+      "verified": true,
+      "source": "https://bsd.dli.mt.gov/building-codes-permits/current-codes",
+      "note": "LII's copy of ARM 24.301.154 still shows the 2021 IRC text (last AMD 9/21/2024); DLI's Current Codes page lists the 2024 IRC effective 2026-09-26. Treat DLI as current. Electrical: NEC 2023. Plumbing: UPC 2024."
+     },
+     "design": {
+      "frost_depth_in": {
+       "value": 36,
+       "unit": "in to bottom of footing below finished grade",
+       "verified": true,
+       "source": "https://bsd.dli.mt.gov/building-codes-permits/permit-applications/building-permits/building-permit-faq",
+       "rule": "ARM 24.301.142(9): outside certified local jurisdictions, minimum depth from finished grade to bottom of footings is 3 ft for single-story wood or metal frame buildings and 4 ft for multistory or masonry buildings. Expansive/unstable soils may need engineered, deeper footings.",
+       "multistory_or_masonry_in": 48,
+       "note": "This is the state's published minimum for areas outside certified jurisdictions (written as an IBC amendment for the state program). It is not a measured frost depth for Florence. A one-story wood-frame addition uses 36 in; 2-story or masonry uses 48 in."
+      },
+      "footing_min_below_undisturbed_in": {
+       "value": 12,
+       "verified": true,
+       "source": "https://up.codes/viewer/montana/irc-2021/chapter/4/foundations",
+       "note": "IRC R403.1.4 (Montana 2021 IRC text on UpCodes). Frost rule above governs here."
+      },
+      "ground_snow_load_psf": {
+       "value": null,
+       "verified": false,
+       "status": "UNVERIFIED - site-specific",
+       "source": "https://bsd.dli.mt.gov/building-codes-permits/snow-load-information",
+       "note": "Outside certified jurisdictions, design snow load is based on ASCE 7-22 ground snow loads from the ASCE 7 Hazard Tool (https://asce7hazardtool.online/) for the exact site/elevation. Not looked up here (the tool is interactive). Call the State Building Codes Bureau (406) 841-2056 or use the tool with the site's lat/long."
+      },
+      "min_roof_snow_load_psf": {
+       "value": 30,
+       "verified": true,
+       "source": "https://bsd.dli.mt.gov/building-codes-permits/snow-load-information",
+       "note": "'The minimum design roof snow load after allowed reductions shall be 30 psf' (Montana law; also ARM 24.301.154(5)). This is a floor, not the design value."
+      },
+      "ice_barrier_required": {
+       "value": true,
+       "verified": true,
+       "source": "https://www.law.cornell.edu/regulations/montana/Mont-Admin-r-24.301.154",
+       "note": "ARM 24.301.154(23) amends R905.1.2 so ice barrier applies to 'the State of Montana' (2021-edition rule text; confirm in the 2024 rule)."
+      },
+      "wind_mph": {"value": null, "verified": false, "status": "UNVERIFIED", "note": "Not published for state jurisdiction; ASCE 7 Hazard Tool. Adjacent Missoula County publishes 105 mph (see that entry)."},
+      "seismic_design_category": {"value": null, "verified": false, "status": "UNVERIFIED", "note": "ASCE 7 Hazard Tool. Adjacent Missoula County publishes D0."},
+      "air_freezing_index": {"value": null, "verified": false, "status": "UNVERIFIED", "note": "Only needed for frost-protected shallow foundations (IRC R403.3). Adjacent Missoula County publishes 2,000."},
+      "climate_zone": {"value": null, "verified": false, "status": "UNVERIFIED", "note": "Adjacent Missoula County publishes IECC 6B."}
+     },
+     "other_permits": [
+      {"what": "Electrical permit (state). A homeowner may wire their own home/garage under a State homeowner electrical permit; rough-in and final inspections by State inspectors.", "who": "Montana Building Codes Bureau, (406) 841-2056", "verified": true, "source": "https://bsd.dli.mt.gov/Building-Codes-Permits/permit-applications/electrical-permits/"},
+      {"what": "Plumbing: homeowners doing their own plumbing on their own residence (not rental/spec) do not need a state plumbing permit; work must still meet the UPC.", "who": "Montana Building Codes Bureau, (406) 841-2056", "verified": true, "source": "https://bsd.dli.mt.gov/building-codes-permits/permit-applications/plumbing-permits/"},
+      {"what": "Septic (wastewater) permit/alteration if the addition adds a bedroom or increases use; may need non-degradation analysis. Floodplain determination if within 300 ft of a delineated floodplain.", "who": "Ravalli County Environmental Health, 215 S 4th St Suite D, Hamilton, (406) 375-6565, rceh@rc.mt.gov", "verified": true, "source": "https://ravallicounty.gov/167/Septic-Permits"},
+      {"what": "Floodplain determination / floodplain development permit, land use questions.", "who": "Ravalli County Planning, 215 S 4th St Suite F, Hamilton, (406) 375-6530, planning@ravallicounty.gov", "verified": true, "source": "https://ravallicounty.gov/177/Planning"},
+      {"what": "Call 811 before digging.", "who": "811", "verified": false, "note": "General practice; not researched for MT specifics this pass."}
+     ],
+     "call_first": {
+      "name": "Montana Building Codes Bureau (State)",
+      "phone": "(406) 841-2056",
+      "email": "buildingcodes@mt.gov",
+      "why": "Confirm you are outside certified jurisdictions, the 36 in footing minimum, the site ground snow load, and electrical permit needs. Then Ravalli County Environmental Health (406) 375-6565 if a bedroom is added."
+     }
+    },
+    {
+     "id": "missoula-county",
+     "label": "Missoula County portion of 59833 (north of County Line Rd)",
+     "applies_when": "Address is in Missoula County.",
+     "building_authority": {
+      "name": "Missoula County Building (certified county program: B, P, E, M, SP)",
+      "official": "Kevin Heisler",
+      "phone": "(406) 258-3723",
+      "url": "https://www.missoulacounty.gov/departments/public-works/building-permits-inspections/",
+      "certified_local_program": true,
+      "verified": true,
+      "sources": ["https://bsd.dli.mt.gov/_docs/building-codes-permits/certified-city.pdf"]
+     },
+     "residential_building_permit_required": "ask",
+     "residential_building_permit_note": "Certified county program; local permits likely required for an addition. Not verified this pass - call.",
+     "code": {"residential": "International Residential Code", "edition": "2021 per county sheet dated 2.2024; state moved to 2024 on 2026-09-26 - ask which edition the county is enforcing", "verified": false, "source": "https://www.missoulacounty.build/media/hdzhrtru/irc-design-criteria-r301-2.pdf"},
+     "design": {
+      "frost_depth_in": {"value": 36, "verified": true, "source": "https://www.missoulacounty.build/media/hdzhrtru/irc-design-criteria-r301-2.pdf", "note": "Table R301.2 for Missoula County (sheet dated 2.2024)."},
+      "ground_snow_load_psf": {"value": null, "verified": false, "status": "UNVERIFIED - site-specific (ASCE 7-22 Hazard Tool)", "source": "https://www.missoulacounty.build/media/hdzhrtru/irc-design-criteria-r301-2.pdf"},
+      "min_roof_snow_load_psf": {"value": 30, "verified": true, "source": "https://www.missoulacounty.build/media/hdzhrtru/irc-design-criteria-r301-2.pdf"},
+      "wind_mph": {"value": 105, "verified": true, "source": "https://www.missoulacounty.build/media/hdzhrtru/irc-design-criteria-r301-2.pdf"},
+      "seismic_design_category": {"value": "D0", "verified": true, "source": "https://www.missoulacounty.build/media/hdzhrtru/irc-design-criteria-r301-2.pdf"},
+      "weathering": {"value": "Severe", "verified": true, "source": "https://www.missoulacounty.build/media/hdzhrtru/irc-design-criteria-r301-2.pdf"},
+      "termite": {"value": "None", "verified": true, "source": "https://www.missoulacounty.build/media/hdzhrtru/irc-design-criteria-r301-2.pdf"},
+      "ice_barrier_required": {"value": true, "verified": true, "source": "https://www.missoulacounty.build/media/hdzhrtru/irc-design-criteria-r301-2.pdf"},
+      "air_freezing_index": {"value": 2000, "verified": true, "source": "https://www.missoulacounty.build/media/hdzhrtru/irc-design-criteria-r301-2.pdf"},
+      "climate_zone": {"value": "6B", "verified": true, "source": "https://www.missoulacounty.build/media/hdzhrtru/irc-design-criteria-r301-2.pdf"}
+     },
+     "call_first": {"name": "Missoula County Building", "phone": "(406) 258-3723", "why": "Permit, inspections, code edition, site snow load."}
+    }
+   ],
+   "default_jurisdiction_id": "mt-state-ravalli-unincorporated",
+   "tax": {
+    "state_sales_tax_pct": 0,
+    "local_tax_pct": 0,
+    "combined_pct": 0,
+    "resort_tax_applies": false,
+    "verified": true,
+    "sources": [
+     "https://revenue.mt.gov/taxes/general-sales-tax",
+     "https://mtresorttax.org/communities-overview/",
+     "https://mca.legmt.gov/bills/mca/title_0070/chapter_0060/part_0150/section_0030/0070-0060-0150-0030.html"
+    ],
+    "note": "Montana has no general sales tax (MT Dept of Revenue). Local resort taxes exist only in designated resort communities (Big Mountain, Big Sky, Columbia Falls, Craig, Gardiner, Red Lodge, St. Regis, West Yellowstone, Whitefish, Wolf Creek); Florence, Missoula and Ravalli County are not among them. Resort tax (MCA 7-6-1503) applies to lodging, restaurants, bars, destination recreation and 'luxuries', so it would not normally hit lumber anyway. Delivery fees and permit fees are separate."
+   },
+   "store": {
+    "retailer": "The Home Depot",
+    "store_number": "3102",
+    "name": "Missoula #3102",
+    "address": "2725 Radio Way, Missoula, MT 59808",
+    "phone": "(406) 523-0901",
+    "pro_desk_phone": "(406) 523-9924",
+    "url": "https://www.homedepot.com/l/Missoula/MT/Missoula/59808/3102",
+    "verified": true,
+    "why_nearest": "HD's Montana directory lists six stores (Billings, Missoula, Great Falls, Bozeman, Kalispell, Helena); Missoula is the only one in the Bitterroot/Missoula area. Drive distance not checked.",
+    "sources": ["https://www.homedepot.com/l/MT", "https://www.homedepot.com/l/Missoula/MT/Missoula/59808/3102"],
+    "price_localization": {
+     "possible": "not from this box",
+     "status": "BLOCKED",
+     "note": "2026-10-28: homedepot.com product pages returned HTTP 403 to curl (with or without a store cookie for #3102), and the fetch tool returned the page without any price or store context. The price snapshot therefore stays at HD's default online store, NOT localized to Missoula #3102. To localize: open homedepot.com in a normal browser, set 'My Store' to Missoula #3102, and re-read each price url (or call the Pro Desk)."
+    }
+   },
+   "defaults_used_in_takeoff": {
+    "jurisdiction_id": "mt-state-ravalli-unincorporated",
+    "frostDepthIn": 36,
+    "taxRatePct": 0,
+    "iceBarrier": true,
+    "storeLabel": "Home Depot Missoula #3102 (prices NOT localized - default online store snapshot)"
+   }
+  }
+ },
+ "fallback": {
+  "frostDepthIn": null,
+  "conservativeFrostDepthIn": 48,
+  "taxRatePct": null,
+  "note": "Used when the zip is not in this file. See zip-popup-spec.md section 5. 48 in is a conservative drawing default only (it matches Montana's 4 ft multistory/masonry minimum and is deeper than the 36 in one-story minimum); it is NOT a code value for any place, and the estimate stays flagged until the user enters their building department's number."
+ }
+}

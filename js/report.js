@@ -4,11 +4,13 @@
 // Data: content-v3/ (Remodel Guide) when present and valid, otherwise content/ placeholders.
 // ============================================================================
 import { getContentCached } from './content.js';
-import { runEstimate, estimateSettings, clearSpanAlternative, CLEAR_SPAN_TYPICAL_MAX_FT } from './estimate.js';
+import { siteSummary } from './zipmodal.js';
+import { runEstimate, siteJurisdiction, estimateSettings, clearSpanAlternative, CLEAR_SPAN_TYPICAL_MAX_FT } from './estimate.js';
 import { modelSig, beamState, applyAnswers, saveRun, loadRun } from './pricecheck.js';
 import { instructionVars, renderInstructions } from './instructions.js';
 import { allSheets } from './sheets.js';
 import { getLayer } from './model.js';
+import { pierDepthIn } from './config.js';
 import { bbox } from './geom.js';
 
 export function getContent() { return getContentCached(); }
@@ -19,7 +21,7 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 export const niceDate = (d) => { const [y, mo, da] = String(d).split('-').map(Number); return `${MONTHS[mo - 1]} ${da}, ${y}`; };
 export const hdLabel = (d) => `Home Depot online price, checked ${niceDate(d)}, not localized`;
 
-const DISCLAIMER = 'This is an estimate, not stamped plans. Material prices come from a homedepot.com snapshot taken {snapshot_date} (America/Denver). They were shown for Home Depot\'s default online store, not localized to a Denver store, and they change often and vary by store. Some prices are estimates and are marked "est." Quantities follow general rules of thumb with waste included. Your plans, your local code and your building department decide what\'s actually required. Structural items (beams, headers, footings, piers, rebar, anything marked FLAGGED) need to be checked by your building department or a licensed engineer. Labor, permits, delivery and tools aren\'t included unless you add them.';
+const DISCLAIMER = 'This is an estimate, not stamped plans. Material prices come from a homedepot.com snapshot taken {snapshot_date} (America/Denver). They were shown for Home Depot\'s default online store, not localized to your local store{store_note}, and they change often and vary by store. Some prices are estimates and are marked "est." Quantities follow general rules of thumb with waste included. Your plans, your local code and your building department decide what\'s actually required. Structural items (beams, headers, footings, piers, rebar, anything marked FLAGGED) need to be checked by your building department or a licensed engineer. Labor, permits, delivery and tools aren\'t included unless you add them.';
 const DISCLAIMER_PH = 'This is an estimate, not stamped plans. ALL PRICES ARE PLACEHOLDERS, not real Home Depot prices. Quantities follow general rules of thumb with waste included. Your plans, your local code and your building department decide what\'s actually required. Structural items (beams, headers, footings, piers, rebar, anything marked FLAGGED) need to be checked by your building department or a licensed engineer. Labor, permits, delivery and tools aren\'t included unless you add them.';
 
 function priceCell(l, C) {
@@ -57,13 +59,20 @@ export async function renderReport(root, opts) {
     let h = `<div class="rp-bar"><b>Price check</b><button id="pcCancel">Cancel</button></div><div class="rp-body pc">
 <p class="pc-intro">Prices your floor plan <b>as it is right now</b>. Answer what you know — every item can be skipped, and anything skipped is flagged in the report.</p>
 ${run ? `<p class="rp-meta">Last price check: ${esc(new Date(run.ranAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}${lastStale ? ' — <b class="rp-warn">out of date</b>' : ''}. <a href="#" id="pcViewLast">View last report</a></p>` : ''}
-<div class="pc-card" id="pcTax"><div class="pc-h"><span class="pc-n">1</span><b>Location for sales tax</b><button class="pc-skip" data-skip="tax">Skip</button></div>
-<label>City / county (free text)<input id="pcLoc" type="text" autocomplete="off" placeholder="e.g. your city, county" value="${esc(set.location || '')}"></label>
-<label>Sales tax rate %<input id="pcTaxPct" type="number" inputmode="decimal" step="0.01" min="0" max="20" placeholder="not set" value="${set.taxRatePct == null ? '' : esc(set.taxRatePct)}"></label>
-<div class="rp-meta">The app doesn't look rates up — enter the combined rate for your location. Blank = skipped (no tax, flagged).</div></div>
+${(() => {
+  const S = siteSummary(m, C.jdoc); const J = siteJurisdiction(m, C);
+  const lt = J && J.taxRatePct != null ? J.taxRatePct : null; const lf = J && J.frostDepthIn != null ? J.frostDepthIn : null;
+  const ov = S.site.taxSource === 'user' && set.taxRatePct != null ? set.taxRatePct : null;
+  return `<div class="pc-card" id="pcTax"><div class="pc-h"><span class="pc-n">1</span><b>Location</b><button class="pc-skip" data-skip="tax">Skip</button></div>
+<div class="pc-loc" id="pcLocInfo"><b>${S.zip ? 'ZIP ' + esc(S.zip) : 'No ZIP entered'}</b>${S.known ? ' · ' + esc(S.label) : S.zip ? ' · no local data yet' : ''}<br><span class="rp-meta">${J ? `Sales tax ${lt != null ? `<b>${esc(lt)}%</b> from the ZIP lookup ✅` : '<b>unknown</b> ⚠️'} · frost depth ${lf != null ? `<b>${esc(lf)} in</b> ✅` : 'unknown ⚠️'}${J.store ? ` · nearest store ${esc(J.store.name)} (prices not localized)` : ''}` : 'Tax and frost depth are unknown until you enter a ZIP (piers drawn at a conservative ' + esc(f.placeholderFrostIn) + ' in placeholder, tax not included — both flagged).'}</span>
+<button type="button" class="btn" id="pcZipBtn">${S.zip ? 'Change ZIP' : 'Enter ZIP'}</button></div>
+<input id="pcLoc" type="hidden" value="${esc(S.zip ? S.label + (S.known ? ' ' + S.zip : '') : '')}">
+<label>Sales tax rate % <span class="rp-meta">(your rate — overrides the ZIP lookup)</span><input id="pcTaxPct" type="number" inputmode="decimal" step="0.01" min="0" max="20" placeholder="${lt != null ? `from ZIP: ${esc(lt)}%` : 'not set'}" value="${ov == null ? '' : esc(ov)}"></label>
+<div class="rp-meta">${lt != null ? `Blank = use the ZIP lookup (${esc(lt)}%).` : 'Blank = not included (0%, flagged). The app never guesses a rate.'}</div></div>
 <div class="pc-card" id="pcFrost"><div class="pc-h"><span class="pc-n">2</span><b>Frost depth</b><button class="pc-skip" data-skip="frost">Skip</button></div>
 <label>Frost depth, inches<input id="pcFrostIn" type="number" inputmode="numeric" min="1" max="120" step="1" placeholder="blank = ${esc(f.placeholderFrostIn)} in placeholder" value="${f.frostDepthIn == null || f.frostDepthIn === '' ? '' : esc(f.frostDepthIn)}"></label>
-<div class="rp-meta">Ask your building department. Blank = piers/footings priced at a ${esc(f.placeholderFrostIn)} in PLACEHOLDER (flagged).</div></div>`;
+<div class="rp-meta">${lf != null ? `From the ZIP lookup: ${esc(lf)} in (${esc(J.jurisdiction.label)}). ` : ''}Piers go max(frost + margin, 12) in below grade. Blank = piers/footings priced at a conservative ${esc(f.placeholderFrostIn)} in PLACEHOLDER (flagged).</div></div>`;
+})()}`;
     if (beam.has) {
       const sel = beam.supported ? 'piers' : (prev === 'skip' ? 'skip' : '');
       h += `<div class="pc-card" id="pcBeam"><div class="pc-h"><span class="pc-n">3</span><b>Mid-floor beam support</b><button class="pc-skip" data-skip="beam">Skip</button></div>
@@ -76,10 +85,11 @@ ${run ? `<p class="rp-meta">Last price check: ${esc(new Date(run.ranAt).toLocale
     root.innerHTML = h; root.scrollTop = 0;
     const q = (s) => root.querySelector(s);
     q('#pcCancel').onclick = () => onClose && onClose();
+    if (q('#pcZipBtn')) q('#pcZipBtn').onclick = () => { const zm = window.__layout && window.__layout.zipModal; if (zm) zm.open({ zip: (getModel().site || {}).zip, onDone: () => renderPrecheck() }); };
     if (q('#pcViewLast')) q('#pcViewLast').onclick = (e) => { e.preventDefault(); renderRun(); bindRun(); };
     root.querySelectorAll('.pc-skip').forEach((b) => b.addEventListener('click', () => {
       const k = b.dataset.skip;
-      if (k === 'tax') { q('#pcLoc').value = ''; q('#pcTaxPct').value = ''; }
+      if (k === 'tax') { q('#pcTaxPct').value = ''; }
       if (k === 'frost') q('#pcFrostIn').value = '';
       if (k === 'beam') q('input[name=pcBeam][value=skip]').checked = true;
       b.closest('.pc-card').classList.add('skipped'); b.textContent = 'Skipped';
@@ -89,7 +99,8 @@ ${run ? `<p class="rp-meta">Last price check: ${esc(new Date(run.ranAt).toLocale
       const tax = numOrNull(q('#pcTaxPct').value); const frost = numOrNull(q('#pcFrostIn').value);
       const bsel = root.querySelector('input[name=pcBeam]:checked');
       const answers = {
-        location: q('#pcLoc').value.trim(), taxRatePct: tax, taxSkipped: tax == null,
+        location: q('#pcLoc').value.trim(), taxRatePct: tax, taxSkipped: tax == null && !(siteJurisdiction(getModel(), C) && siteJurisdiction(getModel(), C).taxRatePct != null),
+        lookupFrostIn: (siteJurisdiction(getModel(), C) || {}).frostDepthIn ?? null,
         frostDepthIn: frost != null && frost > 0 ? frost : null, frostSkipped: !(frost != null && frost > 0),
         beam: beam.has ? (bsel ? bsel.value : 'skip') : null,
       };
@@ -153,9 +164,9 @@ ${run ? `<p class="rp-meta">Last price check: ${esc(new Date(run.ranAt).toLocale
     h += hd
       ? `<div class="rp-price-src" id="rpPriceSrc"><b>Prices: ${esc(hdLabel(snapDate))}.</b> Snapshot date <b>${esc(snapDate)}</b> (America/Denver). ${nHd} lines use checked Home Depot prices${nEst ? `; <b>${nEst} lines are estimates</b> (marked <span class="ph est">est.</span>, source shown)` : ''}${T.unpriced.length ? `; ${T.unpriced.length} need a price` : ''}.</div>`
       : `<div class="rp-ph-banner"><b>PLACEHOLDER PRICES</b>Remodel Guide's Home Depot price data wasn't found, so every price here is a made-up placeholder, not a real Home Depot price.</div>`;
-    h += `<div class="rp-total"><span class="amt" id="rpTotal">${usd(T.total)}</span><span class="rp-meta">${T.taxSet ? `includes ${T.taxRatePct}% sales tax` : '<b class="rp-warn">sales tax not included — rate not set</b>'}${T.contingencyPct ? ` · ${T.contingencyPct}% contingency` : ''}${T.labor == null ? ' · labor not included' : ''}</span></div>`;
+    h += `<div class="rp-total"><span class="amt" id="rpTotal">${usd(T.total)}</span><span class="rp-meta">${T.taxSet ? `includes ${T.taxRatePct}% sales tax${T.taxSource && T.taxSource !== 'user' ? ` (${esc(T.taxSource)})` : ''}` : '<b class="rp-warn">sales tax not included — rate unknown</b>'}${T.contingencyPct ? ` · ${T.contingencyPct}% contingency` : ''}${T.labor == null ? ' · labor not included' : ''}</span></div>`;
     h += `<div class="rp-settings" id="rpSettings">
-<label>Sales tax rate %<input id="rpTax" inputmode="decimal" type="number" step="0.01" min="0" max="20" placeholder="not set — enter your rate" value="${set.taxRatePct == null ? '' : esc(set.taxRatePct)}"></label>
+<label>Sales tax rate %<input id="rpTax" inputmode="decimal" type="number" step="0.01" min="0" max="20" placeholder="${T.taxSet ? `from ZIP: ${T.taxRatePct}%` : 'not set — enter your rate'}" value="${set.taxRatePct == null ? '' : esc(set.taxRatePct)}"></label>
 <label>Contingency %<input id="rpCont" inputmode="decimal" type="number" step="1" min="0" max="50" value="${esc(set.contingencyPct)}"></label>
 <label>Delivery $<input id="rpDel" inputmode="decimal" type="number" step="1" min="0" placeholder="0" value="${set.deliveryUsd ? esc(set.deliveryUsd) : ''}"></label>
 <label>Labor $<input id="rpLab" inputmode="decimal" type="number" step="1" min="0" placeholder="not included" value="${set.laborUsd == null ? '' : esc(set.laborUsd)}"></label>
@@ -166,7 +177,7 @@ ${hd ? `<label>Concrete<select id="rpConc">${['auto', 'bags80', 'bags60', 'ready
     const maxG = Math.max(1, ...est.groups.map((g) => g.total));
     est.groups.forEach((g) => { h += `<tr data-group="${g.id}"><td>${esc(g.name)}<div class="bar" style="width:${Math.round((g.total / maxG) * 100)}%"></div></td><td class="n">${usd(g.total)}</td></tr>`; });
     h += `<tr class="sub"><td>Materials (waste included)${T.fromEstimates ? `<div class="rp-meta">of which ${usd(T.fromEstimates)} is from estimated prices (est.)</div>` : ''}${T.unpriced.length ? `<div class="rp-meta">${T.unpriced.length} line(s) need a price and aren't counted</div>` : ''}</td><td class="n">${usd(T.materials)}</td></tr>`;
-    h += `<tr id="rpTaxRow"><td>Sales tax ${T.taxSet ? `@ <b>${T.taxRatePct}%</b> (your rate)` : '— <b>rate not set, 0% used</b>. Enter your local rate above.'}${hd ? '<div class="rp-meta">If your jurisdiction collects use tax on materials at permit time, use that rate.</div>' : ''}</td><td class="n">${usd(T.tax)}</td></tr>`;
+    h += `<tr id="rpTaxRow"><td>Sales tax ${T.taxSet ? `@ <b>${T.taxRatePct}%</b> (${T.taxSource === 'user' ? 'your rate' : esc(T.taxSource)})` : '— <b>rate unknown, 0% used</b>. Enter your ZIP or your local rate above.'}${hd ? '<div class="rp-meta">If your jurisdiction collects use tax on materials at permit time, use that rate.</div>' : ''}</td><td class="n">${usd(T.tax)}</td></tr>`;
     h += `<tr><td>Contingency ${T.contingencyPct}% (on materials + tax)</td><td class="n">${usd(T.contingency)}</td></tr>`;
     h += `<tr><td>Delivery${T.delivery ? '' : ' <span class="rp-meta">(not added)</span>'}</td><td class="n">${usd(T.delivery)}</td></tr>`;
     h += `<tr><td>Labor</td><td class="n">${T.labor == null ? 'not included' : usd(T.labor)}</td></tr>`;
@@ -180,11 +191,11 @@ ${hd ? `<label>Concrete<select id="rpConc">${['auto', 'bags80', 'bags60', 'ready
     // ---------- 2. check these (pre-check answers + engine flags). Skipped pre-check items are flagged here.
     h += `<section class="rp-sec" id="rp-check"><h2>Check these before you buy</h2>`;
     h += ans.taxSkipped || !T.taxSet
-      ? `<div class="rp-flag warn" id="rpFlagTax" data-skipped="tax"><b>Sales tax: skipped</b><p>No location or tax rate was entered, so <b>no sales tax is included</b> (0% used). Enter your rate above or re-run the price check.</p></div>`
-      : `<div class="rp-flag ok" id="rpFlagTax"><b>Sales tax: ${T.taxRatePct}%</b>${ans.location ? ` <span class="rp-meta">(${esc(ans.location)})</span>` : ''}<p>The rate you entered. Not looked up — check it with your city/county.</p></div>`;
+      ? `<div class="rp-flag warn" id="rpFlagTax" data-skipped="tax"><b>Sales tax: unknown — not included</b><p>Tax rate unknown, enter yours. No ZIP lookup and no rate entered, so <b>no sales tax is included</b> (0% used). Enter your ZIP or rate and re-run the price check.</p></div>`
+      : `<div class="rp-flag ok" id="rpFlagTax"><b>Sales tax: ${T.taxRatePct}%</b>${ans.location ? ` <span class="rp-meta">(${esc(ans.location)})</span>` : ''}<p>${T.taxSource === 'user' ? 'The rate you entered — check it with your city/county.' : `From the ${esc(T.taxSource)} (verified source in content-v4/jurisdictions.json).`}</p></div>`;
     h += frostSet
-      ? `<div class="rp-flag ok" id="rpFrost"><b>Frost depth: ${esc(f.frostDepthIn)} in</b><p>Piers/footings go ${esc(f.frostDepthIn)} in below grade.</p></div>`
-      : `<div class="rp-flag warn" id="rpFrost" data-skipped="frost"><b>Frost depth: skipped — pier depth is a PLACEHOLDER</b><p>Piers and footings are priced and drawn at a <span class="ph">PLACEHOLDER</span> depth of <b>${esc(f.placeholderFrostIn)} in</b>. Ask your building department for the frost depth and re-run the price check.</p></div>`;
+      ? `<div class="rp-flag ok" id="rpFrost"><b>Frost depth: ${esc(f.frostDepthIn)} in</b>${est.report && est.report.frostSource ? ` <span class="rp-meta">(${esc(est.report.frostSource)})</span>` : ''}<p>Piers/footings go ${esc(pierDepthIn(f))} in below grade (max(frost + margin, 12 in)).</p></div>`
+      : `<div class="rp-flag warn" id="rpFrost" data-skipped="frost"><b>Frost depth unknown — pier depth is a PLACEHOLDER</b><p>Frost depth unknown. Piers drawn at ${esc(f.placeholderFrostIn)} in as a conservative <span class="ph">PLACEHOLDER</span>. Enter your local value (or your ZIP) and re-run the price check.</p></div>`;
     if (beam.has && beam.supported) {
       h += `<div class="rp-flag ok" id="rpBeam" data-choice="piers"><b>Mid floor beam: ${beam.supportPiers} pier(s) added under it</b><p>Your pre-check choice. They're priced in the foundation. The beam (3-ply ${esc(beam.joistSize)}) and these piers are EXAMPLE sizes — <b>FLAGGED</b> for an engineer to size.</p></div>`;
     } else if (beam.has) {
@@ -195,7 +206,7 @@ ${hd ? `<label>Concrete<select id="rpConc">${['auto', 'bags80', 'bags60', 'ready
     } else if (ans.beam === 'clearspan') {
       h += `<div class="rp-flag ok" id="rpBeam" data-choice="clearspan"><b>Floor: ${esc(beam.joistSize)} joists spanning wall to wall (no mid beam)</b><p>Your pre-check choice. ${beam.spanFt > CLEAR_SPAN_TYPICAL_MAX_FT ? `<span class="rp-warn">Caution: a ${beam.spanFt} ft span is longer than the ~${CLEAR_SPAN_TYPICAL_MAX_FT} ft a 2x12 @ 16 in typically spans — check a span table or use engineered joists.</span>` : 'EXAMPLE size — verify against your span table.'}</p></div>`;
     }
-    const shown = flags.filter((x) => !(/mid beam/i.test(x)) && !(/Frost depth not entered/i.test(x)));
+    const shown = flags.filter((x) => !(/mid beam/i.test(x)) && !(/Frost depth (not entered|unknown)/i.test(x)) && !(/tax rate unknown/i.test(x)));
     if (shown.length) h += `<ul class="rp-flags">${shown.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
     h += `</section>`;
 
@@ -237,7 +248,7 @@ ${hd ? `<label>Concrete<select id="rpConc">${['auto', 'bags80', 'bags60', 'ready
     h += `</section>`;
 
     // ---------- 7. disclaimer + data sources
-    h += `<section class="rp-sec" id="rp-disc"><div class="rp-disc"><h2>Disclaimer</h2><p id="rpDiscText">${esc(hd ? DISCLAIMER.replace('{snapshot_date}', snapDate) : DISCLAIMER_PH)}</p></div>
+    h += `<section class="rp-sec" id="rp-disc"><div class="rp-disc"><h2>Disclaimer</h2><p id="rpDiscText">${esc(hd ? DISCLAIMER.replace('{snapshot_date}', snapDate).replace('{store_note}', (est.jurisdiction && est.jurisdiction.store) ? ` (nearest: Home Depot ${est.jurisdiction.store.name})` : '') : DISCLAIMER_PH)}</p></div>
 <h3>Data sources</h3><div class="rp-src">${hd ? `Price snapshot: ${esc(snapDate)} (${esc(C.prices.meta.timezone || 'America/Denver')}). ${esc(C.prices.meta.store_context || '')}<br>` : ''}
 Takeoff rules: ${esc(C.status.files.rules)} · Prices: ${esc(C.status.files.prices)} · Steps: ${esc(C.status.files.steps)}${C.status.files.engine ? ` · Engine: ${esc(C.status.files.engine)}` : ''}<br>
 ${C.status.counts ? `Price entries: ${C.status.counts.total} (${C.status.counts.verified} checked, ${C.status.counts.estimated} estimates, ${C.status.counts.unpriced} without a price${C.status.counts.rejected ? `, ${C.status.counts.rejected} rejected` : ''}).<br>` : ''}

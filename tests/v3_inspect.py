@@ -5,6 +5,15 @@ from playwright.sync_api import sync_playwright
 sys.path.insert(0, os.path.dirname(__file__))
 from verify import Touch, mdrag
 
+def zip_skip(pg):
+    """v4: dismiss the startup ZIP pop-up (Skip for now) so older suites run unchanged."""
+    try:
+        pg.wait_for_selector('#zipModal #zmSkip', timeout=2500)
+        pg.click('#zipModal #zmSkip'); pg.wait_for_timeout(250)
+    except Exception:
+        pass
+
+
 BASE = sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:8850/'
 SH = 'screenshots/v3/'
 os.makedirs(SH, exist_ok=True)
@@ -17,9 +26,11 @@ EXAMPLE = os.environ.get('INSPECT_EXAMPLE', 'content-v3/reference/example-20x16.
 
 def setup(pg):
     pg.goto(BASE)
+    zip_skip(pg)
     pg.evaluate("""async (u) => { const m = await (await fetch(u, {cache:'no-store'})).json(); localStorage.clear();
         localStorage.setItem('buildingLayout.model.v1', JSON.stringify(m)); }""", EXAMPLE)
     pg.reload(); pg.wait_for_timeout(1200)
+    zip_skip(pg)
     pg.evaluate("() => { const b = document.querySelector('#zipModal .zm-skip'); if (b) b.click(); }")  # v4 zip pop-up, if present
 
 def popup(pg): return pg.evaluate("() => { const p = document.querySelector('#inspectPop'); return p && !p.hidden ? p.innerText : null; }")

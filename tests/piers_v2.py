@@ -6,6 +6,15 @@ from playwright.sync_api import sync_playwright
 sys.path.insert(0, 'tests')
 from verify import world_to_page, Touch, check, results  # reuse helpers (verify.run only runs under __main__)
 
+def zip_skip(pg):
+    """v4: dismiss the startup ZIP pop-up (Skip for now) so older suites run unchanged."""
+    try:
+        pg.wait_for_selector('#zipModal #zmSkip', timeout=2500)
+        pg.click('#zipModal #zmSkip'); pg.wait_for_timeout(250)
+    except Exception:
+        pass
+
+
 BASE = sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:8850/'
 SHOTS = 'screenshots/v2/'
 M = 'window.__layout.getModel()'
@@ -43,6 +52,7 @@ def main():
         pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' else None)
         pg.on('pageerror', lambda e: errs.append('pageerror: ' + str(e)))
         pg.goto(BASE); pg.wait_for_timeout(1000)
+        zip_skip(pg)
         t = Touch(pg)
         L = 'phone'
 
@@ -194,6 +204,7 @@ def main():
         open_props(pg); pg.click('[data-spmode="exact"]'); pg.wait_for_timeout(200); set_spacing(pg, 5, 6)
         snap = piers(pg)
         pg.reload(); pg.wait_for_timeout(1200)
+        zip_skip(pg)
         fpp = pg.evaluate(f"{M}.layers.find(l=>l.id==='foundation').params")
         check(f'{L}: piers + spacing persist across reload', fpp['pierSpacingMode'] == 'exact' and fpp['pierSpacingIn'] == 66
               and sorted((p['id'], tuple(round(x, 6) for x in p['c']), p['dia']) for p in piers(pg)) == sorted((p['id'], tuple(round(x, 6) for x in p['c']), p['dia']) for p in snap))

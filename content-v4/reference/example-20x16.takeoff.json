@@ -1,0 +1,1105 @@
+{
+ "zip": "59833",
+ "jurisdiction": "mt-state-ravalli-unincorporated",
+ "EXAMPLE": "all dollar amounts are EXAMPLE (HD default online store, not localized to Missoula #3102)",
+ "base": {
+  "lines": [
+   {
+    "id": "site.layout",
+    "layer": "site",
+    "desc": "Batter-board stakes (3 per corner)",
+    "qty_calc": 12,
+    "unit": "stakes",
+    "buy": 1,
+    "price_ref": "grade_stakes_24in_24pk",
+    "unit_price": 25.2,
+    "ext": 25.2,
+    "verified": true
+   },
+   {
+    "id": "site.layout",
+    "layer": "site",
+    "desc": "Batter-board ledgers 2x4x8 (2 per corner)",
+    "qty_calc": 8,
+    "unit": "each",
+    "buy": 8,
+    "price_ref": "lumber_2x4_8",
+    "unit_price": 4.25,
+    "ext": 34,
+    "verified": true
+   },
+   {
+    "id": "conc.total",
+    "layer": "foundation",
+    "desc": "Concrete: piers 49.5 + grade beam 70.2 + footings/stem 0.0 + slab 0.0 = 119.6 cu ft; +10% = 131.6 cu ft = 4.87 yd = 220 x 80 lb or 293 x 60 lb bags -> READY-MIX recommended (> 1 yd), order 5 yd",
+    "qty_calc": 4.87,
+    "unit": "cu yd",
+    "buy": 5,
+    "price_ref": "readymix_cy",
+    "unit_price": 150,
+    "ext": 750,
+    "verified": false
+   },
+   {
+    "id": "conc.total",
+    "layer": "foundation",
+    "desc": "Ready-mix short-load fee (estimate)",
+    "qty_calc": 1,
+    "unit": "each",
+    "buy": 1,
+    "price_ref": "readymix_short_load",
+    "unit_price": 125,
+    "ext": 125,
+    "verified": false
+   },
+   {
+    "id": "found.formTubes",
+    "layer": "foundation",
+    "desc": "Form tubes 12 in dia: 14 piers, each needs 56 in (taped extension; or buy 10-12 ft tubes from a lumber yard)",
+    "qty_calc": 14,
+    "unit": "piers",
+    "buy": 17,
+    "price_ref": "form_tube_12x48",
+    "unit_price": 19.98,
+    "ext": 339.66,
+    "verified": true
+   },
+   {
+    "id": "found.rebar",
+    "layer": "foundation",
+    "desc": "#4 rebar EXAMPLE: pier verticals + 4 grade-beam bars + laps + corner L-bars = 657 lf",
+    "qty_calc": 656.67,
+    "unit": "lf",
+    "buy": 37,
+    "price_ref": "rebar_4_20",
+    "unit_price": 14.33,
+    "ext": 530.21,
+    "verified": true,
+    "note": "EXAMPLE steel - engineer/plans govern"
+   },
+   {
+    "id": "found.tieWire",
+    "layer": "foundation",
+    "desc": "Tie wire (~184 ties)",
+    "qty_calc": 184.33,
+    "unit": "ties",
+    "buy": 2,
+    "price_ref": "tie_wire_roll",
+    "unit_price": 11.71,
+    "ext": 23.42,
+    "verified": true
+   },
+   {
+    "id": "found.gradeBeamForms",
+    "layer": "foundation",
+    "desc": "Grade-beam forms: 2 sides + bottom of 2x12 along 70.2 lf (reusable)",
+    "qty_calc": 210.5,
+    "unit": "lf",
+    "buy": 15,
+    "price_ref": "lumber_2x12_16",
+    "unit_price": 30.68,
+    "ext": 460.2,
+    "verified": true,
+    "note": "Beam bottom is 18 in ABOVE grade - needs shored bottom form; engineer review"
+   },
+   {
+    "id": "found.gradeBeamForms",
+    "layer": "foundation",
+    "desc": "Form stakes / kickers (1 per 2 ft per side)",
+    "qty_calc": 70.17,
+    "unit": "stakes",
+    "buy": 3,
+    "price_ref": "grade_stakes_24in_24pk",
+    "unit_price": 25.2,
+    "ext": 75.6,
+    "verified": true
+   },
+   {
+    "id": "found.anchorBolts",
+    "layer": "foundation",
+    "desc": "1/2 x 10 in anchor bolts: 16 (<= 6 ft o.c., <= 12 in from ends)",
+    "qty_calc": 16,
+    "unit": "each",
+    "buy": 1,
+    "price_ref": "anchor_bolt_50pk",
+    "unit_price": 62.39,
+    "ext": 62.39,
+    "verified": true
+   },
+   {
+    "id": "floor.sill",
+    "layer": "floor",
+    "desc": "PT sill 2x6 (2x6 x 20 ft)",
+    "qty_calc": 2,
+    "unit": "each",
+    "buy": 2,
+    "price_ref": "pt_2x6_20",
+    "unit_price": 20.48,
+    "ext": 40.96,
+    "verified": true
+   },
+   {
+    "id": "floor.sill",
+    "layer": "floor",
+    "desc": "PT sill 2x6 (2x6 x 16 ft)",
+    "qty_calc": 2,
+    "unit": "each",
+    "buy": 2,
+    "price_ref": "pt_2x6_16",
+    "unit_price": 14.12,
+    "ext": 28.24,
+    "verified": true
+   },
+   {
+    "id": "floor.sillGasket",
+    "layer": "floor",
+    "desc": "Sill gasket (70 lf)",
+    "qty_calc": 70.17,
+    "unit": "lf",
+    "buy": 1,
+    "price_ref": "sill_gasket_2pk",
+    "unit_price": 19.98,
+    "ext": 19.98,
+    "verified": true
+   },
+   {
+    "id": "floor.rim",
+    "layer": "floor",
+    "desc": "Rim joist 2x10 (2x10 x 20 ft)",
+    "qty_calc": 2,
+    "unit": "each",
+    "buy": 2,
+    "price_ref": "lumber_2x10_20",
+    "unit_price": 30.92,
+    "ext": 61.84,
+    "verified": true
+   },
+   {
+    "id": "floor.rim",
+    "layer": "floor",
+    "desc": "Rim joist 2x10 (2x10 x 16 ft)",
+    "qty_calc": 2,
+    "unit": "each",
+    "buy": 2,
+    "price_ref": "lumber_2x10_16",
+    "unit_price": 26.56,
+    "ext": 53.12,
+    "verified": true
+   },
+   {
+    "id": "floor.joists",
+    "layer": "floor",
+    "desc": "Floor joists 2x10 @ 16 in (cut at flush mid beam) (2x10 x 8 ft)",
+    "qty_calc": 28,
+    "unit": "each",
+    "buy": 31,
+    "price_ref": "lumber_2x10_8",
+    "unit_price": 12.96,
+    "ext": 401.76,
+    "verified": true
+   },
+   {
+    "id": "floor.girder",
+    "layer": "floor",
+    "desc": "Mid beam FLAGGED: 3-ply 2x10 EXAMPLE, 19.8 ft - size by engineer; supports NOT priced",
+    "qty_calc": 3,
+    "unit": "each",
+    "buy": 3,
+    "price_ref": "lumber_2x10_20",
+    "unit_price": 30.92,
+    "ext": 92.76,
+    "verified": true,
+    "note": "Supports/posts not generated; conflicts with piers-under-walls-only rule"
+   },
+   {
+    "id": "floor.hangers",
+    "layer": "floor",
+    "desc": "Face-mount joist hangers at flush beam (28)",
+    "qty_calc": 28,
+    "unit": "each",
+    "buy": 28,
+    "price_ref": "hanger_lus210",
+    "unit_price": 1.98,
+    "ext": 55.44,
+    "verified": true
+   },
+   {
+    "id": "floor.subfloor",
+    "layer": "floor",
+    "desc": "23/32 T&G subfloor: 320 sq ft +10%",
+    "qty_calc": 320,
+    "unit": "sq ft",
+    "buy": 11,
+    "price_ref": "subfloor_2332_tg",
+    "unit_price": 23.43,
+    "ext": 257.73,
+    "verified": true
+   },
+   {
+    "id": "floor.adhesive",
+    "layer": "floor",
+    "desc": "Subfloor adhesive (307 lf of framing)",
+    "qty_calc": 306.5,
+    "unit": "lf",
+    "buy": 8,
+    "price_ref": "subfloor_adhesive_28oz",
+    "unit_price": 7.68,
+    "ext": 61.44,
+    "verified": true
+   },
+   {
+    "id": "walls.studs",
+    "layer": "walls",
+    "desc": "2x6 studs @ 16 in (o.c. + ends + king/jack + corner backers 2/corner) + 3 studs cut into 12 cripples; stud 91.5 in",
+    "qty_calc": 74,
+    "unit": "each",
+    "buy": 81,
+    "price_ref": "lumber_2x6_stud",
+    "unit_price": 6.14,
+    "ext": 497.34,
+    "verified": true
+   },
+   {
+    "id": "walls.plates",
+    "layer": "walls",
+    "desc": "Plates 2x6: 1 bottom + 2 top (2x6 x 20 ft)",
+    "qty_calc": 6,
+    "unit": "each",
+    "buy": 7,
+    "price_ref": "lumber_2x6_20",
+    "unit_price": 17.65,
+    "ext": 123.55,
+    "verified": true
+   },
+   {
+    "id": "walls.plates",
+    "layer": "walls",
+    "desc": "Plates 2x6: 1 bottom + 2 top (2x6 x 16 ft)",
+    "qty_calc": 6,
+    "unit": "each",
+    "buy": 7,
+    "price_ref": "lumber_2x6_16",
+    "unit_price": 17.22,
+    "ext": 120.54,
+    "verified": true
+   },
+   {
+    "id": "walls.headers",
+    "layer": "walls",
+    "desc": "Headers (EXAMPLE table, verify) + window rough sills, 2x6: 8 pieces from 8 ft stock",
+    "qty_calc": 8,
+    "unit": "pieces",
+    "buy": 4,
+    "price_ref": "lumber_2x6_8",
+    "unit_price": 8.62,
+    "ext": 34.48,
+    "verified": true,
+    "note": "EXAMPLE header sizes - verify"
+   },
+   {
+    "id": "walls.sheathing",
+    "layer": "walls",
+    "desc": "7/16 OSB walls: 72 ft x 8.83 ft + gables 42.7 - openings 44.0 = 635 sq ft +10%",
+    "qty_calc": 634.67,
+    "unit": "sq ft",
+    "buy": 22,
+    "price_ref": "osb_716_4x8",
+    "unit_price": 13.63,
+    "ext": 299.86,
+    "verified": true
+   },
+   {
+    "id": "walls.wrap",
+    "layer": "walls",
+    "desc": "House wrap 679 sq ft gross +laps",
+    "qty_calc": 746.53,
+    "unit": "sq ft",
+    "buy": 1,
+    "price_ref": "housewrap_tyvek_9x150",
+    "unit_price": 235,
+    "ext": 235,
+    "verified": true
+   },
+   {
+    "id": "walls.wrap",
+    "layer": "walls",
+    "desc": "House-wrap seam tape",
+    "qty_calc": 678.67,
+    "unit": "sq ft",
+    "buy": 2,
+    "price_ref": "housewrap_tape",
+    "unit_price": 15.72,
+    "ext": 31.44,
+    "verified": true
+   },
+   {
+    "id": "walls.flashingTape",
+    "layer": "walls",
+    "desc": "Flashing tape around openings (55 lf)",
+    "qty_calc": 55.42,
+    "unit": "lf",
+    "buy": 1,
+    "price_ref": "flashing_tape_4x75",
+    "unit_price": 24.77,
+    "ext": 24.77,
+    "verified": true
+   },
+   {
+    "id": "walls.doors",
+    "layer": "walls",
+    "desc": "Prehung exterior door",
+    "qty_calc": 1,
+    "unit": "each",
+    "buy": 1,
+    "price_ref": "door_ext_36x80",
+    "unit_price": 525,
+    "ext": 525,
+    "verified": false
+   },
+   {
+    "id": "walls.windows",
+    "layer": "walls",
+    "desc": "Window",
+    "qty_calc": 2,
+    "unit": "each",
+    "buy": 2,
+    "price_ref": "window_36x48",
+    "unit_price": 249,
+    "ext": 498,
+    "verified": true
+   },
+   {
+    "id": "roof.rafters",
+    "layer": "roof",
+    "desc": "Rafters 2x8 @ 24 in, 24 incl. 4 barge, each 9.49 ft (pitch 4:12, overhang 12 in) (2x8 x 10 ft)",
+    "qty_calc": 24,
+    "unit": "each",
+    "buy": 26,
+    "price_ref": "lumber_2x8_10",
+    "unit_price": 12.82,
+    "ext": 333.32,
+    "verified": true
+   },
+   {
+    "id": "roof.ridge",
+    "layer": "roof",
+    "desc": "Ridge board 2x10 (22.0 ft incl. overhangs) (2x10 x 12 ft)",
+    "qty_calc": 2,
+    "unit": "each",
+    "buy": 2,
+    "price_ref": "lumber_2x10_12",
+    "unit_price": 19.12,
+    "ext": 38.24,
+    "verified": true
+   },
+   {
+    "id": "roof.ceilingJoists",
+    "layer": "roof",
+    "desc": "Ceiling joists / rafter ties 2x8 @ 24 in EXAMPLE (clear span 15.1 ft) - verify (2x8 x 16 ft)",
+    "qty_calc": 10,
+    "unit": "each",
+    "buy": 11,
+    "price_ref": "lumber_2x8_16",
+    "unit_price": 21.12,
+    "ext": 232.32,
+    "verified": true
+   },
+   {
+    "id": "roof.collarTies",
+    "layer": "roof",
+    "desc": "Collar ties 2x4 (5 @ 5.4 ft, every 2nd pair)",
+    "qty_calc": 5,
+    "unit": "each",
+    "buy": 6,
+    "price_ref": "lumber_2x4_8",
+    "unit_price": 4.25,
+    "ext": 25.5,
+    "verified": true
+   },
+   {
+    "id": "roof.hurricaneTies",
+    "layer": "roof",
+    "desc": "H2.5A hurricane ties (20, one per bearing rafter)",
+    "qty_calc": 20,
+    "unit": "each",
+    "buy": 20,
+    "price_ref": "hurricane_h25a",
+    "unit_price": 0.93,
+    "ext": 18.6,
+    "verified": true
+   },
+   {
+    "id": "roof.gableFraming",
+    "layer": "roof",
+    "desc": "Gable-end studs 2x6 (22 studs, 29 lf) - not modeled by app",
+    "qty_calc": 29.33,
+    "unit": "lf",
+    "buy": 5,
+    "price_ref": "lumber_2x6_8",
+    "unit_price": 8.62,
+    "ext": 43.1,
+    "verified": true
+   },
+   {
+    "id": "roof.lookouts",
+    "layer": "roof",
+    "desc": "Rake lookouts 2x4 x 2 ft (24)",
+    "qty_calc": 24,
+    "unit": "each",
+    "buy": 7,
+    "price_ref": "lumber_2x4_8",
+    "unit_price": 4.25,
+    "ext": 29.75,
+    "verified": true
+   },
+   {
+    "id": "roof.sheathing",
+    "layer": "roof",
+    "desc": "Roof sheathing 7/16 OSB: 2 x 9.49 x 22.0 = 417 sq ft +10%",
+    "qty_calc": 417.42,
+    "unit": "sq ft",
+    "buy": 15,
+    "price_ref": "osb_716_4x8",
+    "unit_price": 13.63,
+    "ext": 204.45,
+    "verified": true,
+    "note": "Panel must be rated for 24 in o.c. - check stamp"
+   },
+   {
+    "id": "roof.sheathing",
+    "layer": "roof",
+    "desc": "H-clips (60)",
+    "qty_calc": 60,
+    "unit": "each",
+    "buy": 2,
+    "price_ref": "h_clip_716_50",
+    "unit_price": 12.22,
+    "ext": 24.44,
+    "verified": true
+   },
+   {
+    "id": "roof.underlayment",
+    "layer": "roof",
+    "desc": "Synthetic underlayment (4.17 squares)",
+    "qty_calc": 459.16,
+    "unit": "sq ft",
+    "buy": 1,
+    "price_ref": "underlayment_synth_1000",
+    "unit_price": 115.53,
+    "ext": 115.53,
+    "verified": true
+   },
+   {
+    "id": "roof.iceBarrier",
+    "layer": "roof",
+    "desc": "Ice & water barrier at eaves (44 lf x 3 ft)",
+    "qty_calc": 132,
+    "unit": "sq ft",
+    "buy": 1,
+    "price_ref": "ice_water_150",
+    "unit_price": 99,
+    "ext": 99,
+    "verified": true
+   },
+   {
+    "id": "roof.shingles",
+    "layer": "roof",
+    "desc": "Shingles: 4.17 sq +10% x 3 bundles/sq",
+    "qty_calc": 4.17,
+    "unit": "squares",
+    "buy": 14,
+    "price_ref": "shingles_bundle",
+    "unit_price": 42.97,
+    "ext": 601.58,
+    "verified": true
+   },
+   {
+    "id": "roof.dripEdge",
+    "layer": "roof",
+    "desc": "Drip edge: eaves 44 + rakes 38 lf",
+    "qty_calc": 81.95,
+    "unit": "lf",
+    "buy": 10,
+    "price_ref": "drip_edge_10",
+    "unit_price": 6.48,
+    "ext": 64.8,
+    "verified": true
+   },
+   {
+    "id": "roof.starter",
+    "layer": "roof",
+    "desc": "Starter strip (90 lf)",
+    "qty_calc": 90.14,
+    "unit": "lf",
+    "buy": 1,
+    "price_ref": "starter_bundle",
+    "unit_price": 54.97,
+    "ext": 54.97,
+    "verified": true
+   },
+   {
+    "id": "roof.ridgeCap",
+    "layer": "roof",
+    "desc": "Ridge cap (22 lf)",
+    "qty_calc": 22,
+    "unit": "lf",
+    "buy": 1,
+    "price_ref": "ridge_cap_bundle",
+    "unit_price": 62.97,
+    "ext": 62.97,
+    "verified": true
+   },
+   {
+    "id": "fast.common_8d_hdg+roof_sheath_8d",
+    "layer": "all",
+    "desc": "8d common 2-1/2 x 0.131 HDG hand nail 224 + 8d common 2-1/2 x 0.131 x 0.281 head (roof sheathing) 630 installed (fastener-schedule.json) +extra = 940 to buy",
+    "qty_calc": 940,
+    "unit": "nails",
+    "buy": 3,
+    "price_ref": "nails_common_8d_hdg_5lb",
+    "unit_price": 26.98,
+    "ext": 80.94,
+    "verified": true,
+    "note": "per-piece code/manufacturer counts; see pieces[]"
+   },
+   {
+    "id": "fast.gun_3x131",
+    "layer": "all",
+    "desc": "3-1/4 x 0.131 collated framing nail 1845 installed (fastener-schedule.json) +extra = 2030 to buy",
+    "qty_calc": 2030,
+    "unit": "nails",
+    "buy": 1,
+    "price_ref": "nails_framing_16d_4000",
+    "unit_price": 105.94,
+    "ext": 105.94,
+    "verified": true,
+    "note": "per-piece code/manufacturer counts; see pieces[]"
+   },
+   {
+    "id": "fast.connector_148x3",
+    "layer": "all",
+    "desc": "0.148 x 3 HDG connector nail (10d common size) 336 installed (fastener-schedule.json) +extra = 353 to buy",
+    "qty_calc": 353,
+    "unit": "nails",
+    "buy": 2,
+    "price_ref": "nails_connector_10d3_250",
+    "unit_price": 23.23,
+    "ext": 46.46,
+    "verified": true,
+    "note": "per-piece code/manufacturer counts; see pieces[]"
+   },
+   {
+    "id": "fast.ring_238x113",
+    "layer": "all",
+    "desc": "2-3/8 x 0.113 ring-shank collated nail (deformed, 0.266 head) 1670 installed (fastener-schedule.json) +extra = 1838 to buy",
+    "qty_calc": 1838,
+    "unit": "nails",
+    "buy": 1,
+    "price_ref": "nails_sheathing_2000",
+    "unit_price": 46.75,
+    "ext": 46.75,
+    "verified": true,
+    "note": "per-piece code/manufacturer counts; see pieces[]"
+   },
+   {
+    "id": "fast.common_16d",
+    "layer": "all",
+    "desc": "16d common 3-1/2 x 0.162 hand nail 358 installed (fastener-schedule.json) +extra = 394 to buy",
+    "qty_calc": 394,
+    "unit": "nails",
+    "buy": 2,
+    "price_ref": "nails_common_16d_5lb",
+    "unit_price": 25.98,
+    "ext": 51.96,
+    "verified": true,
+    "note": "per-piece code/manufacturer counts; see pieces[]"
+   },
+   {
+    "id": "fast.cap_1in",
+    "layer": "all",
+    "desc": "1 in 12 ga EG ring-shank plastic cap nail 612 installed (fastener-schedule.json) +extra = 674 to buy",
+    "qty_calc": 674,
+    "unit": "nails",
+    "buy": 1,
+    "price_ref": "cap_nails_2000",
+    "unit_price": 19.98,
+    "ext": 19.98,
+    "verified": true,
+    "note": "per-piece code/manufacturer counts; see pieces[]"
+   },
+   {
+    "id": "fast.roofing_114",
+    "layer": "all",
+    "desc": "1-1/4 in 11 ga EG roofing nail 1290 installed (fastener-schedule.json) +extra = 1355 to buy",
+    "qty_calc": 1355,
+    "unit": "nails",
+    "buy": 2,
+    "price_ref": "roofing_nails_5lb",
+    "unit_price": 15.98,
+    "ext": 31.96,
+    "verified": true,
+    "note": "per-piece code/manufacturer counts; see pieces[]"
+   },
+   {
+    "id": "fast.roofing_134",
+    "layer": "all",
+    "desc": "1-3/4 in EG roofing nail (ridge cap) 82 installed (fastener-schedule.json) +extra = 87 to buy",
+    "qty_calc": 87,
+    "unit": "nails",
+    "buy": 1,
+    "price_ref": "roofing_nails_134_5lb",
+    "unit_price": 21,
+    "ext": 21,
+    "verified": false,
+    "note": "per-piece code/manufacturer counts; see pieces[]"
+   }
+  ],
+  "groups": {
+   "site": 59.2,
+   "foundation": 2366.48,
+   "floor": 1073.27,
+   "walls": 2389.98,
+   "roof": 1948.57,
+   "all": 404.99
+  },
+  "flags": [
+   "Grade beam bottom 18 in above grade (topAboveGradeIn.piers 30 - gradeBeamDepthIn 12). Elevated beam needs shoring/bottom forms; consider casting it at grade. Engineer review.",
+   "Ground snow load for this site is UNVERIFIED (Ravalli County, outside city/town limits (State of Montana jurisdiction)); rafter, ridge, header and ceiling-joist sizes are EXAMPLE and were NOT checked against it. Get the site value (ASCE 7 Hazard Tool or Montana Building Codes Bureau (State) (406) 841-2056).",
+   "ZIP 59833 spans more than one code jurisdiction; using \"Ravalli County, outside city/town limits (State of Montana jurisdiction)\". Confirm your address's county.",
+   "Joist span 16 ft > beamFlagSpanFt 14: app adds a FLAGGED mid beam whose supports are not generated. Under the piers-only-under-walls rule, prefer deeper joists that clear-span (verify) or have an engineer size the beam and its supports.",
+   "Heel joints: Site ground snow load UNVERIFIED - heel nails use the 70 psf column (the table maximum). If the site value is > 70 psf the table does not apply: heel joints must be engineered. -> 17 x 16d per heel (rafter spacing 24 in, span column 24 ft)."
+  ],
+  "concreteAlternatives": {
+   "bags80": {
+    "qty": 220,
+    "cost": 1423.4
+   },
+   "bags60": {
+    "qty": 293,
+    "cost": 1421.05
+   },
+   "readymix": {
+    "yd": 5,
+    "cost": 875,
+    "estimate": true
+   }
+  },
+  "pieces": "see example-20x16.pieces.json (318 pieces)",
+  "fasteners": {
+   "schedule": "v4-fasteners-1",
+   "byType": {
+    "tie_wire": {
+     "label": "rebar tie (16.5 ga wire)",
+     "kind": "tie",
+     "installed": 184.33,
+     "unitPrice": 0.0976,
+     "usedValue": 17.99,
+     "boughtOn": "found.tieWire"
+    },
+    "anchor_bolt": {
+     "label": "1/2 x 10 anchor bolt w/ nut + washer",
+     "kind": "connector",
+     "installed": 16,
+     "unitPrice": 1.2478,
+     "usedValue": 19.96,
+     "boughtOn": "found.anchorBolts"
+    },
+    "gun_3x131": {
+     "label": "3-1/4 x 0.131 collated framing nail",
+     "kind": "nail",
+     "installed": 1845,
+     "toBuy": 2030,
+     "boxes": [
+      {
+       "price_ref": "nails_framing_16d_4000",
+       "n": 1,
+       "pack_qty": 4000,
+       "box_price": 105.94
+      }
+     ],
+     "unitPrice": 0.0265,
+     "usedValue": 48.87,
+     "boughtOn": "fast.gun_3x131"
+    },
+    "adhesive_lf": {
+     "label": "subfloor adhesive bead (lf)",
+     "kind": "adhesive",
+     "installed": 306.5,
+     "unitPrice": 0.192,
+     "usedValue": 58.85,
+     "boughtOn": "floor.adhesive"
+    },
+    "hanger": {
+     "label": "Simpson LUS face-mount joist hanger",
+     "kind": "connector",
+     "installed": 28,
+     "unitPrice": {
+      "2x8": null,
+      "2x10": 1.98
+     },
+     "usedValue": 55.44,
+     "boughtOn": "floor.hangers"
+    },
+    "connector_148x3": {
+     "label": "0.148 x 3 HDG connector nail (10d common size)",
+     "kind": "nail",
+     "installed": 336,
+     "toBuy": 353,
+     "boxes": [
+      {
+       "price_ref": "nails_connector_10d3_250",
+       "n": 2,
+       "pack_qty": 250,
+       "box_price": 23.23
+      }
+     ],
+     "unitPrice": 0.0929,
+     "usedValue": 31.22,
+     "boughtOn": "fast.connector_148x3"
+    },
+    "ring_238x113": {
+     "label": "2-3/8 x 0.113 ring-shank collated nail (deformed, 0.266 head)",
+     "kind": "nail",
+     "installed": 1670,
+     "toBuy": 1838,
+     "boxes": [
+      {
+       "price_ref": "nails_sheathing_2000",
+       "n": 1,
+       "pack_qty": 2000,
+       "box_price": 46.75
+      }
+     ],
+     "unitPrice": 0.0234,
+     "usedValue": 39.04,
+     "boughtOn": "fast.ring_238x113"
+    },
+    "common_8d_hdg": {
+     "label": "8d common 2-1/2 x 0.131 HDG hand nail",
+     "kind": "nail",
+     "installed": 224,
+     "toBuy": 247,
+     "boxes": [
+      {
+       "price_ref": "nails_common_8d_hdg_5lb",
+       "n": 3,
+       "pack_qty": 449,
+       "box_price": 26.98
+      }
+     ],
+     "sharedWith": [
+      "roof_sheath_8d"
+     ],
+     "unitPrice": 0.0601,
+     "usedValue": 13.46,
+     "boughtOn": "fast.common_8d_hdg+roof_sheath_8d"
+    },
+    "common_16d": {
+     "label": "16d common 3-1/2 x 0.162 hand nail",
+     "kind": "nail",
+     "installed": 358,
+     "toBuy": 394,
+     "boxes": [
+      {
+       "price_ref": "nails_common_16d_5lb",
+       "n": 2,
+       "pack_qty": 230,
+       "box_price": 25.98
+      }
+     ],
+     "unitPrice": 0.113,
+     "usedValue": 40.44,
+     "boughtOn": "fast.common_16d"
+    },
+    "cap_1in": {
+     "label": "1 in 12 ga EG ring-shank plastic cap nail",
+     "kind": "nail",
+     "installed": 612,
+     "toBuy": 674,
+     "boxes": [
+      {
+       "price_ref": "cap_nails_2000",
+       "n": 1,
+       "pack_qty": 2000,
+       "box_price": 19.98
+      }
+     ],
+     "unitPrice": 0.01,
+     "usedValue": 6.11,
+     "boughtOn": "fast.cap_1in"
+    },
+    "tie_h25a": {
+     "label": "Simpson H2.5A hurricane tie",
+     "kind": "connector",
+     "installed": 20,
+     "unitPrice": 0.93,
+     "usedValue": 18.6,
+     "boughtOn": "roof.hurricaneTies"
+    },
+    "roof_sheath_8d": {
+     "label": "8d common 2-1/2 x 0.131 x 0.281 head (roof sheathing)",
+     "kind": "nail",
+     "installed": 630,
+     "toBuy": 693,
+     "boxes": [
+      {
+       "price_ref": "nails_common_8d_hdg_5lb",
+       "n": 3,
+       "pack_qty": 449,
+       "box_price": 26.98
+      }
+     ],
+     "sharedWith": [
+      "common_8d_hdg"
+     ],
+     "unitPrice": 0.0601,
+     "usedValue": 37.86,
+     "boughtOn": "fast.common_8d_hdg+roof_sheath_8d"
+    },
+    "h_clip": {
+     "label": "7/16 H-clip (panel edge clip)",
+     "kind": "connector",
+     "installed": 56,
+     "unitPrice": 0.2444,
+     "usedValue": 13.69,
+     "boughtOn": "roof.sheathing"
+    },
+    "roofing_114": {
+     "label": "1-1/4 in 11 ga EG roofing nail",
+     "kind": "nail",
+     "installed": 1290.24,
+     "toBuy": 1355,
+     "boxes": [
+      {
+       "price_ref": "roofing_nails_5lb",
+       "n": 2,
+       "pack_qty": 1045,
+       "box_price": 15.98
+      }
+     ],
+     "unitPrice": 0.0153,
+     "usedValue": 19.73,
+     "boughtOn": "fast.roofing_114"
+    },
+    "roofing_134": {
+     "label": "1-3/4 in EG roofing nail (ridge cap)",
+     "kind": "nail",
+     "installed": 82,
+     "toBuy": 87,
+     "boxes": [
+      {
+       "price_ref": "roofing_nails_134_5lb",
+       "n": 1,
+       "pack_qty": 740,
+       "box_price": 21
+      }
+     ],
+     "unitPrice": 0.0284,
+     "usedValue": 2.33,
+     "boughtOn": "fast.roofing_134"
+    }
+   },
+   "notes": [],
+   "purchasedCost": 404.99,
+   "usedValueNailsOnly": 239.06,
+   "heelJoint": {
+    "n": 17,
+    "spacing": 24,
+    "snow": 70,
+    "span": 24
+   }
+  },
+  "totals": {
+   "materials": 8242.49,
+   "materials_from_estimated_prices": 1421,
+   "unpriced_lines": [],
+   "taxRatePct": 0,
+   "taxSource": "zip 59833 lookup",
+   "tax": 0,
+   "contingencyPct": 10,
+   "contingency": 824.25,
+   "delivery": 0,
+   "labor": "not included",
+   "total": 9066.74
+  },
+  "report": {
+   "pierCount": 14,
+   "pierDiaIn": 12,
+   "pierDepthIn": 54,
+   "concreteCuFt": 131.61,
+   "concreteYd": 4.87,
+   "bags80": 220,
+   "bags60": 293,
+   "concreteMode": "readymix",
+   "anchorBolts": 16,
+   "roofAreaSqFt": 417.42,
+   "wallSheets": 22,
+   "roofSheets": 15,
+   "floorSheets": 11,
+   "framingNails": null,
+   "fastenerMode": "schedule v4-fasteners-1",
+   "priceSnapshot": "2026-10-28",
+   "pierBottomBelowGradeIn": 36,
+   "requiredPierDepthIn": 36,
+   "frostDepthIn": 36,
+   "frostSource": "zip 59833 lookup (Ravalli County, outside city/town limits (State of Montana jurisdiction))",
+   "jurisdiction": {
+    "zip": "59833",
+    "id": "mt-state-ravalli-unincorporated",
+    "label": "Ravalli County, outside city/town limits (State of Montana jurisdiction)",
+    "code": {
+     "residential": "International Residential Code",
+     "edition": "2024",
+     "effective": "2026-09-26",
+     "amended_by": "ARM Title 24, Chapter 301",
+     "verified": true,
+     "source": "https://bsd.dli.mt.gov/building-codes-permits/current-codes",
+     "note": "LII's copy of ARM 24.301.154 still shows the 2021 IRC text (last AMD 9/21/2024); DLI's Current Codes page lists the 2024 IRC effective 2026-09-26. Treat DLI as current. Electrical: NEC 2023. Plumbing: UPC 2024."
+    },
+    "callFirst": {
+     "name": "Montana Building Codes Bureau (State)",
+     "phone": "(406) 841-2056",
+     "email": "buildingcodes@mt.gov",
+     "why": "Confirm you are outside certified jurisdictions, the 36 in footing minimum, the site ground snow load, and electrical permit needs. Then Ravalli County Environmental Health (406) 375-6565 if a bedroom is added."
+    }
+   },
+   "store": {
+    "label": "The Home Depot Missoula #3102",
+    "localized": false,
+    "note": "2026-10-28: homedepot.com product pages returned HTTP 403 to curl (with or without a store cookie for #3102), and the fetch tool returned the page without any price or store context. The price snapshot therefore stays at HD's default online store, NOT localized to Missoula #3102. To localize: open homedepot.com in a normal browser, set 'My Store' to Missoula #3102, and re-read each price url (or call the Pro Desk)."
+   }
+  }
+ },
+ "fastenersVsLegacy": {
+  "legacy_total": 9017.45,
+  "total": 9066.74,
+  "delta_total": 49.29,
+  "delta_materials": 44.81,
+  "delta_contingency": 4.48,
+  "groups_legacy": {
+   "site": 59.2,
+   "foundation": 2366.48,
+   "floor": 1182.34,
+   "walls": 2389.98,
+   "roof": 2031.77,
+   "all": 167.91
+  },
+  "legacy_lines": [
+   {
+    "id": "floor.girder",
+    "price_ref": "screws_structural_12pk",
+    "buy": 3,
+    "ext": 62.61
+   },
+   {
+    "id": "floor.hangers",
+    "price_ref": "nails_connector_10d3_250",
+    "buy": 2,
+    "ext": 46.46
+   },
+   {
+    "id": "roof.hurricaneTies",
+    "price_ref": "nails_connector_n8_150",
+    "buy": 2,
+    "ext": 15.28
+   },
+   {
+    "id": "roof.nails",
+    "price_ref": "roofing_nails_5lb",
+    "buy": 3,
+    "ext": 47.94
+   },
+   {
+    "id": "roof.underlayment",
+    "price_ref": "cap_nails_2000",
+    "buy": 1,
+    "ext": 19.98
+   },
+   {
+    "id": "fast.framingNails",
+    "price_ref": "nails_framing_16d_1000",
+    "buy": 2,
+    "ext": 87.96
+   },
+   {
+    "id": "fast.sheathingNails",
+    "price_ref": "nails_sheathing_5000",
+    "buy": 1,
+    "ext": 79.95
+   }
+  ],
+  "legacy_cost": 360.18,
+  "schedule_lines": [
+   {
+    "id": "fast.common_8d_hdg+roof_sheath_8d",
+    "price_ref": "nails_common_8d_hdg_5lb",
+    "buy": 3,
+    "ext": 80.94
+   },
+   {
+    "id": "fast.gun_3x131",
+    "price_ref": "nails_framing_16d_4000",
+    "buy": 1,
+    "ext": 105.94
+   },
+   {
+    "id": "fast.connector_148x3",
+    "price_ref": "nails_connector_10d3_250",
+    "buy": 2,
+    "ext": 46.46
+   },
+   {
+    "id": "fast.ring_238x113",
+    "price_ref": "nails_sheathing_2000",
+    "buy": 1,
+    "ext": 46.75
+   },
+   {
+    "id": "fast.common_16d",
+    "price_ref": "nails_common_16d_5lb",
+    "buy": 2,
+    "ext": 51.96
+   },
+   {
+    "id": "fast.cap_1in",
+    "price_ref": "cap_nails_2000",
+    "buy": 1,
+    "ext": 19.98
+   },
+   {
+    "id": "fast.roofing_114",
+    "price_ref": "roofing_nails_5lb",
+    "buy": 2,
+    "ext": 31.96
+   },
+   {
+    "id": "fast.roofing_134",
+    "price_ref": "roofing_nails_134_5lb",
+    "buy": 1,
+    "ext": 21
+   }
+  ],
+  "schedule_cost": 404.99,
+  "delta_fastener_cost": 44.81
+ },
+ "vsV3": {
+  "v3_total": 9628.92,
+  "v3_materials": 8019.75,
+  "v3_tax": 733.81,
+  "v3_contingency": 875.36,
+  "delta_total": -562.18,
+  "delta_materials": 222.74,
+  "delta_tax": -733.81,
+  "delta_contingency": -51.11
+ },
+ "deltas": {
+  "clearSpan2x12NoBeam": {
+   "total": 8937.52,
+   "delta": -129.22
+  },
+  "bagged80lbInsteadOfReadyMix": {
+   "total": 9669.98,
+   "delta": 603.24
+  }
+ }
+}
