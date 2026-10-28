@@ -78,6 +78,8 @@ function setView(v) {
   $('#pierOpts').hidden = v !== 'plan' || plan.getTool() !== 'pier';
   $('#view3d').hidden = v !== '3d';
   $('#tools3d').hidden = v !== '3d';
+  $('#edit3d').hidden = v !== '3d';
+  $('#stage').classList.toggle('is3d', v === '3d');
   if (v === '3d') { if (!v3.show()) toast('3D could not start (no WebGL)'); }
   else { plan.resize(); }
   refreshStatus();
@@ -106,10 +108,61 @@ PLAN.snapOptionsIn.forEach((v) => { const o = document.createElement('option'); 
 snapSel.value = model.snapIn;
 snapSel.addEventListener('change', () => { model.snapIn = Number(snapSel.value); persist(); plan.render(); });
 
-$('#pier3dBtn').addEventListener('click', () => {
-  const on = !v3.getDropMode();
-  if (on) { const f = getLayer(model, 'foundation'); if (f.locked) { toast('Foundation is locked'); return; } model.activeLayerId = 'foundation'; if (!f.visible) f.visible = true; refresh({ all: true }); toast('Tap the ground to drop a Sonotube (snaps to walls)'); }
-  v3.setDropMode(on); $('#pier3dBtn').setAttribute('aria-pressed', on);
+// ---------- 3D edit tools (Select / ◎ Pier / + Wall / + Door / + Window / X-ray / Delete)
+function setAdd3d(mode) {
+  if (mode === 'pier') {
+    const f = getLayer(model, 'foundation');
+    if (f.locked) { toast('Foundation is locked'); return; }
+    model.activeLayerId = 'foundation'; if (!f.visible) f.visible = true; if (model.isolateLayerId && model.isolateLayerId !== 'foundation') model.isolateLayerId = null;
+    toast('Tap the ground to drop a Sonotube (snaps to walls)');
+  } else if (mode) {
+    const w = getLayer(model, 'walls');
+    if (w.locked) { toast('Walls layer is locked'); return; }
+    model.activeLayerId = 'walls'; if (!w.visible) w.visible = true; if (model.isolateLayerId && model.isolateLayerId !== 'walls') model.isolateLayerId = null;
+    toast(mode === 'wall' ? 'Drag along the floor to draw an interior wall' : `Tap a wall to add a ${mode}`);
+  }
+  v3.setAddMode(mode);
+  syncEdit3d();
+  if (mode) refresh({ all: true });
+}
+function syncEdit3d() {
+  const am = v3.getAddMode();
+  $('#sel3dBtn').setAttribute('aria-pressed', !am);
+  $('#pier3dBtn').setAttribute('aria-pressed', am === 'pier');
+  $$('#edit3d [data-add]').forEach((b) => b.setAttribute('aria-pressed', am === b.dataset.add));
+  $('#xrayBtn').setAttribute('aria-pressed', !!model.xray);
+  $('#del3dBtn').disabled = !deletable();
+}
+$('#sel3dBtn').addEventListener('click', () => setAdd3d(null));
+$('#pier3dBtn').addEventListener('click', () => setAdd3d(v3.getAddMode() === 'pier' ? null : 'pier'));
+$$('#edit3d [data-add]').forEach((b) => b.addEventListener('click', () => setAdd3d(v3.getAddMode() === b.dataset.add ? null : b.dataset.add)));
+$('#xrayBtn').addEventListener('click', () => {
+  model.xray = !model.xray; persist(); syncEdit3d(); v3.build();
+  const al = getLayer(model, model.activeLayerId);
+  toast(model.xray ? `X-ray on — layers above ${al.name} are see-through and ignore taps` : 'X-ray off');
+});
+/** the selected object if the user may delete it (walls/openings/manual or auto piers/lines/areas) */
+function deletable() {
+  const o = findObject(model, model.selection); if (!o) return null;
+  const l = getLayer(model, model.selection.layerId);
+  if (o.type === 'pier') return o;
+  if (o.derivedFrom) return null;
+  if (o.type === 'wall' && o.props.exterior) return null;
+  return o && l ? o : null;
+}
+function deleteSelected() {
+  const o = deletable(); if (!o) { toast('Select a pier, interior wall, door, window or drawn item to delete'); return; }
+  const l = getLayer(model, model.selection.layerId);
+  if (l.locked) { toast(`${l.name} is locked`); return; }
+  if (o.type === 'pier') { deletePier(model, o); model.selection = null; app.commit('foundation'); toast('Pier deleted'); return; }
+  l.objects = l.objects.filter((x) => x !== o && !(x.type === 'opening' && x.geometry.wallId === o.id));
+  model.selection = null; app.commit(l.id); toast(`${cap(o.props.kind || o.type)} deleted`);
+}
+$('#del3dBtn').addEventListener('click', deleteSelected);
+window.addEventListener('keydown', (e) => {
+  if (e.target && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+  if ((e.key === 'Delete' || e.key === 'Backspace') && model.view === '3d' && deletable()) { e.preventDefault(); deleteSelected(); }
+  if (e.key === 'Escape' && model.view === '3d' && v3.getAddMode()) setAdd3d(null);
 });
 $$('#tools3d [data-cam]').forEach((b) => b.addEventListener('click', () => v3.preset(b.dataset.cam)));
 $('#explodeBtn').addEventListener('click', () => { model.exploded = !model.exploded; persist(); refresh({ all: true }); v3.preset('aerial'); });
@@ -124,8 +177,26 @@ $('#menuBtn').addEventListener('click', (e) => { e.stopPropagation(); $('#menu')
 document.addEventListener('click', () => { $('#menu').hidden = true; });
 $$('#menu [data-menu]').forEach((b) => b.addEventListener('click', () => {
   if (b.dataset.menu === 'fit') plan.fit();
+  if (b.dataset.menu === 'done') openReport();
   if (b.dataset.menu === 'reset' && confirm('Start over with the 32×24 sample? This clears the saved model on this device.')) { clear(); model = createDefaultModel(); regenerate(model, 'init'); save(model); refresh({ all: true }); setView('plan'); plan.fit(); }
 }));
+
+// ---------- "I'm done" → completion report (price + plan sheets + build steps)
+$('#doneBtn').addEventListener('click', () => openReport());
+async function openReport() {
+  const rep = $('#report');
+  rep.hidden = false; document.body.classList.add('reportOpen');
+  rep.innerHTML = '<div class="rp-loading">Pricing your addition…</div>';
+  try {
+    const { renderReport } = await import('./report.js');
+    await renderReport(rep, { model, v3, onClose: closeReport, toast });
+  } catch (err) {
+    console.error(err);
+    rep.innerHTML = `<div class="rp-loading">Could not build the report: ${String(err && err.message || err)} <button class="btn" id="rpErrClose">Close</button></div>`;
+    $('#rpErrClose').addEventListener('click', closeReport);
+  }
+}
+function closeReport() { $('#report').hidden = true; document.body.classList.remove('reportOpen'); refresh({ all: true }); }
 
 // ---------- sheet
 function setSheet(state) {
@@ -383,7 +454,7 @@ function objHTML(o, l) {
     + `<div class="flag">Header: <b>${o.props.header || headerFor(o.props.widthIn)}</b> — EXAMPLE from a simple table. Verify with your building department.</div>`
     + '<div class="btnRow"><button class="btn danger" data-del>Delete</button></div>';
   if (o.type === 'wall') return head + lockNote + `<div class="sub">${o.props.size} @ ${o.props.studOcIn || 16} in o.c. · ${fmtFtIn(dist(o.geometry.a, o.geometry.b))} long · ${o.props.exterior ? 'exterior (from footprint)' : 'interior'}</div>`
-    + (o.props.exterior ? '<div class="muted">Drag this wall (Select tool, Walls active) to move it. Foundation, floor and roof follow.</div>' : field('Bearing wall (gets footing / piers)', chk('bearing', o.props.bearing)) + '<div class="btnRow"><button class="btn danger" data-del>Delete</button></div>');
+    + (o.props.exterior ? '<div class="muted">Drag this wall to move it — in Plan (Select tool, Walls active) or in 3D (drag it or its ✥ handle; corners have ◉ handles). Foundation, floor and roof follow.</div>' : field('Bearing wall (gets footing / piers)', chk('bearing', o.props.bearing)) + '<div class="btnRow"><button class="btn danger" data-del>Delete</button></div>');
   if (o.type === 'line' || (o.type === 'area' && !o.derivedFrom)) return head + lockNote + field('Label', `<input type="text" data-k="label" value="${o.props.label || ''}">`) + (o.type === 'area' && l.kind === 'site' ? field('Height (ft)', num('heightFt', o.props.heightFt || 10)) : '') + '<div class="btnRow"><button class="btn danger" data-del>Delete</button></div>';
   const elev = o.z != null ? ` · bottom ${fmtFtIn(o.z)}${o.height ? `, ${fmtFtIn(o.height)} tall` : ''}` : '';
   return head + `<div class="sub">${o.props.label || o.type}${elev}</div><div class="muted">Generated ${o.derivedFrom && o.derivedFrom.startsWith('w-') ? 'from wall ' + o.derivedFrom : 'from ' + (o.derivedFrom || 'defaults')}. Change it with this layer's settings below.</div>`
@@ -399,6 +470,7 @@ function renderProps() {
   const flags = (al.flags || []).map((f) => `<div class="flag ${/FLAGGED|crosses/.test(f) ? 'warn' : ''}">${f}</div>`).join('');
   pane.innerHTML = `
     <div class="card" id="selCard">${o ? objHTML(o, ol) : '<h3>Nothing selected</h3><div class="muted">Tap a wall, opening, pier or member in Plan or 3D.</div>'}</div>
+    ${o && ol && ol.id !== al.id && (o.derivedFrom || o.type === 'pier') && !ol.stub && ol.kind !== 'custom' ? `<div class="card" id="objLayerCard"><h3>${ol.name} settings <span class="muted">for the selected ${o.type}</span></h3>${layerParamsHTML(ol)}</div>` : ''}
     <div class="card" id="layerCard"><h3>${al.name} <span class="muted">active layer</span></h3>
       ${al.note ? `<div class="flag">↻ ${al.note.text} · ${timeStr(al.note.at)}</div>` : ''}
       ${layerParamsHTML(al)}${flags}
@@ -420,8 +492,13 @@ function renderProps() {
       model.selection = null; app.commit(ol.id);
     });
   }
-  // layer params
-  const lc = $('#layerCard', pane);
+  bindLayerCard($('#layerCard', pane), al);
+  const olc = $('#objLayerCard', pane);
+  if (olc) bindLayerCard(olc, ol);
+}
+
+/** Wire a layer-settings card (used for the active layer, and for the layer of a selected generated member). */
+function bindLayerCard(lc, al) {
   lc.querySelectorAll('[data-k]').forEach((inp) => inp.addEventListener('change', () => {
     if (al.locked) { toast(`${al.name} is locked`); renderProps(); return; }
     const path = inp.dataset.k.split('.');
@@ -454,6 +531,7 @@ function refreshStatus() {
   $('#wallModeBtn').textContent = model.wallMode === 'studs' ? 'Walls: studs' : 'Walls: solid';
   $('#sheathBtn').setAttribute('aria-pressed', !!getLayer(model, 'roof').params.showSheathing);
   $$('#planTools [data-needs]').forEach((b) => b.classList.toggle('dim', !b.dataset.needs.split(',').includes(al.kind)));
+  syncEdit3d();
 }
 let toastT = 0;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2600); }
@@ -472,7 +550,7 @@ function refresh() {
 }
 
 window.addEventListener('resize', () => { plan.resize(); v3.resize(); });
-window.__layout = { app, getModel: () => model, setView, plan, v3, regenerate: (s) => app.commit(s), assumptions: ASSUMPTIONS };
+window.__layout = { app, getModel: () => model, setView, plan, v3, openReport, closeReport, deleteSelected, regenerate: (s) => app.commit(s), assumptions: ASSUMPTIONS };
 
 // ---------- boot
 refresh();

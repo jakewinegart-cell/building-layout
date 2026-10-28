@@ -16,7 +16,8 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">Building&nbsp;Layout <span class="badge">draft</span></div>
+    <div class="brand"><span class="brandFull">Building&nbsp;Layout <span class="badge">draft</span></span><span class="brandMini" aria-hidden="true">⌂</span></div>
+    <button id="doneBtn" class="doneBtn" title="Price it and get plans + build steps">I'm done ✓</button>
     <div class="seg" id="viewToggle" role="tablist" aria-label="View">
       <button data-view="plan" role="tab">Plan</button>
       <button data-view="3d" role="tab">3D</button>
@@ -26,6 +27,7 @@
       <button id="menuBtn" class="iconBtn" title="More" aria-label="More"></button>
     </div>
     <div id="menu" class="menu" hidden>
+      <button data-menu="done">I'm done — price + plans + steps</button>
       <button data-menu="fit">Fit to footprint</button>
       <button data-menu="reset">Start over (sample 32×24)</button>
       <div class="menuNote">Saved on this device automatically.</div>
@@ -58,8 +60,16 @@
       <button data-cam="top">Top</button>
       <button id="explodeBtn" class="toggle" aria-pressed="false">Exploded</button>
       <button id="wallModeBtn" class="toggle">Studs</button>
-      <button id="pier3dBtn" class="toggle" aria-pressed="false" title="Tap the ground to drop a Sonotube">◎ Drop pier</button>
       <button id="sheathBtn" class="toggle" aria-pressed="false">Roof sheathing</button>
+    </div>
+    <div id="edit3d" class="toolbar row2" role="toolbar" aria-label="3D edit tools" hidden>
+      <button id="sel3dBtn" class="toggle" aria-pressed="true" title="Tap to select · drag the selected item (or its ✥ handle) to move it · drag empty space to orbit">Select</button>
+      <button id="pier3dBtn" class="toggle" aria-pressed="false" title="Tap the ground to drop a Sonotube">◎Pier</button>
+      <button id="wall3dBtn" class="toggle" aria-pressed="false" data-add="wall" title="Drag along the floor to draw an interior wall">+Wall</button>
+      <button id="door3dBtn" class="toggle" aria-pressed="false" data-add="door" title="Tap a wall to add a door">+Door</button>
+      <button id="window3dBtn" class="toggle" aria-pressed="false" data-add="window" title="Tap a wall to add a window">+Win</button>
+      <button id="xrayBtn" class="toggle" aria-pressed="false" title="X-ray: see through the layers above the active one">X-ray</button>
+      <button id="del3dBtn" title="Delete the selected item" aria-label="Delete selected" disabled>🗑</button>
     </div>
 
     <div id="pierPanel" class="pierPanel" hidden role="dialog" aria-label="Selected pier"></div>
@@ -77,6 +87,8 @@
     <div id="layersPane" class="pane"></div>
     <div id="propsPane" class="pane" hidden></div>
   </aside>
+
+  <section id="report" class="report" hidden aria-label="Completion report"></section>
 
   <script type="module" src="js/app.js"></script>
 </body>
