@@ -1,0 +1,207 @@
+// Regeneration engine (spec §6): footprint → exterior walls → foundation → floor → roof,
+// plus elevation stacking. Any layer whose content changes because of an upstream
+// edit gets a visible note ("Updated from walls").
+import { LUMBER, LUMBER_T_IN, HEADER_EXAMPLE } from './config.js';
+import { offsetPolygon, bbox, scanline, isAxisRect, dist } from './geom.js';
+import { piersAlongLines, gableGeometry } from './homeplan-derived.js';
+import { getLayer } from './model.js';
+
+const IN = 1 / 12;
+const SOURCE_LABEL = { footprint: 'footprint', walls: 'walls', foundation: 'foundation', floor: 'floor framing', roof: 'roof', site: 'site' };
+
+export function headerFor(widthIn) {
+  return (HEADER_EXAMPLE.find((h) => widthIn <= h.maxIn) || HEADER_EXAMPLE[HEADER_EXAMPLE.length - 1]).size;
+}
+
+function sig(l) {
+  return JSON.stringify([l.zBase.toFixed(3), l.zTop.toFixed(3), l.objects.map((o) => [o.type, o.geometry, o.z, o.height, o.props])]);
+}
+
+/** Wall centerline segments that carry load (exterior + interior marked bearing). */
+export function bearingLines(walls) {
+  return walls.objects.filter((o) => o.type === 'wall' && (o.props.exterior || o.props.bearing))
+    .map((o) => ({ a: o.geometry.a, b: o.geometry.b, wallId: o.id }));
+}
+
+/**
+ * @param source one of footprint|walls|foundation|floor|roof|site|init
+ * @returns {string[]} names of layers that were regenerated (and got a note)
+ */
+export function regenerate(m, source) {
+  const before = {};
+  m.layers.forEach((l) => { before[l.id] = sig(l); });
+  const site = getLayer(m, 'site'), fnd = getLayer(m, 'foundation'), floor = getLayer(m, 'floor');
+  const walls = getLayer(m, 'walls'), roof = getLayer(m, 'roof');
+  const fp = m.footprint;
+  const fb = bbox(fp);
+  const flags = { foundation: [], floor: [], walls: [], roof: [], site: [] };
+
+  // ---- Site: lot + setbacks generated once (or when the footprint leaves the lot)
+  const sp = site.params;
+  const lot = sp.lot;
+  const outside = !lot || fb.minX < lot.minX || fb.minY < lot.minY || fb.maxX > lot.maxX || fb.maxY > lot.maxY;
+  if (outside) {
+    const mg = sp.lotMarginFt;
+    sp.lot = { minX: Math.floor(fb.minX - mg), minY: Math.floor(fb.minY - mg), maxX: Math.ceil(fb.maxX + mg), maxY: Math.ceil(fb.maxY + mg) + 10 };
+  }
+  site.objects = site.objects.filter((o) => !o.derivedFrom);
+  const L = sp.lot, sb = sp.setbacksFt;
+  site.objects.unshift(
+    { id: 'site-lot', type: 'area', derivedFrom: 'site', geometry: { pts: [[L.minX, L.minY], [L.maxX, L.minY], [L.maxX, L.maxY], [L.minX, L.maxY]] }, props: { role: 'lot', label: 'Lot line' } },
+    { id: 'site-setback', type: 'area', derivedFrom: 'site', geometry: { pts: [[L.minX + sb.side, L.minY + sb.rear], [L.maxX - sb.side, L.minY + sb.rear], [L.maxX - sb.side, L.maxY - sb.front], [L.minX + sb.side, L.maxY - sb.front]] }, props: { role: 'setback', label: 'Setback' } },
+  );
+  if (fb.minX < L.minX + sb.side || fb.maxX > L.maxX - sb.side || fb.minY < L.minY + sb.rear || fb.maxY > L.maxY - sb.front) flags.site.push('Footprint crosses a setback line.');
+  site.zBase = 0; site.zTop = 0;
+
+  // ---- Walls: exterior walls derived from the footprint (footprint = outside face of framing)
+  const wp = walls.params;
+  const extT = LUMBER[wp.extSize] * IN, intT = LUMBER[wp.intSize] * IN;
+  const cl = offsetPolygon(fp, extT / 2);
+  const oldExt = new Map(walls.objects.filter((o) => o.props && o.props.exterior).map((o) => [o.id, o]));
+  const interior = walls.objects.filter((o) => o.type === 'wall' && !o.props.exterior);
+  interior.forEach((w) => { w.props.thicknessIn = LUMBER[wp.intSize]; w.props.size = wp.intSize; });
+  const ext = cl.map((a, i) => {
+    const id = `w-ext-${i}`;
+    const prev = oldExt.get(id);
+    return {
+      id, type: 'wall', derivedFrom: 'footprint',
+      geometry: { a: a.slice(), b: cl[(i + 1) % cl.length].slice(), edge: i },
+      props: Object.assign({ exterior: true, bearing: true }, prev ? { bearing: true } : {}, { size: wp.extSize, thicknessIn: LUMBER[wp.extSize], studOcIn: wp.studOcIn }),
+    };
+  });
+  const wallById = new Map(ext.concat(interior).map((w) => [w.id, w]));
+  const openings = walls.objects.filter((o) => o.type === 'opening' && wallById.has(o.geometry.wallId));
+  const dropped = walls.objects.filter((o) => o.type === 'opening' && !wallById.has(o.geometry.wallId)).length;
+  openings.forEach((o) => {
+    const w = wallById.get(o.geometry.wallId);
+    const len = dist(w.geometry.a, w.geometry.b);
+    const half = (o.props.widthIn * IN) / 2;
+    o.geometry.t = Math.max(Math.min(half + 0.3, len / 2), Math.min(len - half - 0.3, o.geometry.t));
+    o.props.header = headerFor(o.props.widthIn);
+    o.props.headerFlag = 'EXAMPLE header — verify';
+  });
+  const others = walls.objects.filter((o) => o.type !== 'wall' && o.type !== 'opening');
+  walls.objects = ext.concat(interior, openings, others);
+  if (dropped) flags.walls.push(`${dropped} opening(s) removed: their wall no longer exists.`);
+  if (openings.length) flags.walls.push(`Headers flagged on ${openings.length} opening(s) — sizes are an EXAMPLE table, verify.`);
+
+  // ---- Foundation
+  const f = fnd.params;
+  const type = f.type;
+  const topZ = (f.topAboveGradeIn[type] != null ? f.topAboveGradeIn[type] : 8) * IN;
+  const frostIn = f.frostDepthIn != null && f.frostDepthIn !== '' ? Number(f.frostDepthIn) : null;
+  if (frostIn == null) flags.foundation.push('Frost depth not entered — footings drawn at a placeholder depth. Enter your local code value.');
+  const footBot = -((frostIn != null ? frostIn : f.placeholderFrostIn) * IN);
+  const footTop = footBot + f.footingDepthIn * IN;
+  const lines = bearingLines(walls);
+  const fo = [];
+  if (type === 'piers') {
+    const piers = piersAlongLines(lines, f.pierMaxSpacingFt);
+    const gbBot = topZ - f.gradeBeamDepthIn * IN;
+    piers.forEach((p, i) => fo.push({ id: `pier-${i}`, type: 'pier', derivedFrom: p.wallId, geometry: { c: p.c }, z: footBot, height: gbBot - footBot, props: { diaIn: f.pierDiaIn, label: `Pier Ø${f.pierDiaIn} in` } }));
+    lines.forEach((ln, i) => fo.push({ id: `gbeam-${i}`, type: 'beam', derivedFrom: ln.wallId, geometry: { a: ln.a, b: ln.b }, z: gbBot, height: f.gradeBeamDepthIn * IN, props: { role: 'gradeBeam', widthIn: f.gradeBeamWidthIn, label: 'Grade beam' } }));
+  } else if (type === 'slab') {
+    fo.push({ id: 'slab', type: 'area', derivedFrom: 'footprint', geometry: { pts: fp.map((p) => p.slice()) }, z: topZ - f.slabIn * IN, height: f.slabIn * IN, props: { role: 'slab', label: `${f.slabIn} in slab` } });
+    lines.forEach((ln, i) => fo.push({ id: `footing-${i}`, type: 'footing', derivedFrom: ln.wallId, geometry: { a: ln.a, b: ln.b }, z: footBot, height: topZ - f.slabIn * IN - footBot, props: { widthIn: f.footingWidthIn, label: 'Thickened edge / footing' } }));
+  } else {
+    const wallTopZ = topZ;
+    const wallBot = type === 'basement' ? topZ - f.basementWallFt : footTop;
+    const fBot = type === 'basement' ? wallBot - f.footingDepthIn * IN : footBot;
+    lines.forEach((ln, i) => {
+      fo.push({ id: `footing-${i}`, type: 'footing', derivedFrom: ln.wallId, geometry: { a: ln.a, b: ln.b }, z: fBot, height: f.footingDepthIn * IN, props: { widthIn: f.footingWidthIn, depthIn: f.footingDepthIn, label: `Footing ${f.footingWidthIn}x${f.footingDepthIn} in` } });
+      fo.push({ id: `stem-${i}`, type: 'footing', derivedFrom: ln.wallId, geometry: { a: ln.a, b: ln.b }, z: type === 'basement' ? wallBot : fBot + f.footingDepthIn * IN, height: wallTopZ - (type === 'basement' ? wallBot : fBot + f.footingDepthIn * IN), props: { role: 'stem', widthIn: f.stemWallIn, label: type === 'basement' ? 'Basement wall' : 'Stem wall' } });
+    });
+    if (type === 'basement') fo.push({ id: 'bslab', type: 'area', derivedFrom: 'footprint', geometry: { pts: fp.map((p) => p.slice()) }, z: wallBot, height: 4 * IN, props: { role: 'slab', label: 'Basement slab' } });
+  }
+  fnd.objects = fo.concat(fnd.objects.filter((o) => !o.derivedFrom));
+  fnd.zBase = Math.min(footBot, ...fo.map((o) => o.z != null ? o.z : 0));
+  fnd.zTop = topZ;
+
+  // ---- Floor framing
+  const fl = floor.params;
+  const jd = LUMBER[fl.joistSize] * IN;
+  const flo = [];
+  let floorTop = topZ;
+  if (type === 'slab') {
+    flags.floor.push('Slab on grade: no floor framing.');
+  } else {
+    const sillZ = topZ, joistZ = topZ + LUMBER_T_IN * IN, subZ = joistZ + jd;
+    floorTop = subZ + fl.subfloorIn * IN;
+    const sillCl = offsetPolygon(fp, (LUMBER[fl.sillSize] * IN) / 2);
+    sillCl.forEach((a, i) => flo.push({ id: `sill-${i}`, type: 'beam', derivedFrom: `w-ext-${i}`, geometry: { a, b: sillCl[(i + 1) % sillCl.length] }, z: sillZ, height: LUMBER_T_IN * IN, props: { role: 'sill', widthIn: LUMBER[fl.sillSize], label: `Sill ${fl.sill}` } }));
+    const rimCl = offsetPolygon(fp, (LUMBER_T_IN * IN) / 2);
+    rimCl.forEach((a, i) => flo.push({ id: `rim-${i}`, type: 'joist', derivedFrom: `w-ext-${i}`, geometry: { a, b: rimCl[(i + 1) % rimCl.length] }, z: joistZ, height: jd, props: { role: 'rim', widthIn: LUMBER_T_IN, label: `Rim joist ${fl.joistSize}` } }));
+    // Joists span the short direction (spec §6) unless the user picks a direction.
+    const inner = offsetPolygon(fp, LUMBER_T_IN * IN);
+    const ib = bbox(inner);
+    let runAxis = fl.direction; // 'x' = joists run east-west
+    if (runAxis !== 'x' && runAxis !== 'y') runAxis = fb.w >= fb.h ? 'y' : 'x';
+    const span = runAxis === 'y' ? fb.h : fb.w;
+    const oc = fl.joistOcIn * IN;
+    const lo = runAxis === 'y' ? ib.minX : ib.minY, hi = runAxis === 'y' ? ib.maxX : ib.maxY;
+    let k = 0;
+    for (let c = (runAxis === 'y' ? fb.minX : fb.minY) + oc; c < hi - 0.1; c += oc) {
+      if (c < lo + 0.1) continue;
+      scanline(inner, runAxis === 'y' ? 'x' : 'y', c).forEach(([a, b]) => flo.push({ id: `joist-${k++}`, type: 'joist', derivedFrom: 'footprint', geometry: { a, b }, z: joistZ, height: jd, props: { widthIn: LUMBER_T_IN, size: fl.joistSize, label: `${fl.joistSize} @ ${fl.joistOcIn} in o.c.` } }));
+    }
+    floor.params.computed = { runAxis, spanFt: span };
+    if (span > fl.beamFlagSpanFt) {
+      const mid = runAxis === 'y' ? fb.cy : fb.cx;
+      scanline(inner, runAxis === 'y' ? 'y' : 'x', mid).forEach(([a, b], i) => flo.push({ id: `beam-${i}`, type: 'beam', derivedFrom: 'footprint', geometry: { a, b }, z: joistZ, height: jd, props: { role: 'girder', widthIn: 3 * LUMBER_T_IN, flag: true, label: 'Mid beam — FLAGGED, size by engineer' } }));
+      flags.floor.push(`Joist span ${span.toFixed(1)} ft > ${fl.beamFlagSpanFt} ft: mid beam added and FLAGGED (not sized). Its support is not generated — verify.`);
+    }
+    flo.push({ id: 'subfloor', type: 'area', derivedFrom: 'footprint', geometry: { pts: fp.map((p) => p.slice()) }, z: subZ, height: fl.subfloorIn * IN, props: { role: 'subfloor', label: fl.subfloor } });
+  }
+  floor.objects = flo.concat(floor.objects.filter((o) => !o.derivedFrom));
+  floor.zBase = topZ; floor.zTop = floorTop;
+
+  // ---- Walls elevation
+  walls.zBase = floorTop; walls.zTop = floorTop + wp.plateHeightFt;
+  walls.objects.forEach((o) => { if (o.type === 'wall') { o.z = walls.zBase; o.height = wp.plateHeightFt; } });
+  m.levels[0].floorZ = floorTop;
+
+  // ---- Roof (gable over the footprint's bounding rectangle in v1)
+  const rp = roof.params;
+  const ro = [];
+  const ridgeAlongX = rp.ridge === 'long' ? fb.w >= fb.h : fb.w < fb.h;
+  const span = ridgeAlongX ? fb.h : fb.w;
+  const g = gableGeometry(span, rp.pitch, rp.overhangIn, walls.zTop);
+  const rd = LUMBER[rp.rafterSize] * IN;
+  const oc = rp.rafterOcIn * IN;
+  const A0 = (ridgeAlongX ? fb.minX : fb.minY) - g.oh, A1 = (ridgeAlongX ? fb.maxX : fb.maxY) + g.oh;
+  const C0 = (ridgeAlongX ? fb.minY : fb.minX) - g.oh, C1 = (ridgeAlongX ? fb.maxY : fb.maxX) + g.oh, Cm = ridgeAlongX ? fb.cy : fb.cx;
+  const P = (along, cross) => (ridgeAlongX ? [along, cross] : [cross, along]);
+  const stations = [];
+  for (let s = A0; s < A1 - 0.05; s += oc) stations.push(s);
+  stations.push(A1);
+  let r = 0;
+  stations.forEach((s) => {
+    [C0, C1].forEach((c) => ro.push({ id: `rafter-${r++}`, type: 'rafter', derivedFrom: 'roof', geometry: { a: P(s, c), b: P(s, Cm) }, z: g.eaveTipZ, height: rd, props: { zA: g.eaveTipZ, zB: g.ridgeZ, size: rp.rafterSize, widthIn: LUMBER_T_IN, label: `Rafter ${rp.rafterSize} @ ${rp.rafterOcIn} in o.c.` } }));
+  });
+  ro.push({ id: 'ridge', type: 'beam', derivedFrom: 'roof', geometry: { a: P(A0, Cm), b: P(A1, Cm) }, z: g.ridgeZ, height: rd + 1.5 * IN, props: { role: 'ridge', widthIn: LUMBER_T_IN, label: 'Ridge board' } });
+  ro.push({ id: 'roof-outline', type: 'area', derivedFrom: 'walls', geometry: { pts: [P(A0, C0), P(A1, C0), P(A1, C1), P(A0, C1)] }, z: g.eaveTipZ, height: 0, props: { role: 'outline', label: 'Roof outline' } });
+  ro.push({ id: 'roof-pitch', type: 'label', derivedFrom: 'roof', geometry: { c: P((A0 + A1) / 2, (C0 + Cm) / 2) }, props: { text: `${rp.pitch}:12`, arrow: ridgeAlongX ? 'y' : 'x' } });
+  roof.objects = ro.concat(roof.objects.filter((o) => !o.derivedFrom));
+  roof.zBase = walls.zTop; roof.zTop = g.ridgeZ + rd;
+  roof.params.computed = { ridgeAlongX, rise: g.rise, ridgeZ: g.ridgeZ };
+  if (!isAxisRect(fp)) flags.roof.push('Non-rectangular footprint: v1 roof is a gable over the bounding rectangle. Check / edit manually.');
+  if (rp.shape !== 'gable') flags.roof.push('Only gable is generated in v1; shed and hip are coming.');
+  flags.roof.push('Gable-end wall framing is not generated yet.');
+
+  // ---- custom layers keep their own z; stubs sit on top of the roof
+  m.layers.forEach((l) => { if (flags[l.id]) l.flags = flags[l.id]; });
+
+  // ---- notes for layers changed by an upstream edit
+  const srcLayer = source === 'footprint' ? null : source;
+  const changed = [];
+  const now = Date.now();
+  m.layers.forEach((l) => {
+    if (l.stub || l.kind === 'custom' || l.id === srcLayer || source === 'init') return;
+    if (sig(l) !== before[l.id]) {
+      l.note = { text: `Updated from ${SOURCE_LABEL[source] || source}`, at: now };
+      changed.push(l.name);
+    }
+  });
+  if (changed.length) m.lastRegen = { source: SOURCE_LABEL[source] || source, layers: changed, at: now };
+  return changed;
+}
