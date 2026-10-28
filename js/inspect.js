@@ -343,6 +343,9 @@ export function applySchedule(X, info) {
     // concrete pieces: the engine prices concrete/rebar on the foundation lines; keep this pier's share rows, swap ties for the schedule
     rows = info.rows.filter((r) => !r.fastener && !r.tie);
     found.forEach(({ p, n }) => rows.push(...scheduleRows(X, p, n)));
+    // The engine's hover copy for these pieces only totals the fasteners ("total $0.20"); finishInfo() rebuilds it
+    // as material lines → fastener lines → the full per-piece total.
+    info.sharedHover = found.map(({ p, n }) => ({ head: (n > 1 ? `${n} × ` : '') + (p.hover[0] || p.label), fast: p.hover.slice(2, -1) }));
   }
   info.rows = rows;
   info.hover = found.map(({ p, n }) => (n > 1 ? `${n} × ` : '') + p.hover.join(' · '));
@@ -356,6 +359,11 @@ export function finishInfo(X, info) {
   applySchedule(X, info);
   info.total = r2(info.rows.reduce((s, r) => s + (r.amount || 0), 0));
   info.est = info.rows.some((r) => r.est) || info.rows.some((r) => r.amount == null);
+  if (info.sharedHover) { // materials priced on shared (foundation) lines: show this piece's share of each, then fasteners, then the full total
+    const mats = info.rows.filter((r) => !r.fastener).map((r) => `${r.label} = ${r.amount == null ? 'PRICE NEEDED' : usd(r.amount)}${r.est ? ' est.' : ''}`);
+    const fast = info.sharedHover.flatMap((h) => h.fast);
+    info.hover = [[info.sharedHover.map((h) => h.head).join(' + '), ...mats, ...fast, `total ${usd(info.total)}${info.est ? ' est.' : ''}`].join(' · ')];
+  }
   const g = X.est.groups.find((x) => x.id === info.layerId);
   if (g) info.layerSubtotal = { name: g.name, total: g.total };
   const T = X.est.totals || {};
@@ -403,8 +411,8 @@ export function createInspector({ app, plan, v3, stage, button }) {
     pop.style.left = Math.round(x) + 'px'; pop.style.top = Math.round(y) + 'px';
   }
   async function show(hit, ev) {
+    if (!hit) { if (!pinned) { lastHit = null; pop.hidden = true; plan.setInspectMark(null); } return; } // a touch pointerleave must not cancel a pinned tap
     lastHit = hit; lastEv = ev && { clientX: ev.clientX, clientY: ev.clientY, pointerType: ev.pointerType };
-    if (!hit) { if (!pinned) { pop.hidden = true; plan.setInspectMark(null); } return; }
     pinned = !!(ev && ev.pointerType && ev.pointerType !== 'mouse') || (ev && ev.type === 'pointerup');
     if (!X) { pop.innerHTML = infoHTML({ loading: true }); pop.hidden = false; place(lastEv); }
     let info;
@@ -428,11 +436,14 @@ export function createInspector({ app, plan, v3, stage, button }) {
     return null;
   }
   function set(v) {
+    if (!!v === on) return;
     on = !!v; pinned = false;
     document.body.classList.toggle('inspecting', on);
+    if (app.onInspect) app.onInspect(on); // park / restore selection, tool and 3D add mode
     button.setAttribute('aria-pressed', on); button.classList.toggle('on', on);
     button.title = on ? 'Price inspect on — point at a part (Esc or $ to exit)' : 'Price inspect: point at any part to see what it costs';
     if (!on) { pop.hidden = true; plan.setInspectMark(null); v3.clearInspect && v3.clearInspect(); lastHit = null; }
+    plan.render(); if (v3.setInspecting) v3.setInspecting(on); // hide / restore edit handles + gizmos
     else { est = null; X = null; ctx().catch(() => {}); app.toast('$ Price inspect on — ' + (matchMedia('(pointer: coarse)').matches ? 'tap' : 'point at') + ' any part. Esc or $ to exit'); }
   }
   button.addEventListener('click', (e) => { e.stopPropagation(); set(!on); });

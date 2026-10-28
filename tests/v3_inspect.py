@@ -75,7 +75,11 @@ with sync_playwright() as p:
     pg.mouse.move(*pp); pg.wait_for_timeout(800)
     tp = popup(pg) or ''
     check('plan hover on a pier → Sonotube popup (tube, concrete, rebar, total)', 'Sonotube pier' in tp and 'Sonotube' in tp and 'concrete' in tp.lower() and 'rebar' in tp and money_total(tp) is not None, tp.split('\n')[0])
-    check('pier popup: wire ties from fastener-schedule.json + hover copy', 'x wire tie' in tp and '@ $0.098 each' in tp and re.search(r'Concrete pier, \d+ ft[^\n]*concrete \+ rebar priced on the foundation lines · 2 x wire tie @ \$0\.098 each = \$0\.20', tp) is not None, [x for x in tp.split('\n') if 'Concrete pier' in x][:1])
+    hv = next((x for x in tp.split('\n') if x.startswith('Concrete pier')), '')
+    mh = re.search(r' · total \$([0-9,]+\.\d\d)', hv)
+    check('pier popup: wire ties from fastener-schedule.json + hover copy (materials → ties → full per-pier total)', 'x wire tie' in tp and '@ $0.098 each' in tp
+          and re.search(r'Concrete pier, \d+ ft[^\n]*Sonotube = \$[\d.]+[^\n]*concrete[^\n]*rebar[^\n]* · 2 x wire tie @ \$0\.098 each = \$0\.20 · total \$', hv) is not None
+          and mh is not None and float(mh.group(1).replace(',', '')) == money_total(tp) and 'total $0.20' not in hv, hv)
     pg.screenshot(path=SH + '23-inspect-pier.png')
     # clicking / dragging in plan must not edit
     pg.mouse.click(*pt); pg.wait_for_timeout(300)

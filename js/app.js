@@ -82,12 +82,22 @@ const v3 = createView3D($('#view3d'), app);
 // ---------- $ price inspect (off until the user turns it on; never edits the model)
 let inspector = null;
 inspector = createInspector({ app, plan, v3, button: $('#inspectBtn') });
-$('#inspectBtn').addEventListener('click', () => {
-  if (!inspector.isOn()) return;
-  if (v3.getAddMode()) setAdd3d(null);
-  if (plan.getTool() !== 'select') plan.setTool('select');
-  if (model.selection) app.select(null);
-}, false);
+// $ on: park the selection, plan tool and 3D add mode (so no handle, gizmo, ghost or edit panel shows and a tap can't edit);
+// $ off (button or Esc): put them back exactly as they were.
+let inspectStash = null;
+app.onInspect = (on) => {
+  if (on) {
+    inspectStash = { sel: model.selection ? Object.assign({}, model.selection) : null, tool: plan.getTool(), add: v3.getAddMode() };
+    if (inspectStash.add) setAdd3d(null);
+    if (inspectStash.tool !== 'select') plan.setTool('select');
+    if (model.selection) app.select(null, true);
+  } else if (inspectStash) {
+    const st = inspectStash; inspectStash = null;
+    if (st.sel && findObject(model, st.sel)) app.select(st.sel, true);
+    if (st.tool && st.tool !== 'select') plan.setTool(st.tool);
+    if (st.add && model.view === '3d') setAdd3d(st.add);
+  }
+};
 
 function setView(v) {
   model.view = v;

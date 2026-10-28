@@ -124,7 +124,8 @@ with sync_playwright() as p:
     check('stud popup (59833): Common stud $6.14 + 6 x 3-1/4x.131 nail @ $0.026 = $0.16, total $6.30', '2x6 Common stud, 7 ft 7.5 in · $6.14 EXAMPLE · 6 x 3-1/4x.131 nail @ $0.026 each = $0.16 · total $6.30 EXAMPLE' in stud and '$6.30' in stud, stud[:200])
     pier = hover_popup(pg, """() => { const o = __layout.getModel().layers.find(l => l.id === 'foundation').objects.find(o => o.type === 'pier');
         const s = __layout.plan.debug.toScreen(o.geometry.c); const r = document.querySelector('#plan').getBoundingClientRect(); return [r.left + s[0], r.top + s[1]]; }""")
-    check('pier popup (59833): 4 ft 6 in pier, concrete/tube/rebar share + 2 x wire tie @ $0.098 = $0.20', 'Sonotube pier, 4 ft 6 in tall' in pier and 'Concrete pier, 4 ft 6 in · concrete + rebar priced on the foundation lines · 2 x wire tie @ $0.098 each = $0.20' in pier, pier[:200])
+    PIER_HOVER = 'Concrete pier, 4 ft 6 in · 56 in of 12 in Sonotube = $23.31 · 3.89 cu ft ready-mix concrete (Ø12 in × 4 ft 6 in, +10% waste) = $21.60 est. · 20.0 ft #4 rebar (EXAMPLE) = $14.33 · 2 x wire tie @ $0.098 each = $0.20 · total $59.44 est.'
+    check('pier popup (59833): 4 ft 6 in pier, tube/concrete/rebar share + 2 x wire tie @ $0.098 = $0.20, hover total = full pier $59.44 est.', 'Sonotube pier, 4 ft 6 in tall' in pier and PIER_HOVER in pier and re.search(r'Total for this piece\s*\$59\.44', pier), [x for x in pier.split('\n') if x.startswith('Concrete pier')][:1])
     with open(SH + 'inspect-popups-59833.txt', 'w') as fh:
         fh.write('--- stud (plan hover, 20x16 example, ZIP 59833)\n' + stud + '\n--- pier\n' + pier + '\n')
     pg.keyboard.press('Escape'); pg.wait_for_timeout(200)

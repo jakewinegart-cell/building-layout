@@ -24,6 +24,7 @@ export function createView3D(container, app) {
   let addMode = null;     // null | 'pier' | 'wall' | 'door' | 'window' — 3D add tools
   let edit = null;        // active 3D edit: { op (edit-ops drag), planeY, pointerId, sx, sy, started } or a wall draft
   let ov = null, ovx = null;   // 2D overlay canvas for handles' hints + live dimensions
+  const inspecting = () => !!(app.isInspecting && app.isInspecting());
   let handles = null;     // THREE.Group of handle sprites (not pickable by the mesh raycast)
   let handleList = [];    // [{ kind:'move'|'corner', i, pos:Vector3, sprite }]
   let lastDims = [];      // labels drawn on the overlay last frame (for tests)
@@ -368,7 +369,7 @@ export function createView3D(container, app) {
       else if (l.kind === 'walls') buildWalls(ctx);
       else if (l.kind === 'roof') buildRoof(ctx);
       else if (l.kind === 'custom') buildCustom(ctx);
-      g.traverse((o) => { if (o.isMesh) { o.userData.layerId = l.id; if (!report && m.selection && o.userData.objectId === m.selection.objectId && m.selection.layerId === l.id) o.material = SEL_MAT; } });
+      g.traverse((o) => { if (o.isMesh) { o.userData.layerId = l.id; if (!report && !inspecting() && m.selection && o.userData.objectId === m.selection.objectId && m.selection.layerId === l.id) o.material = SEL_MAT; } });
       if (m.exploded && !report) {
         const lab = label(`${l.name}`, l.color);
         const b = bbox(m.footprint);
@@ -404,8 +405,9 @@ export function createView3D(container, app) {
   }
   function buildHandles(report) {
     while (handles.children.length) handles.remove(handles.children[0]);
+    handles.visible = !inspecting();
     handleList = [];
-    if (report) return;
+    if (report || inspecting()) return; // $ inspect: no ✥ move / ◇ corner handles (rebuilt when it turns off)
     const m = app.getModel();
     const wl = getLayer(m, 'walls');
     const wy = layerY('walls') + wl.zBase;
@@ -454,6 +456,7 @@ export function createView3D(container, app) {
     ovx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ovx.clearRect(0, 0, ov.width, ov.height);
     lastDims = [];
+    if (inspecting()) return; // $ inspect: no edit hints / live dims
     const W = container.clientWidth, H = container.clientHeight;
     if (!edit || !edit.started) {
       if (addMode) chip(W / 2, H - 22, { pier: 'Tap the ground to drop a Sonotube', wall: 'Drag along the floor to draw a wall', door: 'Tap a wall to add a door', window: 'Tap a wall to add a window' }[addMode], 'rgba(43,42,39,.88)', 13);
@@ -761,6 +764,8 @@ export function createView3D(container, app) {
     },
     isReady: () => ready,
     clearInspect() { setHover(null); },
+    /** $ inspect on/off: hide (or restore) the edit handles, selection paint and edit hints */
+    setInspecting() { if (ready) { build(); drawOverlay(); } },
     /** page coords of the first mesh matching pred(userData) — for tests */
     screenOfPart(pred) {
       let hit = null;

@@ -115,13 +115,16 @@ export function createPlan(canvas, app) {
   }
 
   // ---------- render
+  let lastOverlay = { selection: false, draft: false };
   function render() {
     const m = M();
     if (!m || !cssW) return;
     ctx.clearRect(0, 0, cssW, cssH);
     ctx.fillStyle = '#f7f5f0'; ctx.fillRect(0, 0, cssW, cssH);
     drawGrid(m);
-    const sel = m.selection;
+    const insp = inspecting(); // $ inspect: no selection highlight, drafts, tool ghosts or pier dims (restored when it turns off)
+    const sel = insp ? null : m.selection;
+    lastOverlay = { selection: !!sel, draft: false };
     stackOrder(m).forEach((l) => {
       const d = layerDisplay(m, l);
       if (!d.shown) return;
@@ -132,7 +135,7 @@ export function createPlan(canvas, app) {
     const wallsD = layerDisplay(m, getLayer(m, 'walls'));
     if (wallsD.shown || m.isolateLayerId === null) drawDims(m);
     drawNorth(m);
-    drawDraft(m);
+    if (!insp) { drawDraft(m); lastOverlay.draft = !!draft || (tool !== 'select' && !!hover) || !!(drag && drag.kind === 'pier' && drag.moved); }
     drawInspectMark();
     if (m.isolateLayerId) text(`Isolated: ${getLayer(m, m.isolateLayerId).name}`, Object.assign([cssW / 2, cssH - 16], { screen: true }), { size: 11, bg: '#2b2b2b', color: '#fff' });
   }
@@ -740,7 +743,7 @@ export function createPlan(canvas, app) {
     },
     setInspectMark(k) { inspectMark = k || null; render(); },
     getInspectMark: () => inspectMark,
-    debug: { view, toScreen, toWorld },
+    debug: { view, toScreen, toWorld, overlay: () => Object.assign({}, lastOverlay) },
   };
 }
 
