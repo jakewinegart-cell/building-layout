@@ -10,6 +10,7 @@ import { createInspector } from './inspect.js';
 import { createZipModal, siteSummary } from './zipmodal.js';
 import { frostKnown } from './config.js';
 import { loadRun, layerPriceState } from './pricecheck.js';
+import { createWizard } from './wizard.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -35,8 +36,32 @@ let saveT = 0;
 let reportCtl = null; // price-check report controller (set when opened)
 const persist = () => { clearTimeout(saveT); saveT = setTimeout(() => save(model), 150); };
 
+let previewModel = null; // wizard preview: a model copy shown in Plan/3D until Apply / Cancel
+// ---------- undo / redo (20 steps; wizard + manual edits, hooked on app.commit; mirrored in sessionStorage)
+const HIST_MAX = 20; const HIST_KEY = 'buildingLayout.history.v1';
+const snapOf = (m) => { const c = Object.assign({}, m); delete c.view; delete c.selection; return JSON.stringify(c); };
+let hist = { undo: [], redo: [] };
+try { const h = JSON.parse(sessionStorage.getItem(HIST_KEY) || 'null'); if (h && Array.isArray(h.undo)) hist = h; } catch (e) { /* ignore */ }
+let lastSnap = null;
+const saveHist = () => { try { sessionStorage.setItem(HIST_KEY, JSON.stringify(hist)); } catch (e) { hist.undo = hist.undo.slice(-5); } };
+function recordHistory(label) {
+  const s = snapOf(model); if (lastSnap == null) { lastSnap = s; return; }
+  if (s === lastSnap) return;
+  hist.undo.push({ snap: lastSnap, label: label || 'edit' }); if (hist.undo.length > HIST_MAX) hist.undo.shift();
+  hist.redo = []; lastSnap = s; saveHist();
+}
+function restoreSnap(snap) {
+  const view = model.view; model = JSON.parse(snap); model.view = view; model.selection = null;
+  regenerate(model, 'init'); lastSnap = snapOf(model); persist(); refresh({ all: true });
+  if (reportCtl && !$('#report').hidden) reportCtl.markStale(); if (inspector) inspector.invalidate();
+}
+function undo() { const e = hist.undo.pop(); if (!e) return null; hist.redo.push({ snap: lastSnap, label: e.label }); restoreSnap(e.snap); saveHist(); toast(`Undone: ${e.label}`); return e.label; }
+function redo() { const e = hist.redo.pop(); if (!e) return null; hist.undo.push({ snap: lastSnap, label: e.label }); restoreSnap(e.snap); saveHist(); toast(`Redone: ${e.label}`); return e.label; }
+let nextLabel = null;
+let wizard = null;
+
 const app = {
-  getModel: () => model,
+  getModel: (real) => (real ? model : previewModel || model),
   defaults: DEFAULTS,
   toast,
   select(sel, silent) {
@@ -57,6 +82,7 @@ const app = {
     pending = new Set(); pendingSource = null;
     // drop selection if the object no longer exists
     if (model.selection && !findObject(model, model.selection)) model.selection = null;
+    recordHistory(nextLabel || `${source} edit`); nextLabel = null; if (wizard) wizard.syncUndo();
     persist();
     refresh({ all: true });
     if (reportCtl && !$('#report').hidden) reportCtl.markStale();
@@ -669,7 +695,29 @@ function refresh() {
 }
 
 window.addEventListener('resize', () => { plan.resize(); v3.resize(); });
-window.__layout = { app, inspector, zipModal: null, getModel: () => model, setView, plan, v3, openReport, closeReport, deleteSelected, regenerate: (s) => app.commit(s), assumptions: ASSUMPTIONS };
+window.__layout = { app, inspector, zipModal: null, getModel: () => model, openWizard: () => wizard.open(), setView, plan, v3, openReport, closeReport, deleteSelected, regenerate: (s) => app.commit(s), assumptions: ASSUMPTIONS };
+
+// ---------- Wizard (typed chat; wizard-v1/wizard-spec.md)
+wizard = createWizard({
+  getModel: (real) => (real ? model : previewModel || model),
+  setPreview(clone) {
+    previewModel = clone; document.body.classList.toggle('wizPreview', !!clone);
+    plan.render(); if (model.view === '3d' || v3.isReady()) v3.build();
+  },
+  applyModel(clone, label) {
+    const view = model.view; model = clone; model.view = view; nextLabel = label; pendingSource = 'wizard'; app.commit('init');
+  },
+  undo, redo, canUndo: () => hist.undo.length > 0, canRedo: () => hist.redo.length > 0,
+  openReport: () => openReport(), toast,
+});
+$('#wizardBtn').addEventListener('click', (e) => { e.stopPropagation(); wizard.toggle(); });
+document.addEventListener('keydown', (e) => {
+  if (!(e.ctrlKey || e.metaKey) || e.altKey) return; const k = e.key.toLowerCase();
+  if (k !== 'z' && k !== 'y') return; const tg = e.target; if (tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA' || tg.tagName === 'SELECT')) return;
+  e.preventDefault(); if (k === 'y' || e.shiftKey) redo(); else undo(); wizard.syncUndo();
+});
+window.__layout.wizard = wizard; window.__layout.undo = undo; window.__layout.redo = redo; window.__layout.history = () => ({ undo: hist.undo.map((x) => x.label), redo: hist.redo.map((x) => x.label) });
+lastSnap = snapOf(model);
 
 // ---------- boot
 refresh();
