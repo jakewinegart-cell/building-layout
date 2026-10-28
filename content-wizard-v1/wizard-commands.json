@@ -1,2118 +1,2155 @@
 {
- "meta": {
-  "name": "Building Layout wizard commands",
-  "version": "wizard-v1",
-  "date": "2026-10-28",
-  "tz": "America/Denver",
-  "recommended_approach": "One LLM call per user turn with tool/function calling (temperature 0), using llm_tools below. The LLM extracts the intent and raw slots and nothing else. App code resolves references, normalizes units (parseFtIn), builds ops, runs every validation deterministically on a structuredClone of the model after regenerate(), shows a preview with the takeoff delta, and applies with an undo snapshot. Never let the LLM write the model or produce code facts, prices or sizes.",
-  "money": "All $ are EXAMPLE from content-v3/homedepot-prices.json (homedepot.com default online store snapshot 2026-10-28, not Denver). No invented prices.",
-  "spec": "wizard-spec.md"
- },
- "conventions": {
-  "coords": "plan ft; x -> east, y -> south (js/geom.js). footprint = outside face of framing.",
-  "directions": {
-   "north": "-y",
-   "back": "north",
-   "rear": "north",
-   "top": "north (plan)",
-   "south": "+y",
-   "front": "south (site setbacksFt.front)",
-   "bottom": "south (plan)",
-   "east": "+x",
-   "right": "east (plan view; in 3D resolve from the camera)",
-   "west": "-x",
-   "left": "west (plan view; in 3D resolve from the camera)"
+  "meta": {
+    "name": "Building Layout wizard commands",
+    "version": "wizard-v1",
+    "date": "2026-10-28",
+    "tz": "America/Denver",
+    "recommended_approach": "One LLM call per user turn with tool/function calling (temperature 0), using llm_tools below. The LLM extracts the intent and raw slots and nothing else. App code resolves references, normalizes units (parseFtIn), builds ops, runs every validation deterministically on a structuredClone of the model after regenerate(), shows a preview with the takeoff delta, and applies with an undo snapshot. Never let the LLM write the model or produce code facts, prices or sizes.",
+    "money": "All $ are EXAMPLE from content-v3/homedepot-prices.json (homedepot.com default online store snapshot 2026-10-28, not Denver). No invented prices.",
+    "spec": "wizard-spec.md"
   },
-  "opening_left_right": "as seen from outside the wall",
-  "height": "plate height = top of top plate above the subfloor (walls.params.plateHeightFt). 'above ground' adds walls.zBase.",
-  "shed_run": "distance between outside faces of the high and low walls (footprint dimension); centerline value shown as a footnote",
-  "units": {
-   "parser": "js/piers.js parseFtIn",
-   "bare_number": "ft for lengths/heights >= 4, in for opening sizes; otherwise ask",
-   "pitch": "'X:12','X/12','X in 12','X pitch', degrees -> 12*tan"
+  "conventions": {
+    "coords": "plan ft; x -> east, y -> south (js/geom.js). footprint = outside face of framing.",
+    "directions": {
+      "north": "-y",
+      "back": "north",
+      "rear": "north",
+      "top": "north (plan)",
+      "south": "+y",
+      "front": "south (site setbacksFt.front)",
+      "bottom": "south (plan)",
+      "east": "+x",
+      "right": "east (plan view; in 3D resolve from the camera)",
+      "west": "-x",
+      "left": "west (plan view; in 3D resolve from the camera)"
+    },
+    "opening_left_right": "as seen from outside the wall",
+    "height": "plate height = top of top plate above the subfloor (walls.params.plateHeightFt). 'above ground' adds walls.zBase.",
+    "shed_run": "distance between outside faces of the high and low walls (footprint dimension); centerline value shown as a footnote",
+    "units": {
+      "parser": "js/piers.js parseFtIn",
+      "bare_number": "ft for lengths/heights >= 4, in for opening sizes; otherwise ask",
+      "pitch": "'X:12','X/12','X in 12','X pitch', degrees -> 12*tan"
+    },
+    "wall_resolution": "exterior wall side from the outward normal of footprint edge i (wall id w-ext-i); ties -> ask; 'this' -> m.selection; 'house side' -> m.attachToExistingWallId or the existing site object touching the footprint"
   },
-  "wall_resolution": "exterior wall side from the outward normal of footprint edge i (wall id w-ext-i); ties -> ask; 'this' -> m.selection; 'house side' -> m.attachToExistingWallId or the existing site object touching the footprint"
- },
- "enums": {
-  "roofCovering": [
-   "asphalt_shingle",
-   "clay_concrete_tile",
-   "metal_shingle",
-   "roll_roofing",
-   "slate",
-   "wood_shingle",
-   "wood_shake",
-   "built_up",
-   "metal_panel_lapped",
-   "metal_panel_lapped_sealant",
-   "metal_standing_seam",
-   "modified_bitumen",
-   "single_ply",
-   "liquid_applied"
-  ]
- },
- "proposed_fields": {
-  "roof.params.shed": {
-   "highWallId": "w-ext-i",
-   "highPlateFt": "number",
-   "lowPlateFt": "number"
+  "enums": {
+    "roofCovering": [
+      "asphalt_shingle",
+      "clay_concrete_tile",
+      "metal_shingle",
+      "roll_roofing",
+      "slate",
+      "wood_shingle",
+      "wood_shake",
+      "built_up",
+      "metal_panel_lapped",
+      "metal_panel_lapped_sealant",
+      "metal_standing_seam",
+      "modified_bitumen",
+      "single_ply",
+      "liquid_applied"
+    ]
   },
-  "roof.params.roofing": {
-   "covering": "enum roofCovering (default asphalt_shingle)",
-   "underlayment": "'synthetic'|'double_synthetic'|'self_adhered_full'"
+  "proposed_fields": {
+    "roof.params.shed": {
+      "highWallId": "w-ext-i",
+      "highPlateFt": "number",
+      "lowPlateFt": "number"
+    },
+    "roof.params.roofing": {
+      "covering": "enum roofCovering (default asphalt_shingle)",
+      "underlayment": "'synthetic'|'double_synthetic'|'self_adhered_full'"
+    },
+    "walls.objects[].props.plateHeightFt": "number|null (at a)",
+    "walls.objects[].props.plateHeightEndFt": "number|null (at b; rake wall)",
+    "m.attachToExistingWallId": "w-ext-i|null (already in content-v3 missing_fields)",
+    "m.wizard.log": "optional chat log; undo stack NOT persisted in the model"
   },
-  "walls.objects[].props.plateHeightFt": "number|null (at a)",
-  "walls.objects[].props.plateHeightEndFt": "number|null (at b; rake wall)",
-  "m.attachToExistingWallId": "w-ext-i|null (already in content-v3 missing_fields)",
-  "m.wizard.log": "optional chat log; undo stack NOT persisted in the model"
- },
- "ops": {
-  "set": {
-   "args": [
-    "path",
-    "value"
-   ],
-   "example": [
-    "roof.params.shape",
-    "shed"
-   ]
-  },
-  "setWall": {
-   "args": [
-    "wallId",
-    "props"
-   ]
-  },
-  "moveEdge": {
-   "args": [
-    "edgeIndex",
-    "offsetFt (+ = inward, same math as edit-ops applyDrag 'edge')"
-   ]
-  },
-  "setFootprint": {
-   "args": [
-    "points"
-   ]
-  },
-  "addOpening": {
-   "args": [
-    "wallId",
-    "t",
-    "kind",
-    "widthIn",
-    "heightIn",
-    "sillIn"
-   ]
-  },
-  "moveOpening": {
-   "args": [
-    "openingId",
-    "t",
-    "wallId?"
-   ]
-  },
-  "removeObject": {
-   "args": [
-    "layerId",
-    "objectId"
-   ]
-  },
-  "addInteriorWall": {
-   "args": [
-    "a",
-    "b",
-    "bearing"
-   ]
-  },
-  "dropPier": {
-   "args": [
-    "c",
-    "diaIn"
-   ],
-   "guard": "V-FND-01"
-  }
- },
- "llm_tools": [
-  {
-   "name": "answer_question",
-   "description": "Answer a question about the current building, its cost (EXAMPLE), code minimums in code_facts, or how to build it. No model change.",
-   "parameters": {
-    "type": "object",
-    "properties": {
-     "intent": {
-      "enum": [
-       "ask.value",
-       "ask.cost",
-       "ask.why",
-       "ask.code",
-       "ask.howto"
+  "ops": {
+    "set": {
+      "args": [
+        "path",
+        "value"
+      ],
+      "example": [
+        "roof.params.shape",
+        "shed"
       ]
-     },
-     "topic": {
-      "type": "string"
-     },
-     "answer_draft": {
-      "type": "string",
-      "description": "1-3 sentences, using only the supplied MODEL/TAKEOFF summary and code_facts"
-     }
     },
-    "required": [
-     "intent",
-     "topic"
-    ]
-   }
-  },
-  {
-   "name": "ask_clarification",
-   "description": "Ask ONE short question (<=12 words) with 2-5 option chips when a required slot is missing or ambiguous.",
-   "parameters": {
-    "type": "object",
-    "properties": {
-     "intent": {
-      "type": "string"
-     },
-     "question": {
-      "type": "string"
-     },
-     "options": {
-      "type": "array",
-      "items": {
-       "type": "string"
-      },
-      "minItems": 2,
-      "maxItems": 5
-     },
-     "slots_so_far": {
-      "type": "object"
-     }
+    "setWall": {
+      "args": [
+        "wallId",
+        "props"
+      ]
     },
-    "required": [
-     "intent",
-     "question",
-     "options"
-    ]
-   }
+    "moveEdge": {
+      "args": [
+        "edgeIndex",
+        "offsetFt (+ = inward, same math as edit-ops applyDrag 'edge')"
+      ]
+    },
+    "setFootprint": {
+      "args": [
+        "points"
+      ]
+    },
+    "addOpening": {
+      "args": [
+        "wallId",
+        "t",
+        "kind",
+        "widthIn",
+        "heightIn",
+        "sillIn"
+      ]
+    },
+    "moveOpening": {
+      "args": [
+        "openingId",
+        "t",
+        "wallId?"
+      ]
+    },
+    "removeObject": {
+      "args": [
+        "layerId",
+        "objectId"
+      ]
+    },
+    "addInteriorWall": {
+      "args": [
+        "a",
+        "b",
+        "bearing"
+      ]
+    },
+    "dropPier": {
+      "args": [
+        "c",
+        "diaIn"
+      ],
+      "guard": "V-FND-01"
+    }
   },
-  {
-   "name": "propose_edit",
-   "description": "Propose one change (or up to 3 grouped changes) to the building. App code previews it; the user applies.",
-   "parameters": {
-    "type": "object",
-    "properties": {
-     "edits": {
-      "type": "array",
-      "maxItems": 3,
-      "items": {
-       "type": "object",
-       "properties": {
-        "intent": {
-         "enum": [
-          "roof.make_shed",
-          "roof.set_pitch",
-          "roof.set_shape",
-          "roof.set_ridge_direction",
-          "roof.set_overhang",
-          "roof.set_framing",
-          "roof.set_covering",
-          "walls.set_height",
-          "walls.move_exterior",
-          "footprint.resize",
-          "walls.add_interior",
-          "walls.move_interior",
-          "walls.delete",
-          "walls.set_bearing",
-          "walls.set_framing",
-          "openings.add",
-          "openings.remove",
-          "openings.move",
-          "openings.resize",
-          "openings.set_props",
-          "foundation.set_type",
-          "foundation.set_params",
-          "foundation.add_pier",
-          "floor.set_framing",
-          "site.set_existing",
-          "estimate.set"
-         ]
+  "llm_tools": [
+    {
+      "name": "answer_question",
+      "description": "Answer a question about the current building, its cost (EXAMPLE), code minimums in code_facts, or how to build it. No model change.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "intent": {
+            "enum": [
+              "ask.value",
+              "ask.cost",
+              "ask.why",
+              "ask.code",
+              "ask.howto"
+            ]
+          },
+          "topic": {
+            "type": "string"
+          },
+          "answer_draft": {
+            "type": "string",
+            "description": "1-3 sentences, using only the supplied MODEL/TAKEOFF summary and code_facts"
+          }
         },
-        "slots": {
-         "type": "object",
-         "description": "raw slot strings exactly as the user said them; see intents[].slots"
-        }
-       },
-       "required": [
-        "intent",
-        "slots"
-       ]
+        "required": [
+          "intent",
+          "topic"
+        ]
       }
-     }
     },
-    "required": [
-     "edits"
-    ]
-   }
-  },
-  {
-   "name": "meta",
-   "description": "undo / redo / apply / cancel the pending preview",
-   "parameters": {
-    "type": "object",
-    "properties": {
-     "intent": {
-      "enum": [
-       "meta.undo",
-       "meta.redo",
-       "meta.apply",
-       "meta.cancel"
+    {
+      "name": "ask_clarification",
+      "description": "Ask ONE short question (<=12 words) with 2-5 option chips when a required slot is missing or ambiguous.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "intent": {
+            "type": "string"
+          },
+          "question": {
+            "type": "string"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 2,
+            "maxItems": 5
+          },
+          "slots_so_far": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "intent",
+          "question",
+          "options"
+        ]
+      }
+    },
+    {
+      "name": "propose_edit",
+      "description": "Propose one change (or up to 3 grouped changes) to the building. App code previews it; the user applies.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "edits": {
+            "type": "array",
+            "maxItems": 3,
+            "items": {
+              "type": "object",
+              "properties": {
+                "intent": {
+                  "enum": [
+                    "roof.make_shed",
+                    "roof.set_pitch",
+                    "roof.set_shape",
+                    "roof.set_ridge_direction",
+                    "roof.set_overhang",
+                    "roof.set_framing",
+                    "roof.set_covering",
+                    "walls.set_height",
+                    "walls.move_exterior",
+                    "footprint.resize",
+                    "walls.add_interior",
+                    "walls.move_interior",
+                    "walls.delete",
+                    "walls.set_bearing",
+                    "walls.set_framing",
+                    "openings.add",
+                    "openings.remove",
+                    "openings.move",
+                    "openings.resize",
+                    "openings.set_props",
+                    "foundation.set_type",
+                    "foundation.set_params",
+                    "foundation.set_pier_shape",
+                    "foundation.add_pier",
+                    "floor.set_framing",
+                    "site.set_existing",
+                    "estimate.set"
+                  ]
+                },
+                "slots": {
+                  "type": "object",
+                  "description": "raw slot strings exactly as the user said them; see intents[].slots. roof.make_shed {highHeight, lowHeight, highSide, pitch}; roof.set_pitch {pitch, relative}; foundation.set_type {type: piersOnly|piers|crawlspace|slab|basement}; foundation.set_pier_shape {shape: round|square|precast, size: 12|16}"
+                }
+              },
+              "required": [
+                "intent",
+                "slots"
+              ]
+            }
+          }
+        },
+        "required": [
+          "edits"
+        ]
+      }
+    },
+    {
+      "name": "meta",
+      "description": "undo / redo / apply / cancel the pending preview",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "intent": {
+            "enum": [
+              "meta.undo",
+              "meta.redo",
+              "meta.apply",
+              "meta.cancel"
+            ]
+          }
+        },
+        "required": [
+          "intent"
+        ]
+      }
+    }
+  ],
+  "intents": [
+    {
+      "id": "roof.make_shed",
+      "kind": "edit",
+      "description": "Change the roof to a single-slope (shed) roof using a high and low wall height, or a pitch.",
+      "status": "needs_app_support",
+      "examples": [
+        "put the roof higher at one end so it goes from 10ft to 8feet",
+        "make it a shed roof, 10 ft at the house and 8 ft at the far wall",
+        "slope the roof from the back down to the front",
+        "single slope roof 1.5 in 12 sloping south",
+        "lean-to roof off the house"
+      ],
+      "slots": {
+        "highHeight": {
+          "type": "string",
+          "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
+        },
+        "lowHeight": {
+          "type": "string",
+          "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
+        },
+        "pitch": {
+          "type": "string",
+          "description": "optional, e.g. '2:12'"
+        },
+        "highSide": {
+          "type": "string",
+          "description": "How the user referred to the wall: compass ('north'), position ('back','front','left','right'), 'this' (selection), 'the long wall', 'the house side', 'wall with the door'. App code resolves it to a wall id."
+        },
+        "heightMeaning": {
+          "enum": [
+            "wall",
+            "above_ground",
+            "unknown"
+          ],
+          "default": "wall"
+        }
+      },
+      "required": [
+        "highSide",
+        "(highHeight+lowHeight) | (pitch + one height)"
+      ],
+      "model_fields_touched": [
+        "roof.params.shape",
+        "roof.params.shed.highWallId (PROPOSED)",
+        "roof.params.shed.highPlateFt (PROPOSED)",
+        "roof.params.shed.lowPlateFt (PROPOSED)",
+        "roof.params.pitch (derived)",
+        "walls.objects[w-ext-*].props.plateHeightFt / plateHeightEndFt (PROPOSED)",
+        "roof.objects (rafter, ridge removed, outline, label)"
+      ],
+      "regen_source": [
+        "roof",
+        "walls"
+      ],
+      "validations": [
+        "V-ROOF-01",
+        "V-ROOF-02",
+        "V-ROOF-03",
+        "V-ROOF-04",
+        "V-ROOF-05",
+        "V-ROOF-06",
+        "V-ROOF-07",
+        "V-WALL-01",
+        "V-WALL-03",
+        "V-ATTACH-01",
+        "V-GEN-SHED"
+      ],
+      "clarify_when": [
+        "highSide missing or 'one end'/'one side' → chips for each exterior wall side with the resulting pitch; if attachToExistingWallId or an existing building touches a wall, ask to confirm high side = house side (slope away from the house)",
+        "heightMeaning unclear ('10 ft off the ground', 'roof height') → ask wall height vs above ground",
+        "non-rectangular footprint → ask which wall is high and warn that the v1 shed is drawn over the bounding rectangle"
+      ],
+      "notes": "Pitch = (highPlateFt - lowPlateFt) / run * 12, run = footprint distance between the outside faces of the high and low walls. Low wall = the exterior wall parallel and opposite to the high wall. The side walls become rake walls. Requires shed generation (status: needs_app_support until App Builder adds shedGeometry)."
+    },
+    {
+      "id": "roof.set_pitch",
+      "kind": "edit",
+      "description": "Set roof pitch (gable), or re-derive heights for a shed.",
+      "status": "ready",
+      "examples": [
+        "make the roof 6/12",
+        "steeper roof, like 8 in 12",
+        "what if it was 2:12",
+        "drop the pitch to 3",
+        "make the roof 3:12",
+        "slope it 2.5 in 12",
+        "flatter",
+        "make it steeper"
+      ],
+      "slots": {
+        "pitch": {
+          "type": "string"
+        },
+        "relative": {
+          "enum": [
+            "set",
+            "steeper",
+            "flatter"
+          ],
+          "default": "set"
+        },
+        "keepSide": {
+          "enum": [
+            "high",
+            "low",
+            "ask"
+          ],
+          "default": "ask"
+        }
+      },
+      "required": [
+        "pitch"
+      ],
+      "model_fields_touched": [
+        "roof.params.pitch",
+        "(shed) roof.params.shed.highPlateFt or lowPlateFt"
+      ],
+      "regen_source": [
+        "roof"
+      ],
+      "validations": [
+        "V-ROOF-01",
+        "V-ROOF-02",
+        "V-ROOF-05",
+        "V-WALL-01"
+      ],
+      "clarify_when": [
+        "shed roof: ask which wall moves (raise the high wall vs lower the low wall)",
+        "'steeper' without a number: offer +1, +2 and +4 in 12 chips"
       ]
-     }
     },
-    "required": [
-     "intent"
-    ]
-   }
-  }
- ],
- "intents": [
-  {
-   "id": "roof.make_shed",
-   "kind": "edit",
-   "description": "Change the roof to a single-slope (shed) roof using a high and low wall height, or a pitch.",
-   "status": "needs_app_support",
-   "examples": [
-    "put the roof higher at one end so it goes from 10ft to 8feet",
-    "make it a shed roof, 10 ft at the house and 8 ft at the far wall",
-    "slope the roof from the back down to the front",
-    "single slope roof 1.5 in 12 sloping south",
-    "lean-to roof off the house"
-   ],
-   "slots": {
-    "highHeight": {
-     "type": "string",
-     "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
+    {
+      "id": "roof.set_shape",
+      "kind": "edit",
+      "description": "Switch roof shape.",
+      "status": "ready",
+      "examples": [
+        "make it a gable again",
+        "hip roof please",
+        "go back to a regular peaked roof"
+      ],
+      "slots": {
+        "shape": {
+          "enum": [
+            "gable",
+            "shed",
+            "hip"
+          ]
+        }
+      },
+      "required": [
+        "shape"
+      ],
+      "model_fields_touched": [
+        "roof.params.shape"
+      ],
+      "regen_source": [
+        "roof"
+      ],
+      "validations": [
+        "V-ROOF-08",
+        "V-ROOF-01"
+      ],
+      "notes": "hip → blocked (not generated). shed → hand off to roof.make_shed slot filling."
     },
-    "lowHeight": {
-     "type": "string",
-     "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
+    {
+      "id": "roof.set_ridge_direction",
+      "kind": "edit",
+      "description": "Gable ridge along the long or short side.",
+      "status": "ready",
+      "examples": [
+        "run the ridge the other way",
+        "ridge north-south"
+      ],
+      "slots": {
+        "ridge": {
+          "enum": [
+            "long",
+            "short",
+            "north-south",
+            "east-west",
+            "toggle"
+          ]
+        }
+      },
+      "required": [
+        "ridge"
+      ],
+      "model_fields_touched": [
+        "roof.params.ridge"
+      ],
+      "regen_source": [
+        "roof"
+      ],
+      "validations": [
+        "V-ROOF-05"
+      ],
+      "notes": "Compass values map to long/short using the footprint bbox (east-west = ridgeAlongX)."
     },
-    "pitch": {
-     "type": "string",
-     "description": "optional, e.g. '2:12'"
+    {
+      "id": "roof.set_overhang",
+      "kind": "edit",
+      "description": "Eave/rake overhang.",
+      "status": "ready",
+      "examples": [
+        "18 inch overhangs",
+        "no overhang",
+        "bigger eaves"
+      ],
+      "slots": {
+        "overhang": {
+          "type": "string",
+          "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
+        }
+      },
+      "required": [
+        "overhang"
+      ],
+      "model_fields_touched": [
+        "roof.params.overhangIn"
+      ],
+      "regen_source": [
+        "roof"
+      ],
+      "validations": [
+        "V-RANGE"
+      ],
+      "notes": "Range 0-36 in; above 24 in → warn 'long overhangs need lookouts/outriggers sized; verify'."
     },
-    "highSide": {
-     "type": "string",
-     "description": "How the user referred to the wall: compass ('north'), position ('back','front','left','right'), 'this' (selection), 'the long wall', 'the house side', 'wall with the door'. App code resolves it to a wall id."
+    {
+      "id": "roof.set_framing",
+      "kind": "edit",
+      "description": "Rafter size/spacing.",
+      "status": "ready",
+      "examples": [
+        "use 2x10 rafters",
+        "rafters 16 inches on center"
+      ],
+      "slots": {
+        "rafterSize": {
+          "enum": [
+            "2x6",
+            "2x8",
+            "2x10",
+            "2x12"
+          ]
+        },
+        "rafterOcIn": {
+          "enum": [
+            12,
+            16,
+            19.2,
+            24
+          ]
+        }
+      },
+      "required": [
+        "rafterSize|rafterOcIn"
+      ],
+      "model_fields_touched": [
+        "roof.params.rafterSize",
+        "roof.params.rafterOcIn"
+      ],
+      "regen_source": [
+        "roof"
+      ],
+      "validations": [
+        "V-ROOF-05"
+      ]
     },
-    "heightMeaning": {
-     "enum": [
-      "wall",
-      "above_ground",
-      "unknown"
-     ],
-     "default": "wall"
+    {
+      "id": "roof.set_covering",
+      "kind": "edit",
+      "description": "Roof covering material (drives the min-slope check and the takeoff lines).",
+      "status": "ready",
+      "examples": [
+        "use metal roofing",
+        "standing seam",
+        "rubber roof",
+        "TPO",
+        "rolled roofing",
+        "go back to shingles"
+      ],
+      "slots": {
+        "covering": {
+          "$ref": "#/enums/roofCovering"
+        }
+      },
+      "required": [
+        "covering"
+      ],
+      "model_fields_touched": [
+        "roof.params.roofing.covering (PROPOSED)"
+      ],
+      "regen_source": [
+        "roof"
+      ],
+      "validations": [
+        "V-ROOF-01",
+        "V-ROOF-02",
+        "V-ROOF-03",
+        "V-PRICE-MISSING"
+      ],
+      "clarify_when": [
+        "'metal' alone → chips: standing seam (1/4:12) | ribbed/corrugated with sealed laps (1/2:12) | ribbed/corrugated, no sealant (3:12)"
+      ]
+    },
+    {
+      "id": "walls.set_height",
+      "kind": "edit",
+      "description": "Plate height for all walls or one wall.",
+      "status": "ready",
+      "examples": [
+        "make the walls 9 feet",
+        "raise the north wall to 10'",
+        "walls a foot taller"
+      ],
+      "slots": {
+        "height": {
+          "type": "string",
+          "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
+        },
+        "wall": {
+          "type": "string",
+          "description": "How the user referred to the wall: compass ('north'), position ('back','front','left','right'), 'this' (selection), 'the long wall', 'the house side', 'wall with the door'. App code resolves it to a wall id."
+        },
+        "relative": {
+          "enum": [
+            "set",
+            "add"
+          ],
+          "default": "set"
+        }
+      },
+      "required": [
+        "height"
+      ],
+      "model_fields_touched": [
+        "walls.params.plateHeightFt",
+        "walls.objects[id].props.plateHeightFt (PROPOSED)"
+      ],
+      "regen_source": [
+        "walls"
+      ],
+      "validations": [
+        "V-WALL-01",
+        "V-WALL-03",
+        "V-RANGE"
+      ],
+      "clarify_when": [
+        "raising one wall under a gable → ask: make it a shed roof, or keep a gable and raise all walls"
+      ]
+    },
+    {
+      "id": "walls.move_exterior",
+      "kind": "edit",
+      "description": "Move an exterior wall in/out (footprint edge offset along its normal, same as the Plan edge drag).",
+      "status": "ready",
+      "examples": [
+        "move the east wall out 2 feet",
+        "push the back wall in 1 ft",
+        "make the south wall line up 3 ft further out"
+      ],
+      "slots": {
+        "wall": {
+          "type": "string",
+          "description": "How the user referred to the wall: compass ('north'), position ('back','front','left','right'), 'this' (selection), 'the long wall', 'the house side', 'wall with the door'. App code resolves it to a wall id."
+        },
+        "distance": {
+          "type": "string",
+          "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
+        },
+        "direction": {
+          "enum": [
+            "out",
+            "in",
+            "north",
+            "south",
+            "east",
+            "west"
+          ]
+        }
+      },
+      "required": [
+        "wall",
+        "distance",
+        "direction"
+      ],
+      "model_fields_touched": [
+        "m.footprint"
+      ],
+      "regen_source": [
+        "walls"
+      ],
+      "validations": [
+        "V-FND-02",
+        "V-FND-03",
+        "V-WALL-05",
+        "V-SITE-01"
+      ]
+    },
+    {
+      "id": "footprint.resize",
+      "kind": "edit",
+      "description": "Set overall width/depth or grow/shrink.",
+      "status": "ready",
+      "examples": [
+        "make it 24 by 16",
+        "make it 2 ft deeper",
+        "make the addition 12x20"
+      ],
+      "slots": {
+        "width": {
+          "type": "string",
+          "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
+        },
+        "depth": {
+          "type": "string",
+          "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
+        },
+        "delta": {
+          "type": "string",
+          "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
+        },
+        "grow": {
+          "enum": [
+            "north",
+            "south",
+            "east",
+            "west",
+            "both"
+          ]
+        },
+        "anchor": {
+          "enum": [
+            "nw",
+            "ne",
+            "sw",
+            "se",
+            "house_side",
+            "center"
+          ],
+          "default": "house_side"
+        }
+      },
+      "required": [
+        "width|depth|delta"
+      ],
+      "model_fields_touched": [
+        "m.footprint"
+      ],
+      "regen_source": [
+        "footprint"
+      ],
+      "validations": [
+        "V-FND-02",
+        "V-FND-03",
+        "V-WALL-05",
+        "V-SITE-01",
+        "V-ROOF-05"
+      ],
+      "clarify_when": [
+        "'24 by 16' → assume first = east-west width unless the current footprint is closer the other way; confirm in preview text",
+        "growth direction unknown and no house side → ask East/West/Both"
+      ]
+    },
+    {
+      "id": "walls.add_interior",
+      "kind": "edit",
+      "description": "Add an interior wall.",
+      "status": "ready",
+      "examples": [
+        "add a wall across the middle north to south",
+        "put a wall 8 ft from the west wall"
+      ],
+      "slots": {
+        "orientation": {
+          "enum": [
+            "north-south",
+            "east-west"
+          ]
+        },
+        "offsetFrom": {
+          "type": "string",
+          "description": "How the user referred to the wall: compass ('north'), position ('back','front','left','right'), 'this' (selection), 'the long wall', 'the house side', 'wall with the door'. App code resolves it to a wall id."
+        },
+        "offset": {
+          "type": "string",
+          "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
+        },
+        "bearing": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "orientation",
+        "offset|'middle'"
+      ],
+      "model_fields_touched": [
+        "walls.objects (new wall via addInteriorWall)"
+      ],
+      "regen_source": [
+        "walls"
+      ],
+      "validations": [
+        "V-WALL-06"
+      ]
+    },
+    {
+      "id": "walls.move_interior",
+      "kind": "edit",
+      "description": "Move an interior wall.",
+      "status": "ready",
+      "examples": [
+        "move that wall 3 ft west"
+      ],
+      "slots": {
+        "wall": {
+          "type": "string",
+          "description": "How the user referred to the wall: compass ('north'), position ('back','front','left','right'), 'this' (selection), 'the long wall', 'the house side', 'wall with the door'. App code resolves it to a wall id."
+        },
+        "distance": {
+          "type": "string",
+          "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
+        },
+        "direction": {
+          "enum": [
+            "north",
+            "south",
+            "east",
+            "west"
+          ]
+        }
+      },
+      "required": [
+        "wall",
+        "distance",
+        "direction"
+      ],
+      "model_fields_touched": [
+        "walls.objects[id].geometry.a/b"
+      ],
+      "regen_source": [
+        "walls"
+      ],
+      "validations": [
+        "V-WALL-06",
+        "V-FND-02"
+      ]
+    },
+    {
+      "id": "walls.delete",
+      "kind": "edit",
+      "description": "Delete an interior wall (exterior walls can't be deleted; change the footprint instead).",
+      "status": "ready",
+      "examples": [
+        "delete this wall",
+        "take out the middle wall"
+      ],
+      "slots": {
+        "wall": {
+          "type": "string",
+          "description": "How the user referred to the wall: compass ('north'), position ('back','front','left','right'), 'this' (selection), 'the long wall', 'the house side', 'wall with the door'. App code resolves it to a wall id."
+        }
+      },
+      "required": [
+        "wall"
+      ],
+      "model_fields_touched": [
+        "walls.objects (remove wall + its openings)"
+      ],
+      "regen_source": [
+        "walls"
+      ],
+      "validations": [
+        "V-WALL-07"
+      ]
+    },
+    {
+      "id": "walls.set_bearing",
+      "kind": "edit",
+      "description": "Mark an interior wall bearing (adds a grade beam + auto piers on its line when foundation.type='piers').",
+      "status": "ready",
+      "examples": [
+        "make that a bearing wall",
+        "put piers under this wall"
+      ],
+      "slots": {
+        "wall": {
+          "type": "string",
+          "description": "How the user referred to the wall: compass ('north'), position ('back','front','left','right'), 'this' (selection), 'the long wall', 'the house side', 'wall with the door'. App code resolves it to a wall id."
+        },
+        "bearing": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "wall"
+      ],
+      "model_fields_touched": [
+        "walls.objects[id].props.bearing"
+      ],
+      "regen_source": [
+        "walls"
+      ],
+      "validations": [
+        "V-FND-01"
+      ]
+    },
+    {
+      "id": "walls.set_framing",
+      "kind": "edit",
+      "description": "Stud size/spacing.",
+      "status": "ready",
+      "examples": [
+        "2x4 exterior walls",
+        "studs at 24 inches"
+      ],
+      "slots": {
+        "extSize": {
+          "enum": [
+            "2x4",
+            "2x6"
+          ]
+        },
+        "intSize": {
+          "enum": [
+            "2x4",
+            "2x6"
+          ]
+        },
+        "studOcIn": {
+          "enum": [
+            12,
+            16,
+            24
+          ]
+        }
+      },
+      "required": [
+        "extSize|intSize|studOcIn"
+      ],
+      "model_fields_touched": [
+        "walls.params.extSize",
+        "walls.params.intSize",
+        "walls.params.studOcIn"
+      ],
+      "regen_source": [
+        "walls"
+      ],
+      "validations": [
+        "V-WALL-01"
+      ]
+    },
+    {
+      "id": "openings.add",
+      "kind": "edit",
+      "description": "Add a door or window.",
+      "status": "ready",
+      "examples": [
+        "add a 36 inch window on the west wall",
+        "put a door on the south wall 4 ft from the corner",
+        "add a 6 ft slider on the back"
+      ],
+      "slots": {
+        "kind": {
+          "enum": [
+            "door",
+            "window"
+          ]
+        },
+        "wall": {
+          "type": "string",
+          "description": "How the user referred to the wall: compass ('north'), position ('back','front','left','right'), 'this' (selection), 'the long wall', 'the house side', 'wall with the door'. App code resolves it to a wall id."
+        },
+        "width": {
+          "type": "string",
+          "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
+        },
+        "height": {
+          "type": "string",
+          "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
+        },
+        "sill": {
+          "type": "string",
+          "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
+        },
+        "position": {
+          "type": "string",
+          "description": "'centered', '4 ft from the west corner', 'next to the door'"
+        }
+      },
+      "required": [
+        "kind",
+        "wall"
+      ],
+      "model_fields_touched": [
+        "walls.objects (new opening {geometry:{wallId,t}, props:{kind,widthIn,heightIn,sillIn}})",
+        "props.header (re-derived)"
+      ],
+      "regen_source": [
+        "walls"
+      ],
+      "validations": [
+        "V-WALL-02",
+        "V-WALL-03",
+        "V-WALL-04"
+      ],
+      "notes": "Defaults from DEFAULTS.openings (door 36x80 sill 0; window 36x48 sill 30). No position → centered, avoiding existing openings."
+    },
+    {
+      "id": "openings.remove",
+      "kind": "edit",
+      "description": "Remove a door/window.",
+      "status": "ready",
+      "examples": [
+        "remove the window on the east wall",
+        "get rid of the back door"
+      ],
+      "slots": {
+        "opening": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "opening"
+      ],
+      "model_fields_touched": [
+        "walls.objects (remove opening)"
+      ],
+      "regen_source": [
+        "walls"
+      ],
+      "validations": []
+    },
+    {
+      "id": "openings.move",
+      "kind": "edit",
+      "description": "Move an opening along its wall or to another wall.",
+      "status": "ready",
+      "examples": [
+        "move the door 3 ft to the left",
+        "center the window",
+        "move the door to the west wall"
+      ],
+      "slots": {
+        "opening": {
+          "type": "string"
+        },
+        "distance": {
+          "type": "string",
+          "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
+        },
+        "direction": {
+          "enum": [
+            "left",
+            "right",
+            "north",
+            "south",
+            "east",
+            "west",
+            "center"
+          ]
+        },
+        "toWall": {
+          "type": "string",
+          "description": "How the user referred to the wall: compass ('north'), position ('back','front','left','right'), 'this' (selection), 'the long wall', 'the house side', 'wall with the door'. App code resolves it to a wall id."
+        }
+      },
+      "required": [
+        "opening",
+        "distance+direction | center | toWall"
+      ],
+      "model_fields_touched": [
+        "walls.objects[id].geometry.t",
+        "walls.objects[id].geometry.wallId"
+      ],
+      "regen_source": [
+        "walls"
+      ],
+      "validations": [
+        "V-WALL-03",
+        "V-WALL-04"
+      ],
+      "notes": "Left/right = as seen from OUTSIDE that wall; preview says so."
+    },
+    {
+      "id": "openings.resize",
+      "kind": "edit",
+      "description": "Change opening size/sill.",
+      "status": "ready",
+      "examples": [
+        "make the door 6 ft wide",
+        "bigger windows, 48 by 60",
+        "raise the window sill to 36 inches"
+      ],
+      "slots": {
+        "opening": {
+          "type": "string"
+        },
+        "width": {
+          "type": "string",
+          "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
+        },
+        "height": {
+          "type": "string",
+          "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
+        },
+        "sill": {
+          "type": "string",
+          "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
+        }
+      },
+      "required": [
+        "opening",
+        "width|height|sill"
+      ],
+      "model_fields_touched": [
+        "props.widthIn",
+        "props.heightIn",
+        "props.sillIn",
+        "props.header (re-derived via headerFor)"
+      ],
+      "regen_source": [
+        "walls"
+      ],
+      "validations": [
+        "V-WALL-02",
+        "V-WALL-03"
+      ]
+    },
+    {
+      "id": "openings.set_props",
+      "kind": "edit",
+      "description": "Door swing / kind.",
+      "status": "ready",
+      "examples": [
+        "the door swings out",
+        "make that window a door"
+      ],
+      "slots": {
+        "opening": {
+          "type": "string"
+        },
+        "swing": {
+          "enum": [
+            "in",
+            "out"
+          ]
+        },
+        "kind": {
+          "enum": [
+            "door",
+            "window"
+          ]
+        }
+      },
+      "required": [
+        "opening"
+      ],
+      "model_fields_touched": [
+        "props.swing",
+        "props.kind (+ DEFAULTS.openings sizes)"
+      ],
+      "regen_source": [
+        "walls"
+      ],
+      "validations": [
+        "V-WALL-03"
+      ]
+    },
+    {
+      "id": "foundation.set_type",
+      "kind": "edit",
+      "description": "Foundation type.",
+      "status": "ready",
+      "examples": [
+        "switch to a slab",
+        "use a crawlspace instead",
+        "go back to piers"
+      ],
+      "slots": {
+        "type": {
+          "enum": [
+            "piersOnly",
+            "slab",
+            "crawlspace",
+            "basement",
+            "piers"
+          ]
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "model_fields_touched": [
+        "foundation.params.type"
+      ],
+      "regen_source": [
+        "foundation"
+      ],
+      "validations": [
+        "V-FND-04",
+        "V-FND-05"
+      ]
+    },
+    {
+      "id": "foundation.set_params",
+      "kind": "edit",
+      "description": "Foundation numbers.",
+      "status": "ready",
+      "examples": [
+        "frost depth is 36 inches",
+        "12 inch tubes every 6 feet",
+        "piers exactly 5 ft apart",
+        "soil is expansive clay"
+      ],
+      "slots": {
+        "frostDepth": {
+          "type": "string",
+          "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
+        },
+        "pierDia": {
+          "enum": [
+            8,
+            10,
+            12,
+            16
+          ]
+        },
+        "pierSpacing": {
+          "type": "string",
+          "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
+        },
+        "spacingMode": {
+          "enum": [
+            "max",
+            "exact"
+          ]
+        },
+        "topAboveGrade": {
+          "type": "string",
+          "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
+        },
+        "gradeBeamDepth": {
+          "type": "string",
+          "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
+        },
+        "gradeBeamWidth": {
+          "type": "string",
+          "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
+        },
+        "soilType": {
+          "enum": [
+            "unknown",
+            "normal",
+            "expansive"
+          ]
+        }
+      },
+      "required": [
+        "any"
+      ],
+      "model_fields_touched": [
+        "foundation.params.frostDepthIn",
+        "pierDiaIn",
+        "pierSpacingIn",
+        "pierSpacingMode",
+        "topAboveGradeIn.<type>",
+        "gradeBeamDepthIn",
+        "gradeBeamWidthIn",
+        "soilType"
+      ],
+      "regen_source": [
+        "foundation"
+      ],
+      "validations": [
+        "V-FND-04",
+        "V-FND-05",
+        "V-FND-06",
+        "V-RANGE"
+      ]
+    },
+    {
+      "id": "foundation.set_pier_shape",
+      "examples": [
+        "make the piers square",
+        "square 16 inch piers",
+        "use round sonotubes",
+        "precast pier blocks"
+      ],
+      "slots": {
+        "shape": {
+          "enum": [
+            "round",
+            "square",
+            "precast"
+          ]
+        },
+        "size": {
+          "enum": [
+            12,
+            16
+          ],
+          "description": "square side in inches"
+        }
+      },
+      "touches": [
+        "foundation.params.pierShape",
+        "foundation.params.pierSquareIn"
+      ],
+      "regen": "foundation",
+      "added": "v4 app (piers-only hotfix)"
+    },
+    {
+      "id": "foundation.add_pier",
+      "kind": "edit",
+      "description": "Place a manual pier (Sonotube).",
+      "status": "ready",
+      "examples": [
+        "add a pier under the middle of the floor",
+        "put an extra pier at the door"
+      ],
+      "slots": {
+        "location": {
+          "type": "string"
+        },
+        "dia": {
+          "enum": [
+            8,
+            10,
+            12,
+            16
+          ]
+        }
+      },
+      "required": [
+        "location"
+      ],
+      "model_fields_touched": [
+        "foundation.objects (dropPier at snapPier)"
+      ],
+      "regen_source": [
+        "foundation"
+      ],
+      "validations": [
+        "V-FND-01"
+      ]
+    },
+    {
+      "id": "floor.set_framing",
+      "kind": "edit",
+      "description": "Joist size/spacing/direction.",
+      "status": "ready",
+      "examples": [
+        "2x12 joists so I don't need the middle beam",
+        "joists 12 inches on center",
+        "run the joists east-west"
+      ],
+      "slots": {
+        "joistSize": {
+          "enum": [
+            "2x6",
+            "2x8",
+            "2x10",
+            "2x12"
+          ]
+        },
+        "joistOcIn": {
+          "enum": [
+            12,
+            16,
+            19.2,
+            24
+          ]
+        },
+        "direction": {
+          "enum": [
+            "auto",
+            "x",
+            "y"
+          ]
+        }
+      },
+      "required": [
+        "joistSize|joistOcIn|direction"
+      ],
+      "model_fields_touched": [
+        "floor.params.joistSize",
+        "floor.params.joistOcIn",
+        "floor.params.direction",
+        "floor.params.beamFlagSpanFt (only via explicit user setting)"
+      ],
+      "regen_source": [
+        "floor"
+      ],
+      "validations": [
+        "V-FND-03"
+      ],
+      "notes": "2x12 clear-span: the wizard may suggest raising beamFlagSpanFt ONLY as part of 'use 2x12 clear-span (verify span table)' since content-v3 shows that alternative; always flagged verify."
+    },
+    {
+      "id": "site.set_existing",
+      "kind": "edit",
+      "description": "Say where the existing house is / that the addition attaches.",
+      "status": "ready",
+      "examples": [
+        "the house is on the north side",
+        "this is attached to my house on the back wall",
+        "it's freestanding"
+      ],
+      "slots": {
+        "side": {
+          "type": "string",
+          "description": "How the user referred to the wall: compass ('north'), position ('back','front','left','right'), 'this' (selection), 'the long wall', 'the house side', 'wall with the door'. App code resolves it to a wall id."
+        },
+        "attached": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "side|attached"
+      ],
+      "model_fields_touched": [
+        "site objects {role:'existing'}",
+        "m.attachToExistingWallId (PROPOSED)"
+      ],
+      "regen_source": [
+        "site"
+      ],
+      "validations": [
+        "V-ATTACH-01"
+      ]
+    },
+    {
+      "id": "estimate.set",
+      "kind": "edit",
+      "description": "Estimate settings.",
+      "status": "ready",
+      "examples": [
+        "tax is 8.81%",
+        "add $150 delivery",
+        "no contingency",
+        "use bags instead of ready-mix"
+      ],
+      "slots": {
+        "taxRatePct": {
+          "type": "number"
+        },
+        "contingencyPct": {
+          "type": "number"
+        },
+        "deliveryUsd": {
+          "type": "number"
+        },
+        "laborUsd": {
+          "type": "number"
+        },
+        "concreteMode": {
+          "enum": [
+            "auto",
+            "readymix",
+            "bags80",
+            "bags60"
+          ]
+        },
+        "iceBarrier": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "any"
+      ],
+      "model_fields_touched": [
+        "m.estimate.*"
+      ],
+      "regen_source": [
+        "none"
+      ],
+      "validations": [
+        "V-RANGE"
+      ]
+    },
+    {
+      "id": "ask.value",
+      "kind": "question",
+      "description": "Read a value from the model.",
+      "status": "ready",
+      "examples": [
+        "what pitch is that",
+        "how tall is the high wall",
+        "how many piers",
+        "how long are the rafters"
+      ],
+      "slots": {
+        "topic": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "topic"
+      ],
+      "model_fields_touched": [],
+      "regen_source": [
+        "none"
+      ],
+      "validations": []
+    },
+    {
+      "id": "ask.cost",
+      "kind": "question",
+      "description": "Cost from the takeoff (EXAMPLE).",
+      "status": "ready",
+      "examples": [
+        "what does this cost",
+        "what did that change cost",
+        "how much is the roof",
+        "why is it so expensive"
+      ],
+      "slots": {
+        "scope": {
+          "enum": [
+            "total",
+            "layer",
+            "last_change",
+            "item"
+          ]
+        },
+        "layer": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "model_fields_touched": [],
+      "regen_source": [
+        "none"
+      ],
+      "validations": [
+        "V-PRICE-WORDING"
+      ]
+    },
+    {
+      "id": "ask.why",
+      "kind": "question",
+      "description": "Explain a flag/requirement from content.",
+      "status": "ready",
+      "examples": [
+        "why do I need a grade beam",
+        "why is the middle beam flagged",
+        "why does it say verify"
+      ],
+      "slots": {
+        "topic": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "topic"
+      ],
+      "model_fields_touched": [],
+      "regen_source": [
+        "none"
+      ],
+      "validations": []
+    },
+    {
+      "id": "ask.code",
+      "kind": "question",
+      "description": "Code-minimum questions limited to code_facts.",
+      "status": "ready",
+      "examples": [
+        "can I use shingles on this",
+        "what's the lowest pitch for metal",
+        "do I need double underlayment"
+      ],
+      "slots": {
+        "topic": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "topic"
+      ],
+      "model_fields_touched": [],
+      "regen_source": [
+        "none"
+      ],
+      "validations": []
+    },
+    {
+      "id": "ask.howto",
+      "kind": "question",
+      "description": "How-to from instructions.md.",
+      "status": "ready",
+      "examples": [
+        "how do I set the piers",
+        "how do I frame a rake wall"
+      ],
+      "slots": {
+        "topic": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "topic"
+      ],
+      "model_fields_touched": [],
+      "regen_source": [
+        "none"
+      ],
+      "validations": []
+    },
+    {
+      "id": "meta.undo",
+      "kind": "meta",
+      "description": "Undo last applied change.",
+      "status": "ready",
+      "examples": [
+        "undo",
+        "put it back",
+        "go back"
+      ],
+      "slots": {},
+      "required": [],
+      "model_fields_touched": [
+        "(restores snapshot)"
+      ],
+      "regen_source": [
+        "init"
+      ],
+      "validations": []
+    },
+    {
+      "id": "meta.redo",
+      "kind": "meta",
+      "description": "Redo.",
+      "status": "ready",
+      "examples": [
+        "redo"
+      ],
+      "slots": {},
+      "required": [],
+      "model_fields_touched": [],
+      "regen_source": [
+        "init"
+      ],
+      "validations": []
+    },
+    {
+      "id": "meta.apply",
+      "kind": "meta",
+      "description": "Apply the pending preview.",
+      "status": "ready",
+      "examples": [
+        "yes",
+        "do it",
+        "apply",
+        "looks good"
+      ],
+      "slots": {},
+      "required": [],
+      "model_fields_touched": [],
+      "regen_source": [
+        "(pending)"
+      ],
+      "validations": []
+    },
+    {
+      "id": "meta.cancel",
+      "kind": "meta",
+      "description": "Discard the pending preview.",
+      "status": "ready",
+      "examples": [
+        "no",
+        "never mind",
+        "cancel"
+      ],
+      "slots": {},
+      "required": [],
+      "model_fields_touched": [],
+      "regen_source": [
+        "none"
+      ],
+      "validations": []
     }
-   },
-   "required": [
-    "highSide",
-    "(highHeight+lowHeight) | (pitch + one height)"
-   ],
-   "model_fields_touched": [
-    "roof.params.shape",
-    "roof.params.shed.highWallId (PROPOSED)",
-    "roof.params.shed.highPlateFt (PROPOSED)",
-    "roof.params.shed.lowPlateFt (PROPOSED)",
-    "roof.params.pitch (derived)",
-    "walls.objects[w-ext-*].props.plateHeightFt / plateHeightEndFt (PROPOSED)",
-    "roof.objects (rafter, ridge removed, outline, label)"
-   ],
-   "regen_source": [
-    "roof",
-    "walls"
-   ],
-   "validations": [
-    "V-ROOF-01",
-    "V-ROOF-02",
-    "V-ROOF-03",
-    "V-ROOF-04",
-    "V-ROOF-05",
-    "V-ROOF-06",
-    "V-ROOF-07",
-    "V-WALL-01",
-    "V-WALL-03",
-    "V-ATTACH-01",
-    "V-GEN-SHED"
-   ],
-   "clarify_when": [
-    "highSide missing or 'one end'/'one side' → chips for each exterior wall side with the resulting pitch; if attachToExistingWallId or an existing building touches a wall, ask to confirm high side = house side (slope away from the house)",
-    "heightMeaning unclear ('10 ft off the ground', 'roof height') → ask wall height vs above ground",
-    "non-rectangular footprint → ask which wall is high and warn that the v1 shed is drawn over the bounding rectangle"
-   ],
-   "notes": "Pitch = (highPlateFt - lowPlateFt) / run * 12, run = footprint distance between the outside faces of the high and low walls. Low wall = the exterior wall parallel and opposite to the high wall. The side walls become rake walls. Requires shed generation (status: needs_app_support until App Builder adds shedGeometry)."
-  },
-  {
-   "id": "roof.set_pitch",
-   "kind": "edit",
-   "description": "Set roof pitch (gable), or re-derive heights for a shed.",
-   "status": "ready",
-   "examples": [
-    "make the roof 6/12",
-    "steeper roof, like 8 in 12",
-    "what if it was 2:12",
-    "drop the pitch to 3"
-   ],
-   "slots": {
-    "pitch": {
-     "type": "string"
+  ],
+  "validations": [
+    {
+      "id": "V-FND-01",
+      "severity": "block",
+      "rule": "Every pier center (auto or manual) within PIERS.offWallTolFt (0.5 ft) of a bearing line (exterior or interior bearing:true wall centerline). No mid-span piers. Grade beam on those lines.",
+      "message": "Piers only go under walls and at corners, never mid-span, with a grade beam on those lines. Try deeper joists that clear-span, or make that a bearing wall.",
+      "source": [
+        "content-v3/README.md §6 Jake's foundation rule",
+        "content-v3/instructions.md piers step 5",
+        "js/homeplan-derived.js piersAlongLines"
+      ]
     },
-    "relative": {
-     "enum": [
-      "set",
-      "steeper",
-      "flatter"
-     ],
-     "default": "set"
+    {
+      "id": "V-FND-02",
+      "severity": "warn",
+      "rule": "After a footprint/wall change, manual piers with props.flags (off wall line / outside footprint) are listed.",
+      "message": "{n} pier(s) are no longer under a wall. They were kept. Move them back under the walls or reset to auto?",
+      "source": [
+        "js/generate.js manual pier flags"
+      ]
     },
-    "keepSide": {
-     "enum": [
-      "high",
-      "low",
-      "ask"
-     ],
-     "default": "ask"
+    {
+      "id": "V-FND-03",
+      "severity": "warn",
+      "rule": "floor.params.computed.spanFt > floor.params.beamFlagSpanFt",
+      "message": "The floor spans {span}, so a mid beam is added and FLAGGED (not sized, no supports). Under the piers-under-walls rule, deeper joists (e.g. 2x12, verify span table) are usually better.",
+      "source": [
+        "js/generate.js",
+        "content-v3/pricing-rules.md variants"
+      ]
+    },
+    {
+      "id": "V-FND-04",
+      "severity": "info",
+      "rule": "foundation.params.frostDepthIn == null",
+      "message": "Frost depth isn't entered, so footings and piers are drawn at a 24 in placeholder. Ask your building department.",
+      "source": [
+        "js/config.js placeholderFrostIn",
+        "content-v3/instructions.md"
+      ]
+    },
+    {
+      "id": "V-FND-05",
+      "severity": "warn",
+      "rule": "foundation.params.soilType == 'expansive'",
+      "message": "Expansive soil: you'll likely need a soils report and engineered piers.",
+      "source": [
+        "content-v3/instructions.md engineer triggers"
+      ]
+    },
+    {
+      "id": "V-FND-06",
+      "severity": "info",
+      "rule": "type=='piers' && topAboveGradeIn.piers - gradeBeamDepthIn > 0",
+      "message": "The grade beam bottom is {x} in above ground. That needs supported forms. Ask about casting it at grade.",
+      "source": [
+        "content-v3/takeoff-rules.md"
+      ]
+    },
+    {
+      "id": "V-ROOF-01",
+      "severity": "block",
+      "rule": "roof.params.pitch < code_facts.minSlope[roof.params.roofing.covering].min",
+      "message": "{covering} needs at least {min}:12 (IRC {section}). This roof would be {pitch}:12.",
+      "offer": [
+        "coverings whose min <= pitch",
+        "smallest height/pitch change reaching min"
+      ],
+      "source": [
+        "https://up.codes/viewer/connecticut/irc-2021/chapter/9/roof-assemblies",
+        "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
+      ]
+    },
+    {
+      "id": "V-ROOF-02",
+      "severity": "warn",
+      "rule": "covering=='asphalt_shingle' && 2 <= pitch < 4",
+      "message": "Between 2:12 and 4:12, asphalt shingles need two layers of underlayment (IRC R905.2.2, Table R905.1.1(2)).",
+      "takeoff": "double roof.underlayment",
+      "source": [
+        "https://up.codes/viewer/connecticut/irc-2021/chapter/9/roof-assemblies",
+        "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
+      ]
+    },
+    {
+      "id": "V-ROOF-03",
+      "severity": "warn",
+      "rule": "covering startsWith 'metal_panel' or 'metal_standing_seam'",
+      "message": "Check your panel's minimum slope. The manufacturer can be stricter than code.",
+      "source": [
+        "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies",
+        "https://www.americaroofingco.com/lowest-slope-for-metal-roof/"
+      ]
+    },
+    {
+      "id": "V-ROOF-04",
+      "severity": "info",
+      "rule": "pitch < 2",
+      "message": "Low-slope roof: make sure the low edge drains away from the house and walkways (IRC R903.4). Snow sits longer, so follow the roofing maker's underlayment/ice-barrier instructions.",
+      "source": [
+        "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
+      ]
+    },
+    {
+      "id": "V-ROOF-05",
+      "severity": "warn",
+      "rule": "any change to roof span, pitch, shape, rafterSize or rafterOcIn",
+      "message": "Rafters span about {span} (horizontal). Check {rafterSize} @ {oc} in against the IRC rafter span tables for your snow load (R802.4.1), or ask your engineer.",
+      "source": [
+        "https://up.codes/viewer/connecticut/irc-2021/chapter/8/roof-ceiling-construction"
+      ]
+    },
+    {
+      "id": "V-ROOF-06",
+      "severity": "warn",
+      "rule": "rafterLen + 0.5 ft > max stock length priced (20 ft)",
+      "message": "{len} rafters are longer than any board in the price list and can't be spliced mid-span without support.",
+      "source": [
+        "content-v3/homedepot-prices.json",
+        "content-v3/takeoff-rules.json stock rule"
+      ]
+    },
+    {
+      "id": "V-ROOF-07",
+      "severity": "info",
+      "rule": "shape gable → shed",
+      "message": "Ridge, ridge cap, collar ties and gable framing removed. Ceiling joists are typically not needed as rafter ties when rafters bear on walls at both ends. Verify.",
+      "source": [
+        "https://up.codes/viewer/connecticut/irc-2021/chapter/8/roof-ceiling-construction (R802.3, R802.5.2)"
+      ]
+    },
+    {
+      "id": "V-ROOF-08",
+      "severity": "block",
+      "rule": "shape == 'hip'",
+      "message": "Hip roofs aren't generated yet.",
+      "source": [
+        "js/generate.js flag"
+      ]
+    },
+    {
+      "id": "V-GEN-SHED",
+      "severity": "block",
+      "rule": "shape == 'shed' && !app.supports('shedRoof')",
+      "message": "Shed roofs aren't drawn yet in this version. Here are the numbers; nothing was changed.",
+      "source": [
+        "js/generate.js: 'Only gable is generated in v1; shed and hip are coming.'"
+      ]
+    },
+    {
+      "id": "V-WALL-01",
+      "severity": "warn",
+      "rule": "stud length (plateFt*12 - 1.5*(bottomPlates+topPlates)) > 120 in for any wall (incl. the rake-wall high end)",
+      "message": "Studs over 10 ft need extra lateral support or design (IRC Table R602.3(5)).",
+      "source": [
+        "https://up.codes/viewer/connecticut/irc-2021/chapter/6/wall-construction"
+      ]
+    },
+    {
+      "id": "V-WALL-02",
+      "severity": "warn",
+      "rule": "opening.widthIn > 72 → header '2-2x12 (verify — long span)'; always EXAMPLE header",
+      "message": "Header {header} is from an EXAMPLE table. Verify. Openings over 6 ft usually need an engineered header. In 2x6 walls add a 3rd ply or filler.",
+      "source": [
+        "js/config.js HEADER_EXAMPLE",
+        "content-v3/instructions.md walls"
+      ]
+    },
+    {
+      "id": "V-WALL-03",
+      "severity": "block",
+      "rule": "opening fits wall (width + 2*(jack+king) <= len - 0.6 ft), no overlap with other openings' rough openings+king/jack, sillIn + heightIn + header depth + plates <= plate height at t",
+      "message": "That doesn't fit: {why}.",
+      "source": [
+        "js/generate.js t clamp",
+        "js/homeplan-derived.js studLayout"
+      ]
+    },
+    {
+      "id": "V-WALL-04",
+      "severity": "warn",
+      "rule": "opening edge within 24 in of a corner",
+      "message": "This opening is close to the corner, which leaves less wall for bracing. Verify with your building department.",
+      "source": [
+        "general practice (not a cited code value)"
+      ]
+    },
+    {
+      "id": "V-WALL-05",
+      "severity": "info",
+      "rule": "ops remove a wall that has openings",
+      "message": "{n} opening(s) on that wall will be removed.",
+      "source": [
+        "js/generate.js"
+      ]
+    },
+    {
+      "id": "V-WALL-06",
+      "severity": "block",
+      "rule": "interior wall endpoints inside the footprint, length >= 2 ft",
+      "message": "That wall would be outside the building or too short."
+    },
+    {
+      "id": "V-WALL-07",
+      "severity": "block",
+      "rule": "exterior walls cannot be deleted",
+      "message": "Exterior walls come from the footprint. Move or resize the footprint instead."
+    },
+    {
+      "id": "V-SITE-01",
+      "severity": "warn",
+      "rule": "regenerate flag 'Footprint crosses a setback line.'",
+      "message": "The building now crosses a setback line.",
+      "source": [
+        "js/generate.js"
+      ]
+    },
+    {
+      "id": "V-ATTACH-01",
+      "severity": "warn",
+      "rule": "m.attachToExistingWallId set or shed high side = house",
+      "message": "Building against the house (ledger, flashing, tying in) is a permit and engineer trigger.",
+      "source": [
+        "content-v3/instructions.md engineer triggers"
+      ]
+    },
+    {
+      "id": "V-PRICE-MISSING",
+      "severity": "info",
+      "rule": "takeoff line without price",
+      "message": "{item} needs a price. It isn't in the Home Depot snapshot, so the total isn't complete.",
+      "source": [
+        "content-v3/pricing-rules.md"
+      ]
+    },
+    {
+      "id": "V-PRICE-WORDING",
+      "severity": "info",
+      "rule": "any $ said by the wizard",
+      "message": "EXAMPLE, homedepot.com online snapshot {snapshot_date}, not a Denver store; 'est.' for verified:false.",
+      "source": [
+        "content-v3/pricing-rules.md",
+        "content-v3/homedepot-prices.json meta"
+      ]
+    },
+    {
+      "id": "V-RANGE",
+      "severity": "block",
+      "rule": "numeric sanity ranges",
+      "ranges": {
+        "plateHeightFt": [
+          7,
+          12
+        ],
+        "overhangIn": [
+          0,
+          36
+        ],
+        "pitch": [
+          0.25,
+          12
+        ],
+        "footprintSideFt": [
+          6,
+          40
+        ],
+        "opening.widthIn": [
+          18,
+          144
+        ],
+        "opening.heightIn": [
+          12,
+          96
+        ],
+        "frostDepthIn": [
+          0,
+          100
+        ],
+        "pierSpacingIn": [
+          24,
+          120
+        ],
+        "taxRatePct": [
+          0,
+          15
+        ],
+        "contingencyPct": [
+          0,
+          50
+        ]
+      },
+      "message": "{field} {value} is outside what this app handles ({min}-{max})."
     }
-   },
-   "required": [
-    "pitch"
-   ],
-   "model_fields_touched": [
-    "roof.params.pitch",
-    "(shed) roof.params.shed.highPlateFt or lowPlateFt"
-   ],
-   "regen_source": [
-    "roof"
-   ],
-   "validations": [
-    "V-ROOF-01",
-    "V-ROOF-02",
-    "V-ROOF-05",
-    "V-WALL-01"
-   ],
-   "clarify_when": [
-    "shed roof: ask which wall moves (raise the high wall vs lower the low wall)",
-    "'steeper' without a number: offer +1, +2 and +4 in 12 chips"
-   ]
-  },
-  {
-   "id": "roof.set_shape",
-   "kind": "edit",
-   "description": "Switch roof shape.",
-   "status": "ready",
-   "examples": [
-    "make it a gable again",
-    "hip roof please",
-    "go back to a regular peaked roof"
-   ],
-   "slots": {
-    "shape": {
-     "enum": [
-      "gable",
-      "shed",
-      "hip"
-     ]
-    }
-   },
-   "required": [
-    "shape"
-   ],
-   "model_fields_touched": [
-    "roof.params.shape"
-   ],
-   "regen_source": [
-    "roof"
-   ],
-   "validations": [
-    "V-ROOF-08",
-    "V-ROOF-01"
-   ],
-   "notes": "hip → blocked (not generated). shed → hand off to roof.make_shed slot filling."
-  },
-  {
-   "id": "roof.set_ridge_direction",
-   "kind": "edit",
-   "description": "Gable ridge along the long or short side.",
-   "status": "ready",
-   "examples": [
-    "run the ridge the other way",
-    "ridge north-south"
-   ],
-   "slots": {
-    "ridge": {
-     "enum": [
-      "long",
-      "short",
-      "north-south",
-      "east-west",
-      "toggle"
-     ]
-    }
-   },
-   "required": [
-    "ridge"
-   ],
-   "model_fields_touched": [
-    "roof.params.ridge"
-   ],
-   "regen_source": [
-    "roof"
-   ],
-   "validations": [
-    "V-ROOF-05"
-   ],
-   "notes": "Compass values map to long/short using the footprint bbox (east-west = ridgeAlongX)."
-  },
-  {
-   "id": "roof.set_overhang",
-   "kind": "edit",
-   "description": "Eave/rake overhang.",
-   "status": "ready",
-   "examples": [
-    "18 inch overhangs",
-    "no overhang",
-    "bigger eaves"
-   ],
-   "slots": {
-    "overhang": {
-     "type": "string",
-     "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
-    }
-   },
-   "required": [
-    "overhang"
-   ],
-   "model_fields_touched": [
-    "roof.params.overhangIn"
-   ],
-   "regen_source": [
-    "roof"
-   ],
-   "validations": [
-    "V-RANGE"
-   ],
-   "notes": "Range 0-36 in; above 24 in → warn 'long overhangs need lookouts/outriggers sized; verify'."
-  },
-  {
-   "id": "roof.set_framing",
-   "kind": "edit",
-   "description": "Rafter size/spacing.",
-   "status": "ready",
-   "examples": [
-    "use 2x10 rafters",
-    "rafters 16 inches on center"
-   ],
-   "slots": {
-    "rafterSize": {
-     "enum": [
-      "2x6",
-      "2x8",
-      "2x10",
-      "2x12"
-     ]
+  ],
+  "code_facts": {
+    "verified_on": "2026-10-28",
+    "note": "Model IRC text read on UpCodes (2021 IRC as adopted in the 2022 CT code, and 2024 IRC/GSA). codes.iccsafe.org returned 403 to this fetch. Local adopted edition and amendments govern.",
+    "minSlope": {
+      "asphalt_shingle": {
+        "min": 2,
+        "section": "R905.2.2",
+        "extra": "2:12 to <4:12: double underlayment per R905.1.1 / Table R905.1.1(2)",
+        "sources": [
+          "https://up.codes/viewer/connecticut/irc-2021/chapter/9/roof-assemblies",
+          "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
+        ]
+      },
+      "clay_concrete_tile": {
+        "min": 2.5,
+        "section": "R905.3.2",
+        "extra": "2.5:12 to 4:12: double underlayment",
+        "sources": [
+          "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
+        ]
+      },
+      "metal_shingle": {
+        "min": 3,
+        "section": "R905.4.2",
+        "sources": [
+          "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
+        ]
+      },
+      "roll_roofing": {
+        "min": 1,
+        "section": "R905.5.2",
+        "sources": [
+          "https://up.codes/viewer/connecticut/irc-2021/chapter/9/roof-assemblies",
+          "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
+        ]
+      },
+      "slate": {
+        "min": 4,
+        "section": "R905.6.2",
+        "sources": [
+          "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
+        ]
+      },
+      "wood_shingle": {
+        "min": 3,
+        "section": "R905.7.2",
+        "sources": [
+          "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
+        ]
+      },
+      "wood_shake": {
+        "min": 3,
+        "section": "R905.8.2",
+        "sources": [
+          "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
+        ]
+      },
+      "built_up": {
+        "min": 0.25,
+        "section": "R905.9.1",
+        "extra": "coal-tar 1/8:12",
+        "sources": [
+          "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
+        ]
+      },
+      "metal_panel_lapped": {
+        "min": 3,
+        "section": "R905.10.2 item 1",
+        "extra": "lapped, nonsoldered seams, no applied lap sealant",
+        "sources": [
+          "https://up.codes/viewer/connecticut/irc-2021/chapter/9/roof-assemblies",
+          "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
+        ]
+      },
+      "metal_panel_lapped_sealant": {
+        "min": 0.5,
+        "section": "R905.10.2 item 2",
+        "sources": [
+          "https://up.codes/viewer/connecticut/irc-2021/chapter/9/roof-assemblies",
+          "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
+        ]
+      },
+      "metal_standing_seam": {
+        "min": 0.25,
+        "section": "R905.10.2 item 3",
+        "sources": [
+          "https://up.codes/viewer/connecticut/irc-2021/chapter/9/roof-assemblies",
+          "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
+        ]
+      },
+      "modified_bitumen": {
+        "min": 0.25,
+        "section": "R905.11.1",
+        "sources": [
+          "https://up.codes/viewer/connecticut/irc-2021/chapter/9/roof-assemblies",
+          "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
+        ]
+      },
+      "single_ply": {
+        "min": 0.25,
+        "section": "2021: R905.12.1 (thermoset) / R905.13.1 (thermoplastic); 2024: R905.12.1",
+        "sources": [
+          "https://up.codes/viewer/connecticut/irc-2021/chapter/9/roof-assemblies",
+          "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
+        ]
+      },
+      "liquid_applied": {
+        "min": 0.25,
+        "section": "R905.14.1 (2024)",
+        "sources": [
+          "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
+        ]
+      }
     },
-    "rafterOcIn": {
-     "enum": [
-      12,
-      16,
-      19.2,
-      24
-     ]
-    }
-   },
-   "required": [
-    "rafterSize|rafterOcIn"
-   ],
-   "model_fields_touched": [
-    "roof.params.rafterSize",
-    "roof.params.rafterOcIn"
-   ],
-   "regen_source": [
-    "roof"
-   ],
-   "validations": [
-    "V-ROOF-05"
-   ]
-  },
-  {
-   "id": "roof.set_covering",
-   "kind": "edit",
-   "description": "Roof covering material (drives the min-slope check and the takeoff lines).",
-   "status": "ready",
-   "examples": [
-    "use metal roofing",
-    "standing seam",
-    "rubber roof",
-    "TPO",
-    "rolled roofing",
-    "go back to shingles"
-   ],
-   "slots": {
-    "covering": {
-     "$ref": "#/enums/roofCovering"
-    }
-   },
-   "required": [
-    "covering"
-   ],
-   "model_fields_touched": [
-    "roof.params.roofing.covering (PROPOSED)"
-   ],
-   "regen_source": [
-    "roof"
-   ],
-   "validations": [
-    "V-ROOF-01",
-    "V-ROOF-02",
-    "V-ROOF-03",
-    "V-PRICE-MISSING"
-   ],
-   "clarify_when": [
-    "'metal' alone → chips: standing seam (1/4:12) | ribbed/corrugated with sealed laps (1/2:12) | ribbed/corrugated, no sealant (3:12)"
-   ]
-  },
-  {
-   "id": "walls.set_height",
-   "kind": "edit",
-   "description": "Plate height for all walls or one wall.",
-   "status": "ready",
-   "examples": [
-    "make the walls 9 feet",
-    "raise the north wall to 10'",
-    "walls a foot taller"
-   ],
-   "slots": {
-    "height": {
-     "type": "string",
-     "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
+    "studHeight": {
+      "fact": "Bearing 2x4/2x6 studs: 10 ft laterally unsupported height (Table R602.3(5)); exceptions in R602.3.1",
+      "sources": [
+        "https://up.codes/viewer/connecticut/irc-2021/chapter/6/wall-construction"
+      ]
     },
-    "wall": {
-     "type": "string",
-     "description": "How the user referred to the wall: compass ('north'), position ('back','front','left','right'), 'this' (selection), 'the long wall', 'the house side', 'wall with the door'. App code resolves it to a wall id."
+    "rafterSpan": {
+      "fact": "Rafter spans per Tables R802.4.1(1)-(8), measured on the horizontal projection (R802.4.1). Not tabulated in this content; the wizard warns only.",
+      "sources": [
+        "https://up.codes/viewer/connecticut/irc-2021/chapter/8/roof-ceiling-construction"
+      ]
     },
-    "relative": {
-     "enum": [
-      "set",
-      "add"
-     ],
-     "default": "set"
-    }
-   },
-   "required": [
-    "height"
-   ],
-   "model_fields_touched": [
-    "walls.params.plateHeightFt",
-    "walls.objects[id].props.plateHeightFt (PROPOSED)"
-   ],
-   "regen_source": [
-    "walls"
-   ],
-   "validations": [
-    "V-WALL-01",
-    "V-WALL-03",
-    "V-RANGE"
-   ],
-   "clarify_when": [
-    "raising one wall under a gable → ask: make it a shed roof, or keep a gable and raise all walls"
-   ]
-  },
-  {
-   "id": "walls.move_exterior",
-   "kind": "edit",
-   "description": "Move an exterior wall in/out (footprint edge offset along its normal, same as the Plan edge drag).",
-   "status": "ready",
-   "examples": [
-    "move the east wall out 2 feet",
-    "push the back wall in 1 ft",
-    "make the south wall line up 3 ft further out"
-   ],
-   "slots": {
-    "wall": {
-     "type": "string",
-     "description": "How the user referred to the wall: compass ('north'), position ('back','front','left','right'), 'this' (selection), 'the long wall', 'the house side', 'wall with the door'. App code resolves it to a wall id."
+    "rafterTies": {
+      "fact": "Rafters meeting at a ridge need ceiling joists/rafter ties as continuous ties (R802.5.2) or a designed ridge beam (R802.3).",
+      "sources": [
+        "https://up.codes/viewer/connecticut/irc-2021/chapter/8/roof-ceiling-construction"
+      ]
     },
-    "distance": {
-     "type": "string",
-     "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
-    },
-    "direction": {
-     "enum": [
-      "out",
-      "in",
-      "north",
-      "south",
-      "east",
-      "west"
-     ]
-    }
-   },
-   "required": [
-    "wall",
-    "distance",
-    "direction"
-   ],
-   "model_fields_touched": [
-    "m.footprint"
-   ],
-   "regen_source": [
-    "walls"
-   ],
-   "validations": [
-    "V-FND-02",
-    "V-FND-03",
-    "V-WALL-05",
-    "V-SITE-01"
-   ]
-  },
-  {
-   "id": "footprint.resize",
-   "kind": "edit",
-   "description": "Set overall width/depth or grow/shrink.",
-   "status": "ready",
-   "examples": [
-    "make it 24 by 16",
-    "make it 2 ft deeper",
-    "make the addition 12x20"
-   ],
-   "slots": {
-    "width": {
-     "type": "string",
-     "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
-    },
-    "depth": {
-     "type": "string",
-     "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
-    },
-    "delta": {
-     "type": "string",
-     "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
-    },
-    "grow": {
-     "enum": [
-      "north",
-      "south",
-      "east",
-      "west",
-      "both"
-     ]
-    },
-    "anchor": {
-     "enum": [
-      "nw",
-      "ne",
-      "sw",
-      "se",
-      "house_side",
-      "center"
-     ],
-     "default": "house_side"
-    }
-   },
-   "required": [
-    "width|depth|delta"
-   ],
-   "model_fields_touched": [
-    "m.footprint"
-   ],
-   "regen_source": [
-    "footprint"
-   ],
-   "validations": [
-    "V-FND-02",
-    "V-FND-03",
-    "V-WALL-05",
-    "V-SITE-01",
-    "V-ROOF-05"
-   ],
-   "clarify_when": [
-    "'24 by 16' → assume first = east-west width unless the current footprint is closer the other way; confirm in preview text",
-    "growth direction unknown and no house side → ask East/West/Both"
-   ]
-  },
-  {
-   "id": "walls.add_interior",
-   "kind": "edit",
-   "description": "Add an interior wall.",
-   "status": "ready",
-   "examples": [
-    "add a wall across the middle north to south",
-    "put a wall 8 ft from the west wall"
-   ],
-   "slots": {
-    "orientation": {
-     "enum": [
-      "north-south",
-      "east-west"
-     ]
-    },
-    "offsetFrom": {
-     "type": "string",
-     "description": "How the user referred to the wall: compass ('north'), position ('back','front','left','right'), 'this' (selection), 'the long wall', 'the house side', 'wall with the door'. App code resolves it to a wall id."
-    },
-    "offset": {
-     "type": "string",
-     "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
-    },
-    "bearing": {
-     "type": "boolean",
-     "default": false
-    }
-   },
-   "required": [
-    "orientation",
-    "offset|'middle'"
-   ],
-   "model_fields_touched": [
-    "walls.objects (new wall via addInteriorWall)"
-   ],
-   "regen_source": [
-    "walls"
-   ],
-   "validations": [
-    "V-WALL-06"
-   ]
-  },
-  {
-   "id": "walls.move_interior",
-   "kind": "edit",
-   "description": "Move an interior wall.",
-   "status": "ready",
-   "examples": [
-    "move that wall 3 ft west"
-   ],
-   "slots": {
-    "wall": {
-     "type": "string",
-     "description": "How the user referred to the wall: compass ('north'), position ('back','front','left','right'), 'this' (selection), 'the long wall', 'the house side', 'wall with the door'. App code resolves it to a wall id."
-    },
-    "distance": {
-     "type": "string",
-     "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
-    },
-    "direction": {
-     "enum": [
-      "north",
-      "south",
-      "east",
-      "west"
-     ]
-    }
-   },
-   "required": [
-    "wall",
-    "distance",
-    "direction"
-   ],
-   "model_fields_touched": [
-    "walls.objects[id].geometry.a/b"
-   ],
-   "regen_source": [
-    "walls"
-   ],
-   "validations": [
-    "V-WALL-06",
-    "V-FND-02"
-   ]
-  },
-  {
-   "id": "walls.delete",
-   "kind": "edit",
-   "description": "Delete an interior wall (exterior walls can't be deleted; change the footprint instead).",
-   "status": "ready",
-   "examples": [
-    "delete this wall",
-    "take out the middle wall"
-   ],
-   "slots": {
-    "wall": {
-     "type": "string",
-     "description": "How the user referred to the wall: compass ('north'), position ('back','front','left','right'), 'this' (selection), 'the long wall', 'the house side', 'wall with the door'. App code resolves it to a wall id."
-    }
-   },
-   "required": [
-    "wall"
-   ],
-   "model_fields_touched": [
-    "walls.objects (remove wall + its openings)"
-   ],
-   "regen_source": [
-    "walls"
-   ],
-   "validations": [
-    "V-WALL-07"
-   ]
-  },
-  {
-   "id": "walls.set_bearing",
-   "kind": "edit",
-   "description": "Mark an interior wall bearing (adds a grade beam + auto piers on its line when foundation.type='piers').",
-   "status": "ready",
-   "examples": [
-    "make that a bearing wall",
-    "put piers under this wall"
-   ],
-   "slots": {
-    "wall": {
-     "type": "string",
-     "description": "How the user referred to the wall: compass ('north'), position ('back','front','left','right'), 'this' (selection), 'the long wall', 'the house side', 'wall with the door'. App code resolves it to a wall id."
-    },
-    "bearing": {
-     "type": "boolean"
-    }
-   },
-   "required": [
-    "wall"
-   ],
-   "model_fields_touched": [
-    "walls.objects[id].props.bearing"
-   ],
-   "regen_source": [
-    "walls"
-   ],
-   "validations": [
-    "V-FND-01"
-   ]
-  },
-  {
-   "id": "walls.set_framing",
-   "kind": "edit",
-   "description": "Stud size/spacing.",
-   "status": "ready",
-   "examples": [
-    "2x4 exterior walls",
-    "studs at 24 inches"
-   ],
-   "slots": {
-    "extSize": {
-     "enum": [
-      "2x4",
-      "2x6"
-     ]
-    },
-    "intSize": {
-     "enum": [
-      "2x4",
-      "2x6"
-     ]
-    },
-    "studOcIn": {
-     "enum": [
-      12,
-      16,
-      24
-     ]
-    }
-   },
-   "required": [
-    "extSize|intSize|studOcIn"
-   ],
-   "model_fields_touched": [
-    "walls.params.extSize",
-    "walls.params.intSize",
-    "walls.params.studOcIn"
-   ],
-   "regen_source": [
-    "walls"
-   ],
-   "validations": [
-    "V-WALL-01"
-   ]
-  },
-  {
-   "id": "openings.add",
-   "kind": "edit",
-   "description": "Add a door or window.",
-   "status": "ready",
-   "examples": [
-    "add a 36 inch window on the west wall",
-    "put a door on the south wall 4 ft from the corner",
-    "add a 6 ft slider on the back"
-   ],
-   "slots": {
-    "kind": {
-     "enum": [
-      "door",
-      "window"
-     ]
-    },
-    "wall": {
-     "type": "string",
-     "description": "How the user referred to the wall: compass ('north'), position ('back','front','left','right'), 'this' (selection), 'the long wall', 'the house side', 'wall with the door'. App code resolves it to a wall id."
-    },
-    "width": {
-     "type": "string",
-     "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
-    },
-    "height": {
-     "type": "string",
-     "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
-    },
-    "sill": {
-     "type": "string",
-     "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
-    },
-    "position": {
-     "type": "string",
-     "description": "'centered', '4 ft from the west corner', 'next to the door'"
-    }
-   },
-   "required": [
-    "kind",
-    "wall"
-   ],
-   "model_fields_touched": [
-    "walls.objects (new opening {geometry:{wallId,t}, props:{kind,widthIn,heightIn,sillIn}})",
-    "props.header (re-derived)"
-   ],
-   "regen_source": [
-    "walls"
-   ],
-   "validations": [
-    "V-WALL-02",
-    "V-WALL-03",
-    "V-WALL-04"
-   ],
-   "notes": "Defaults from DEFAULTS.openings (door 36x80 sill 0; window 36x48 sill 30). No position → centered, avoiding existing openings."
-  },
-  {
-   "id": "openings.remove",
-   "kind": "edit",
-   "description": "Remove a door/window.",
-   "status": "ready",
-   "examples": [
-    "remove the window on the east wall",
-    "get rid of the back door"
-   ],
-   "slots": {
-    "opening": {
-     "type": "string"
-    }
-   },
-   "required": [
-    "opening"
-   ],
-   "model_fields_touched": [
-    "walls.objects (remove opening)"
-   ],
-   "regen_source": [
-    "walls"
-   ],
-   "validations": []
-  },
-  {
-   "id": "openings.move",
-   "kind": "edit",
-   "description": "Move an opening along its wall or to another wall.",
-   "status": "ready",
-   "examples": [
-    "move the door 3 ft to the left",
-    "center the window",
-    "move the door to the west wall"
-   ],
-   "slots": {
-    "opening": {
-     "type": "string"
-    },
-    "distance": {
-     "type": "string",
-     "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
-    },
-    "direction": {
-     "enum": [
-      "left",
-      "right",
-      "north",
-      "south",
-      "east",
-      "west",
-      "center"
-     ]
-    },
-    "toWall": {
-     "type": "string",
-     "description": "How the user referred to the wall: compass ('north'), position ('back','front','left','right'), 'this' (selection), 'the long wall', 'the house side', 'wall with the door'. App code resolves it to a wall id."
-    }
-   },
-   "required": [
-    "opening",
-    "distance+direction | center | toWall"
-   ],
-   "model_fields_touched": [
-    "walls.objects[id].geometry.t",
-    "walls.objects[id].geometry.wallId"
-   ],
-   "regen_source": [
-    "walls"
-   ],
-   "validations": [
-    "V-WALL-03",
-    "V-WALL-04"
-   ],
-   "notes": "Left/right = as seen from OUTSIDE that wall; preview says so."
-  },
-  {
-   "id": "openings.resize",
-   "kind": "edit",
-   "description": "Change opening size/sill.",
-   "status": "ready",
-   "examples": [
-    "make the door 6 ft wide",
-    "bigger windows, 48 by 60",
-    "raise the window sill to 36 inches"
-   ],
-   "slots": {
-    "opening": {
-     "type": "string"
-    },
-    "width": {
-     "type": "string",
-     "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
-    },
-    "height": {
-     "type": "string",
-     "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
-    },
-    "sill": {
-     "type": "string",
-     "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
-    }
-   },
-   "required": [
-    "opening",
-    "width|height|sill"
-   ],
-   "model_fields_touched": [
-    "props.widthIn",
-    "props.heightIn",
-    "props.sillIn",
-    "props.header (re-derived via headerFor)"
-   ],
-   "regen_source": [
-    "walls"
-   ],
-   "validations": [
-    "V-WALL-02",
-    "V-WALL-03"
-   ]
-  },
-  {
-   "id": "openings.set_props",
-   "kind": "edit",
-   "description": "Door swing / kind.",
-   "status": "ready",
-   "examples": [
-    "the door swings out",
-    "make that window a door"
-   ],
-   "slots": {
-    "opening": {
-     "type": "string"
-    },
-    "swing": {
-     "enum": [
-      "in",
-      "out"
-     ]
-    },
-    "kind": {
-     "enum": [
-      "door",
-      "window"
-     ]
-    }
-   },
-   "required": [
-    "opening"
-   ],
-   "model_fields_touched": [
-    "props.swing",
-    "props.kind (+ DEFAULTS.openings sizes)"
-   ],
-   "regen_source": [
-    "walls"
-   ],
-   "validations": [
-    "V-WALL-03"
-   ]
-  },
-  {
-   "id": "foundation.set_type",
-   "kind": "edit",
-   "description": "Foundation type.",
-   "status": "ready",
-   "examples": [
-    "switch to a slab",
-    "use a crawlspace instead",
-    "go back to piers"
-   ],
-   "slots": {
-    "type": {
-     "enum": [
-      "slab",
-      "crawlspace",
-      "basement",
-      "piers"
-     ]
-    }
-   },
-   "required": [
-    "type"
-   ],
-   "model_fields_touched": [
-    "foundation.params.type"
-   ],
-   "regen_source": [
-    "foundation"
-   ],
-   "validations": [
-    "V-FND-04",
-    "V-FND-05"
-   ]
-  },
-  {
-   "id": "foundation.set_params",
-   "kind": "edit",
-   "description": "Foundation numbers.",
-   "status": "ready",
-   "examples": [
-    "frost depth is 36 inches",
-    "12 inch tubes every 6 feet",
-    "piers exactly 5 ft apart",
-    "soil is expansive clay"
-   ],
-   "slots": {
-    "frostDepth": {
-     "type": "string",
-     "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
-    },
-    "pierDia": {
-     "enum": [
-      8,
-      10,
-      12,
-      16
-     ]
-    },
-    "pierSpacing": {
-     "type": "string",
-     "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
-    },
-    "spacingMode": {
-     "enum": [
-      "max",
-      "exact"
-     ]
-    },
-    "topAboveGrade": {
-     "type": "string",
-     "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
-    },
-    "gradeBeamDepth": {
-     "type": "string",
-     "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
-    },
-    "gradeBeamWidth": {
-     "type": "string",
-     "description": "Length exactly as the user said it, e.g. '10ft', \"8' 6\\\"\", '102 in'. App code normalizes with parseFtIn()."
-    },
-    "soilType": {
-     "enum": [
-      "unknown",
-      "normal",
-      "expansive"
-     ]
-    }
-   },
-   "required": [
-    "any"
-   ],
-   "model_fields_touched": [
-    "foundation.params.frostDepthIn",
-    "pierDiaIn",
-    "pierSpacingIn",
-    "pierSpacingMode",
-    "topAboveGradeIn.<type>",
-    "gradeBeamDepthIn",
-    "gradeBeamWidthIn",
-    "soilType"
-   ],
-   "regen_source": [
-    "foundation"
-   ],
-   "validations": [
-    "V-FND-04",
-    "V-FND-05",
-    "V-FND-06",
-    "V-RANGE"
-   ]
-  },
-  {
-   "id": "foundation.add_pier",
-   "kind": "edit",
-   "description": "Place a manual pier (Sonotube).",
-   "status": "ready",
-   "examples": [
-    "add a pier under the middle of the floor",
-    "put an extra pier at the door"
-   ],
-   "slots": {
-    "location": {
-     "type": "string"
-    },
-    "dia": {
-     "enum": [
-      8,
-      10,
-      12,
-      16
-     ]
-    }
-   },
-   "required": [
-    "location"
-   ],
-   "model_fields_touched": [
-    "foundation.objects (dropPier at snapPier)"
-   ],
-   "regen_source": [
-    "foundation"
-   ],
-   "validations": [
-    "V-FND-01"
-   ]
-  },
-  {
-   "id": "floor.set_framing",
-   "kind": "edit",
-   "description": "Joist size/spacing/direction.",
-   "status": "ready",
-   "examples": [
-    "2x12 joists so I don't need the middle beam",
-    "joists 12 inches on center",
-    "run the joists east-west"
-   ],
-   "slots": {
-    "joistSize": {
-     "enum": [
-      "2x6",
-      "2x8",
-      "2x10",
-      "2x12"
-     ]
-    },
-    "joistOcIn": {
-     "enum": [
-      12,
-      16,
-      19.2,
-      24
-     ]
-    },
-    "direction": {
-     "enum": [
-      "auto",
-      "x",
-      "y"
-     ]
-    }
-   },
-   "required": [
-    "joistSize|joistOcIn|direction"
-   ],
-   "model_fields_touched": [
-    "floor.params.joistSize",
-    "floor.params.joistOcIn",
-    "floor.params.direction",
-    "floor.params.beamFlagSpanFt (only via explicit user setting)"
-   ],
-   "regen_source": [
-    "floor"
-   ],
-   "validations": [
-    "V-FND-03"
-   ],
-   "notes": "2x12 clear-span: the wizard may suggest raising beamFlagSpanFt ONLY as part of 'use 2x12 clear-span (verify span table)' since content-v3 shows that alternative; always flagged verify."
-  },
-  {
-   "id": "site.set_existing",
-   "kind": "edit",
-   "description": "Say where the existing house is / that the addition attaches.",
-   "status": "ready",
-   "examples": [
-    "the house is on the north side",
-    "this is attached to my house on the back wall",
-    "it's freestanding"
-   ],
-   "slots": {
-    "side": {
-     "type": "string",
-     "description": "How the user referred to the wall: compass ('north'), position ('back','front','left','right'), 'this' (selection), 'the long wall', 'the house side', 'wall with the door'. App code resolves it to a wall id."
-    },
-    "attached": {
-     "type": "boolean"
-    }
-   },
-   "required": [
-    "side|attached"
-   ],
-   "model_fields_touched": [
-    "site objects {role:'existing'}",
-    "m.attachToExistingWallId (PROPOSED)"
-   ],
-   "regen_source": [
-    "site"
-   ],
-   "validations": [
-    "V-ATTACH-01"
-   ]
-  },
-  {
-   "id": "estimate.set",
-   "kind": "edit",
-   "description": "Estimate settings.",
-   "status": "ready",
-   "examples": [
-    "tax is 8.81%",
-    "add $150 delivery",
-    "no contingency",
-    "use bags instead of ready-mix"
-   ],
-   "slots": {
-    "taxRatePct": {
-     "type": "number"
-    },
-    "contingencyPct": {
-     "type": "number"
-    },
-    "deliveryUsd": {
-     "type": "number"
-    },
-    "laborUsd": {
-     "type": "number"
-    },
-    "concreteMode": {
-     "enum": [
-      "auto",
-      "readymix",
-      "bags80",
-      "bags60"
-     ]
+    "drainage": {
+      "fact": "Unless roofs are sloped to drain over roof edges, roof drains are required at each low point (R903.4).",
+      "sources": [
+        "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
+      ]
     },
     "iceBarrier": {
-     "type": "boolean"
+      "fact": "Ice barrier required for listed coverings where the jurisdiction designates a history of ice damming (R905.1.2, Table R301.2).",
+      "sources": [
+        "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
+      ]
     }
-   },
-   "required": [
-    "any"
-   ],
-   "model_fields_touched": [
-    "m.estimate.*"
-   ],
-   "regen_source": [
-    "none"
-   ],
-   "validations": [
-    "V-RANGE"
-   ]
   },
-  {
-   "id": "ask.value",
-   "kind": "question",
-   "description": "Read a value from the model.",
-   "status": "ready",
-   "examples": [
-    "what pitch is that",
-    "how tall is the high wall",
-    "how many piers",
-    "how long are the rafters"
-   ],
-   "slots": {
-    "topic": {
-     "type": "string"
-    }
-   },
-   "required": [
-    "topic"
-   ],
-   "model_fields_touched": [],
-   "regen_source": [
-    "none"
-   ],
-   "validations": []
-  },
-  {
-   "id": "ask.cost",
-   "kind": "question",
-   "description": "Cost from the takeoff (EXAMPLE).",
-   "status": "ready",
-   "examples": [
-    "what does this cost",
-    "what did that change cost",
-    "how much is the roof",
-    "why is it so expensive"
-   ],
-   "slots": {
-    "scope": {
-     "enum": [
-      "total",
-      "layer",
-      "last_change",
-      "item"
-     ]
+  "clarification_templates": [
+    {
+      "when": "shed high side unknown",
+      "question": "Which side is the high ({high}) side?",
+      "options": "each exterior side with resulting pitch, e.g. 'North (back) · 1.5:12'",
+      "tip": "Against your house, the high side usually goes at the house so water runs away from it."
     },
-    "layer": {
-     "type": "string"
+    {
+      "when": "shed + house known",
+      "question": "High side against the house, sloping away?",
+      "options": [
+        "Yes, high at house (recommended)",
+        "No, pick another side"
+      ]
+    },
+    {
+      "when": "height meaning",
+      "question": "{h} wall height, or {h} above the ground?",
+      "options": [
+        "Wall height (top of wall)",
+        "Above ground"
+      ]
+    },
+    {
+      "when": "V-ROOF-01",
+      "question": "{covering} needs {min}:12 or more. What would you like?",
+      "options": [
+        "coverings passing at this pitch (with IRC section)",
+        "Steeper: {smallest height change}"
+      ]
+    },
+    {
+      "when": "V-FND-01",
+      "question": "Piers only go under walls. Want one of these instead?",
+      "options": [
+        "2x12 joists, no mid beam",
+        "Add a bearing wall there",
+        "Cancel"
+      ]
+    },
+    {
+      "when": "footprint growth direction",
+      "question": "Which way should it grow?",
+      "options": [
+        "East",
+        "West",
+        "Both sides evenly"
+      ]
     }
-   },
-   "required": [],
-   "model_fields_touched": [],
-   "regen_source": [
-    "none"
-   ],
-   "validations": [
-    "V-PRICE-WORDING"
-   ]
-  },
-  {
-   "id": "ask.why",
-   "kind": "question",
-   "description": "Explain a flag/requirement from content.",
-   "status": "ready",
-   "examples": [
-    "why do I need a grade beam",
-    "why is the middle beam flagged",
-    "why does it say verify"
-   ],
-   "slots": {
-    "topic": {
-     "type": "string"
-    }
-   },
-   "required": [
-    "topic"
-   ],
-   "model_fields_touched": [],
-   "regen_source": [
-    "none"
-   ],
-   "validations": []
-  },
-  {
-   "id": "ask.code",
-   "kind": "question",
-   "description": "Code-minimum questions limited to code_facts.",
-   "status": "ready",
-   "examples": [
-    "can I use shingles on this",
-    "what's the lowest pitch for metal",
-    "do I need double underlayment"
-   ],
-   "slots": {
-    "topic": {
-     "type": "string"
-    }
-   },
-   "required": [
-    "topic"
-   ],
-   "model_fields_touched": [],
-   "regen_source": [
-    "none"
-   ],
-   "validations": []
-  },
-  {
-   "id": "ask.howto",
-   "kind": "question",
-   "description": "How-to from instructions.md.",
-   "status": "ready",
-   "examples": [
-    "how do I set the piers",
-    "how do I frame a rake wall"
-   ],
-   "slots": {
-    "topic": {
-     "type": "string"
-    }
-   },
-   "required": [
-    "topic"
-   ],
-   "model_fields_touched": [],
-   "regen_source": [
-    "none"
-   ],
-   "validations": []
-  },
-  {
-   "id": "meta.undo",
-   "kind": "meta",
-   "description": "Undo last applied change.",
-   "status": "ready",
-   "examples": [
-    "undo",
-    "put it back",
-    "go back"
-   ],
-   "slots": {},
-   "required": [],
-   "model_fields_touched": [
-    "(restores snapshot)"
-   ],
-   "regen_source": [
-    "init"
-   ],
-   "validations": []
-  },
-  {
-   "id": "meta.redo",
-   "kind": "meta",
-   "description": "Redo.",
-   "status": "ready",
-   "examples": [
-    "redo"
-   ],
-   "slots": {},
-   "required": [],
-   "model_fields_touched": [],
-   "regen_source": [
-    "init"
-   ],
-   "validations": []
-  },
-  {
-   "id": "meta.apply",
-   "kind": "meta",
-   "description": "Apply the pending preview.",
-   "status": "ready",
-   "examples": [
-    "yes",
-    "do it",
-    "apply",
-    "looks good"
-   ],
-   "slots": {},
-   "required": [],
-   "model_fields_touched": [],
-   "regen_source": [
-    "(pending)"
-   ],
-   "validations": []
-  },
-  {
-   "id": "meta.cancel",
-   "kind": "meta",
-   "description": "Discard the pending preview.",
-   "status": "ready",
-   "examples": [
-    "no",
-    "never mind",
-    "cancel"
-   ],
-   "slots": {},
-   "required": [],
-   "model_fields_touched": [],
-   "regen_source": [
-    "none"
-   ],
-   "validations": []
-  }
- ],
- "validations": [
-  {
-   "id": "V-FND-01",
-   "severity": "block",
-   "rule": "Every pier center (auto or manual) within PIERS.offWallTolFt (0.5 ft) of a bearing line (exterior or interior bearing:true wall centerline). No mid-span piers. Grade beam on those lines.",
-   "message": "Piers only go under walls and at corners, never mid-span, with a grade beam on those lines. Try deeper joists that clear-span, or make that a bearing wall.",
-   "source": [
-    "content-v3/README.md §6 Jake's foundation rule",
-    "content-v3/instructions.md piers step 5",
-    "js/homeplan-derived.js piersAlongLines"
-   ]
-  },
-  {
-   "id": "V-FND-02",
-   "severity": "warn",
-   "rule": "After a footprint/wall change, manual piers with props.flags (off wall line / outside footprint) are listed.",
-   "message": "{n} pier(s) are no longer under a wall. They were kept. Move them back under the walls or reset to auto?",
-   "source": [
-    "js/generate.js manual pier flags"
-   ]
-  },
-  {
-   "id": "V-FND-03",
-   "severity": "warn",
-   "rule": "floor.params.computed.spanFt > floor.params.beamFlagSpanFt",
-   "message": "The floor spans {span}, so a mid beam is added and FLAGGED (not sized, no supports). Under the piers-under-walls rule, deeper joists (e.g. 2x12, verify span table) are usually better.",
-   "source": [
-    "js/generate.js",
-    "content-v3/pricing-rules.md variants"
-   ]
-  },
-  {
-   "id": "V-FND-04",
-   "severity": "info",
-   "rule": "foundation.params.frostDepthIn == null",
-   "message": "Frost depth isn't entered, so footings and piers are drawn at a 24 in placeholder. Ask your building department.",
-   "source": [
-    "js/config.js placeholderFrostIn",
-    "content-v3/instructions.md"
-   ]
-  },
-  {
-   "id": "V-FND-05",
-   "severity": "warn",
-   "rule": "foundation.params.soilType == 'expansive'",
-   "message": "Expansive soil: you'll likely need a soils report and engineered piers.",
-   "source": [
-    "content-v3/instructions.md engineer triggers"
-   ]
-  },
-  {
-   "id": "V-FND-06",
-   "severity": "info",
-   "rule": "type=='piers' && topAboveGradeIn.piers - gradeBeamDepthIn > 0",
-   "message": "The grade beam bottom is {x} in above ground. That needs supported forms. Ask about casting it at grade.",
-   "source": [
-    "content-v3/takeoff-rules.md"
-   ]
-  },
-  {
-   "id": "V-ROOF-01",
-   "severity": "block",
-   "rule": "roof.params.pitch < code_facts.minSlope[roof.params.roofing.covering].min",
-   "message": "{covering} needs at least {min}:12 (IRC {section}). This roof would be {pitch}:12.",
-   "offer": [
-    "coverings whose min <= pitch",
-    "smallest height/pitch change reaching min"
-   ],
-   "source": [
-    "https://up.codes/viewer/connecticut/irc-2021/chapter/9/roof-assemblies",
-    "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
-   ]
-  },
-  {
-   "id": "V-ROOF-02",
-   "severity": "warn",
-   "rule": "covering=='asphalt_shingle' && 2 <= pitch < 4",
-   "message": "Between 2:12 and 4:12, asphalt shingles need two layers of underlayment (IRC R905.2.2, Table R905.1.1(2)).",
-   "takeoff": "double roof.underlayment",
-   "source": [
-    "https://up.codes/viewer/connecticut/irc-2021/chapter/9/roof-assemblies",
-    "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
-   ]
-  },
-  {
-   "id": "V-ROOF-03",
-   "severity": "warn",
-   "rule": "covering startsWith 'metal_panel' or 'metal_standing_seam'",
-   "message": "Check your panel's minimum slope. The manufacturer can be stricter than code.",
-   "source": [
-    "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies",
-    "https://www.americaroofingco.com/lowest-slope-for-metal-roof/"
-   ]
-  },
-  {
-   "id": "V-ROOF-04",
-   "severity": "info",
-   "rule": "pitch < 2",
-   "message": "Low-slope roof: make sure the low edge drains away from the house and walkways (IRC R903.4). Snow sits longer, so follow the roofing maker's underlayment/ice-barrier instructions.",
-   "source": [
-    "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
-   ]
-  },
-  {
-   "id": "V-ROOF-05",
-   "severity": "warn",
-   "rule": "any change to roof span, pitch, shape, rafterSize or rafterOcIn",
-   "message": "Rafters span about {span} (horizontal). Check {rafterSize} @ {oc} in against the IRC rafter span tables for your snow load (R802.4.1), or ask your engineer.",
-   "source": [
-    "https://up.codes/viewer/connecticut/irc-2021/chapter/8/roof-ceiling-construction"
-   ]
-  },
-  {
-   "id": "V-ROOF-06",
-   "severity": "warn",
-   "rule": "rafterLen + 0.5 ft > max stock length priced (20 ft)",
-   "message": "{len} rafters are longer than any board in the price list and can't be spliced mid-span without support.",
-   "source": [
-    "content-v3/homedepot-prices.json",
-    "content-v3/takeoff-rules.json stock rule"
-   ]
-  },
-  {
-   "id": "V-ROOF-07",
-   "severity": "info",
-   "rule": "shape gable → shed",
-   "message": "Ridge, ridge cap, collar ties and gable framing removed. Ceiling joists are typically not needed as rafter ties when rafters bear on walls at both ends. Verify.",
-   "source": [
-    "https://up.codes/viewer/connecticut/irc-2021/chapter/8/roof-ceiling-construction (R802.3, R802.5.2)"
-   ]
-  },
-  {
-   "id": "V-ROOF-08",
-   "severity": "block",
-   "rule": "shape == 'hip'",
-   "message": "Hip roofs aren't generated yet.",
-   "source": [
-    "js/generate.js flag"
-   ]
-  },
-  {
-   "id": "V-GEN-SHED",
-   "severity": "block",
-   "rule": "shape == 'shed' && !app.supports('shedRoof')",
-   "message": "Shed roofs aren't drawn yet in this version. Here are the numbers; nothing was changed.",
-   "source": [
-    "js/generate.js: 'Only gable is generated in v1; shed and hip are coming.'"
-   ]
-  },
-  {
-   "id": "V-WALL-01",
-   "severity": "warn",
-   "rule": "stud length (plateFt*12 - 1.5*(bottomPlates+topPlates)) > 120 in for any wall (incl. the rake-wall high end)",
-   "message": "Studs over 10 ft need extra lateral support or design (IRC Table R602.3(5)).",
-   "source": [
-    "https://up.codes/viewer/connecticut/irc-2021/chapter/6/wall-construction"
-   ]
-  },
-  {
-   "id": "V-WALL-02",
-   "severity": "warn",
-   "rule": "opening.widthIn > 72 → header '2-2x12 (verify — long span)'; always EXAMPLE header",
-   "message": "Header {header} is from an EXAMPLE table. Verify. Openings over 6 ft usually need an engineered header. In 2x6 walls add a 3rd ply or filler.",
-   "source": [
-    "js/config.js HEADER_EXAMPLE",
-    "content-v3/instructions.md walls"
-   ]
-  },
-  {
-   "id": "V-WALL-03",
-   "severity": "block",
-   "rule": "opening fits wall (width + 2*(jack+king) <= len - 0.6 ft), no overlap with other openings' rough openings+king/jack, sillIn + heightIn + header depth + plates <= plate height at t",
-   "message": "That doesn't fit: {why}.",
-   "source": [
-    "js/generate.js t clamp",
-    "js/homeplan-derived.js studLayout"
-   ]
-  },
-  {
-   "id": "V-WALL-04",
-   "severity": "warn",
-   "rule": "opening edge within 24 in of a corner",
-   "message": "This opening is close to the corner, which leaves less wall for bracing. Verify with your building department.",
-   "source": [
-    "general practice (not a cited code value)"
-   ]
-  },
-  {
-   "id": "V-WALL-05",
-   "severity": "info",
-   "rule": "ops remove a wall that has openings",
-   "message": "{n} opening(s) on that wall will be removed.",
-   "source": [
-    "js/generate.js"
-   ]
-  },
-  {
-   "id": "V-WALL-06",
-   "severity": "block",
-   "rule": "interior wall endpoints inside the footprint, length >= 2 ft",
-   "message": "That wall would be outside the building or too short."
-  },
-  {
-   "id": "V-WALL-07",
-   "severity": "block",
-   "rule": "exterior walls cannot be deleted",
-   "message": "Exterior walls come from the footprint. Move or resize the footprint instead."
-  },
-  {
-   "id": "V-SITE-01",
-   "severity": "warn",
-   "rule": "regenerate flag 'Footprint crosses a setback line.'",
-   "message": "The building now crosses a setback line.",
-   "source": [
-    "js/generate.js"
-   ]
-  },
-  {
-   "id": "V-ATTACH-01",
-   "severity": "warn",
-   "rule": "m.attachToExistingWallId set or shed high side = house",
-   "message": "Building against the house (ledger, flashing, tying in) is a permit and engineer trigger.",
-   "source": [
-    "content-v3/instructions.md engineer triggers"
-   ]
-  },
-  {
-   "id": "V-PRICE-MISSING",
-   "severity": "info",
-   "rule": "takeoff line without price",
-   "message": "{item} needs a price. It isn't in the Home Depot snapshot, so the total isn't complete.",
-   "source": [
-    "content-v3/pricing-rules.md"
-   ]
-  },
-  {
-   "id": "V-PRICE-WORDING",
-   "severity": "info",
-   "rule": "any $ said by the wizard",
-   "message": "EXAMPLE, homedepot.com online snapshot {snapshot_date}, not a Denver store; 'est.' for verified:false.",
-   "source": [
-    "content-v3/pricing-rules.md",
-    "content-v3/homedepot-prices.json meta"
-   ]
-  },
-  {
-   "id": "V-RANGE",
-   "severity": "block",
-   "rule": "numeric sanity ranges",
-   "ranges": {
-    "plateHeightFt": [
-     7,
-     12
-    ],
-    "overhangIn": [
-     0,
-     36
-    ],
-    "pitch": [
-     0.25,
-     12
-    ],
-    "footprintSideFt": [
-     6,
-     40
-    ],
-    "opening.widthIn": [
-     18,
-     144
-    ],
-    "opening.heightIn": [
-     12,
-     96
-    ],
-    "frostDepthIn": [
-     0,
-     100
-    ],
-    "pierSpacingIn": [
-     24,
-     120
-    ],
-    "taxRatePct": [
-     0,
-     15
-    ],
-    "contingencyPct": [
-     0,
-     50
-    ]
-   },
-   "message": "{field} {value} is outside what this app handles ({min}-{max})."
-  }
- ],
- "code_facts": {
-  "verified_on": "2026-10-28",
-  "note": "Model IRC text read on UpCodes (2021 IRC as adopted in the 2022 CT code, and 2024 IRC/GSA). codes.iccsafe.org returned 403 to this fetch. Local adopted edition and amendments govern.",
-  "minSlope": {
-   "asphalt_shingle": {
-    "min": 2,
-    "section": "R905.2.2",
-    "extra": "2:12 to <4:12: double underlayment per R905.1.1 / Table R905.1.1(2)",
-    "sources": [
-     "https://up.codes/viewer/connecticut/irc-2021/chapter/9/roof-assemblies",
-     "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
-    ]
-   },
-   "clay_concrete_tile": {
-    "min": 2.5,
-    "section": "R905.3.2",
-    "extra": "2.5:12 to 4:12: double underlayment",
-    "sources": [
-     "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
-    ]
-   },
-   "metal_shingle": {
-    "min": 3,
-    "section": "R905.4.2",
-    "sources": [
-     "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
-    ]
-   },
-   "roll_roofing": {
-    "min": 1,
-    "section": "R905.5.2",
-    "sources": [
-     "https://up.codes/viewer/connecticut/irc-2021/chapter/9/roof-assemblies",
-     "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
-    ]
-   },
-   "slate": {
-    "min": 4,
-    "section": "R905.6.2",
-    "sources": [
-     "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
-    ]
-   },
-   "wood_shingle": {
-    "min": 3,
-    "section": "R905.7.2",
-    "sources": [
-     "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
-    ]
-   },
-   "wood_shake": {
-    "min": 3,
-    "section": "R905.8.2",
-    "sources": [
-     "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
-    ]
-   },
-   "built_up": {
-    "min": 0.25,
-    "section": "R905.9.1",
-    "extra": "coal-tar 1/8:12",
-    "sources": [
-     "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
-    ]
-   },
-   "metal_panel_lapped": {
-    "min": 3,
-    "section": "R905.10.2 item 1",
-    "extra": "lapped, nonsoldered seams, no applied lap sealant",
-    "sources": [
-     "https://up.codes/viewer/connecticut/irc-2021/chapter/9/roof-assemblies",
-     "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
-    ]
-   },
-   "metal_panel_lapped_sealant": {
-    "min": 0.5,
-    "section": "R905.10.2 item 2",
-    "sources": [
-     "https://up.codes/viewer/connecticut/irc-2021/chapter/9/roof-assemblies",
-     "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
-    ]
-   },
-   "metal_standing_seam": {
-    "min": 0.25,
-    "section": "R905.10.2 item 3",
-    "sources": [
-     "https://up.codes/viewer/connecticut/irc-2021/chapter/9/roof-assemblies",
-     "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
-    ]
-   },
-   "modified_bitumen": {
-    "min": 0.25,
-    "section": "R905.11.1",
-    "sources": [
-     "https://up.codes/viewer/connecticut/irc-2021/chapter/9/roof-assemblies",
-     "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
-    ]
-   },
-   "single_ply": {
-    "min": 0.25,
-    "section": "2021: R905.12.1 (thermoset) / R905.13.1 (thermoplastic); 2024: R905.12.1",
-    "sources": [
-     "https://up.codes/viewer/connecticut/irc-2021/chapter/9/roof-assemblies",
-     "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
-    ]
-   },
-   "liquid_applied": {
-    "min": 0.25,
-    "section": "R905.14.1 (2024)",
-    "sources": [
-     "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
-    ]
-   }
-  },
-  "studHeight": {
-   "fact": "Bearing 2x4/2x6 studs: 10 ft laterally unsupported height (Table R602.3(5)); exceptions in R602.3.1",
-   "sources": [
-    "https://up.codes/viewer/connecticut/irc-2021/chapter/6/wall-construction"
-   ]
-  },
-  "rafterSpan": {
-   "fact": "Rafter spans per Tables R802.4.1(1)-(8), measured on the horizontal projection (R802.4.1). Not tabulated in this content; the wizard warns only.",
-   "sources": [
-    "https://up.codes/viewer/connecticut/irc-2021/chapter/8/roof-ceiling-construction"
-   ]
-  },
-  "rafterTies": {
-   "fact": "Rafters meeting at a ridge need ceiling joists/rafter ties as continuous ties (R802.5.2) or a designed ridge beam (R802.3).",
-   "sources": [
-    "https://up.codes/viewer/connecticut/irc-2021/chapter/8/roof-ceiling-construction"
-   ]
-  },
-  "drainage": {
-   "fact": "Unless roofs are sloped to drain over roof edges, roof drains are required at each low point (R903.4).",
-   "sources": [
-    "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
-   ]
-  },
-  "iceBarrier": {
-   "fact": "Ice barrier required for listed coverings where the jurisdiction designates a history of ice damming (R905.1.2, Table R301.2).",
-   "sources": [
-    "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies"
-   ]
-  }
- },
- "clarification_templates": [
-  {
-   "when": "shed high side unknown",
-   "question": "Which side is the high ({high}) side?",
-   "options": "each exterior side with resulting pitch, e.g. 'North (back) · 1.5:12'",
-   "tip": "Against your house, the high side usually goes at the house so water runs away from it."
-  },
-  {
-   "when": "shed + house known",
-   "question": "High side against the house, sloping away?",
-   "options": [
-    "Yes, high at house (recommended)",
-    "No, pick another side"
-   ]
-  },
-  {
-   "when": "height meaning",
-   "question": "{h} wall height, or {h} above the ground?",
-   "options": [
-    "Wall height (top of wall)",
-    "Above ground"
-   ]
-  },
-  {
-   "when": "V-ROOF-01",
-   "question": "{covering} needs {min}:12 or more. What would you like?",
-   "options": [
-    "coverings passing at this pitch (with IRC section)",
-    "Steeper: {smallest height change}"
-   ]
-  },
-  {
-   "when": "V-FND-01",
-   "question": "Piers only go under walls. Want one of these instead?",
-   "options": [
-    "2x12 joists, no mid beam",
-    "Add a bearing wall there",
-    "Cancel"
-   ]
-  },
-  {
-   "when": "footprint growth direction",
-   "question": "Which way should it grow?",
-   "options": [
-    "East",
-    "West",
-    "Both sides evenly"
-   ]
-  }
- ]
+  ]
 }
