@@ -1,0 +1,89 @@
+// ============================================================================
+// estimate.js — one adapter over the two pricing engines so the report has a single shape.
+//   hd:          Remodel Guide's reference engine (content-v3/reference/takeoff-reference.mjs)
+//                with its rules + dated Home Depot snapshot. Totals = materials + tax + contingency
+//                + delivery + labor (content-v3/pricing-rules.md). Tax rate is the USER's: blank → 0 and
+//                the total says "tax not included".
+//   placeholder: this app's js/takeoff.js with content/ data, every price a labeled PLACEHOLDER.
+// ============================================================================
+import { ESTIMATE_DEFAULTS } from './config.js';
+import { getLayer } from './model.js';
+import { regenerate } from './generate.js';
+import { takeoff as placeholderTakeoff, measure } from './takeoff.js';
+
+const r2 = (x) => Math.round(x * 100) / 100;
+export const GROUPS = [
+  { id: 'site', name: 'Site layout' }, { id: 'foundation', name: 'Foundation' }, { id: 'floor', name: 'Floor framing' },
+  { id: 'walls', name: 'Walls, doors & windows' }, { id: 'roof', name: 'Roof framing & roofing' }, { id: 'fasteners', name: 'Fasteners' },
+];
+export function estimateSettings(m) { return Object.assign({}, ESTIMATE_DEFAULTS, m.estimate || {}); }
+export function engineOpts(m) {
+  const e = estimateSettings(m); const rp = getLayer(m, 'roof').params;
+  const o = { taxRatePct: e.taxRatePct == null || e.taxRatePct === '' ? 0 : Number(e.taxRatePct), contingencyPct: Number(e.contingencyPct) || 0, deliveryUsd: Number(e.deliveryUsd) || 0, laborUsd: e.laborUsd == null || e.laborUsd === '' ? null : Number(e.laborUsd), concreteMode: e.concreteMode || 'auto', iceBarrier: e.iceBarrier !== false };
+  if (rp.ceilingJoistSize && rp.ceilingJoistSize !== 'auto') o.ceilingJoistSize = rp.ceilingJoistSize;
+  return o;
+}
+
+/** Run the estimate. C = loadContent() result. Never mutates m. */
+export function runEstimate(m, C, optsOverride = {}) {
+  const mm = JSON.parse(JSON.stringify(m));
+  const set = estimateSettings(m);
+  const taxSet = !(set.taxRatePct == null || set.taxRatePct === '');
+  if (C.mode === 'hd') {
+    const opts = Object.assign(engineOpts(m), optsOverride);
+    const r = C.engine.takeoff(mm, C.rules, C.prices, opts);
+    const P = C.prices.prices;
+    const lines = r.lines.map((l) => {
+      const p = l.price_ref ? P[l.price_ref] : null;
+      return {
+        id: l.id, group: l.layer === 'all' ? 'fasteners' : l.layer, desc: l.desc, qtyCalc: l.qty_calc, calcUnit: l.unit,
+        qty: l.buy, unit: (p && p.unit) || 'each', packQty: p && p.pack_qty, product: p ? p.name : null, priceRef: l.price_ref,
+        unitPrice: l.unit_price, total: l.ext, bulk: !!(p && p.bulk_price && l.buy >= p.bulk_price.min_qty),
+        status: l.ext == null ? 'unpriced' : (l.verified ? 'hd' : 'estimate'),
+        dateChecked: p && p.date_checked, url: p && p.url, sourceUrl: p && p.source_url, estimateSource: p && !p.verified ? p.estimate_source : null,
+        internetNumber: p && p.internet_number, note: l.note || null,
+      };
+    });
+    const t = r.totals;
+    return {
+      mode: 'hd', lines, flags: r.flags, report: r.report, concreteAlternatives: r.concreteAlternatives, M: measure(m),
+      groups: GROUPS.map((g) => ({ id: g.id, name: g.name, total: r2(r.groups[g.id === 'fasteners' ? 'all' : g.id] || 0), lines: lines.filter((l) => l.group === g.id) })).filter((g) => g.lines.length),
+      totals: { materials: t.materials, fromEstimates: t.materials_from_estimated_prices, unpriced: t.unpriced_lines, taxSet, taxRatePct: taxSet ? t.taxRatePct : null, tax: t.tax, contingencyPct: t.contingencyPct, contingency: t.contingency, delivery: t.delivery, labor: t.labor === 'not included' ? null : t.labor, total: t.total },
+      snapshotDate: C.snapshotDate, raw: r,
+    };
+  }
+  // placeholder engine
+  const r = placeholderTakeoff(mm, C.rules, C.prices);
+  const lines = r.lines.map((l) => ({ id: l.ruleId, group: l.layer, desc: l.basis, qtyCalc: null, calcUnit: '', qty: l.qty, unit: l.unit, product: l.name, priceRef: l.item, unitPrice: l.unitPrice, total: l.total, status: 'placeholder', search: l.search, note: l.flag }));
+  const materials = r.total; const tax = taxSet ? r2(materials * Number(set.taxRatePct) / 100) : 0;
+  const cont = r2((materials + tax) * (Number(set.contingencyPct) || 0) / 100); const del = Number(set.deliveryUsd) || 0; const lab = set.laborUsd == null || set.laborUsd === '' ? null : Number(set.laborUsd);
+  return {
+    mode: 'placeholder', lines, flags: [], report: {}, concreteAlternatives: null, M: r.M,
+    groups: GROUPS.map((g) => ({ id: g.id, name: g.name, lines: lines.filter((l) => l.group === g.id) })).map((g) => Object.assign(g, { total: r2(g.lines.reduce((s, l) => s + l.total, 0)) })).filter((g) => g.lines.length),
+    totals: { materials, fromEstimates: 0, unpriced: r.missing, taxSet, taxRatePct: taxSet ? Number(set.taxRatePct) : null, tax, contingencyPct: Number(set.contingencyPct) || 0, contingency: cont, delivery: del, labor: lab, total: r2(materials + tax + cont + del + (lab || 0)) },
+    snapshotDate: null,
+  };
+}
+
+/** Does the floor have an (unsupported) mid beam? */
+export function midBeamInfo(m) {
+  const fl = getLayer(m, 'floor'); const g = fl.objects.filter((o) => o.props && o.props.role === 'girder');
+  const span = (fl.params.computed && fl.params.computed.spanFt) || 0;
+  return { has: g.length > 0, count: g.length, spanFt: span, joistSize: fl.params.joistSize, lenFt: g.reduce((s, o) => s + Math.hypot(o.geometry.b[0] - o.geometry.a[0], o.geometry.b[1] - o.geometry.a[1]), 0) };
+}
+/** The 2x12 clear-span alternative from Remodel Guide's examples: 2x12 joists, mid beam threshold above the span (no beam, no hangers). */
+export function applyClearSpan(m) {
+  const fl = getLayer(m, 'floor');
+  const span = (fl.params.computed && fl.params.computed.spanFt) || 0;
+  fl.params.joistSize = '2x12';
+  fl.params.beamFlagSpanFt = Math.max(17, Math.ceil(span + 0.5));
+  return m;
+}
+export const CLEAR_SPAN_TYPICAL_MAX_FT = 17; // Remodel Guide's example uses 17 ft for 2x12 @ 16 in — EXAMPLE, verify against span tables
+/** Price the clear-span alternative without touching the model. */
+export function clearSpanAlternative(m, C, base) {
+  const mm = applyClearSpan(JSON.parse(JSON.stringify(m)));
+  regenerate(mm, 'floor');
+  const alt = runEstimate(mm, C);
+  return { total: alt.totals.total, materials: alt.totals.materials, delta: r2(alt.totals.total - base.totals.total), withinTypical: midBeamInfo(m).spanFt <= CLEAR_SPAN_TYPICAL_MAX_FT };
+}

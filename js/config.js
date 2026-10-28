@@ -68,6 +68,7 @@ export const DEFAULTS = {
     placeDepthIn: null,                // bottom below grade, in (null = frost depth, or the placeholder)
     gradeBeamDepthIn: 12,
     gradeBeamWidthIn: 12,
+    soilType: 'unknown',               // v3 (Remodel Guide missing_fields): 'unknown' | 'normal' | 'expansive' — expansive → engineered piers
   },
   floor: {
     sill: '2x6 PT', sillSize: '2x6',
@@ -84,11 +85,22 @@ export const DEFAULTS = {
   roof: {
     shape: 'gable', pitch: 4, overhangIn: 12, rafterOcIn: 24, rafterSize: '2x8',
     ridge: 'long', showSheathing: false,
+    ceilingJoistSize: 'auto',          // v3: rafter ties / ceiling joists ('auto' = EXAMPLE table by span)
   },
   openings: {
     door: { widthIn: 36, heightIn: 80, sillIn: 0 },
     window: { widthIn: 36, heightIn: 48, sillIn: 30 },
   },
+};
+
+/** v3 estimate settings (m.estimate). Tax is blank until the user enters their own rate — the app never assumes a location. */
+export const ESTIMATE_DEFAULTS = {
+  taxRatePct: null,       // null = not set: total shows "tax not included"
+  contingencyPct: 10,     // optional, per Remodel Guide pricing-rules.md
+  deliveryUsd: 0,         // user-entered; never invented
+  laborUsd: null,         // null = not included
+  concreteMode: 'auto',   // auto | readymix | bags80 | bags60
+  iceBarrier: true,
 };
 
 /** Sonotube / pier editing (v2). */

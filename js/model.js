@@ -1,5 +1,5 @@
 // Building model (spec §7): Building → layers → objects. Persisted to localStorage.
-import { DEFAULTS, LAYER_COLORS, STORAGE_KEY, SCHEMA_VERSION, PLAN } from './config.js';
+import { DEFAULTS, LAYER_COLORS, STORAGE_KEY, SCHEMA_VERSION, PLAN, ESTIMATE_DEFAULTS } from './config.js';
 
 let counter = 0;
 export const uid = (p = 'o') => `${p}-${Date.now().toString(36)}${(counter++).toString(36)}${Math.random().toString(36).slice(2, 5)}`;
@@ -40,6 +40,7 @@ export function createDefaultModel() {
     wallMode: 'studs',          // studs | solid (3D)
     snapIn: PLAN.defaultSnapIn,
     lastRegen: null,
+    estimate: clone(ESTIMATE_DEFAULTS),
   };
   // Sample openings so a first run shows door swings / window breaks.
   const walls = m.layers.find((l) => l.id === 'walls');
@@ -107,5 +108,8 @@ export function migrate(m) {
     Object.keys(DEFAULTS.foundation).forEach((k) => { if (!(k in p)) p[k] = clone(DEFAULTS.foundation[k]); });
     if (!Array.isArray(p.deletedAutoSlots)) p.deletedAutoSlots = [];
   }
+  const r = m.layers.find((l) => l.id === 'roof');
+  if (r) Object.keys(DEFAULTS.roof).forEach((k) => { if (!(k in r.params)) r.params[k] = clone(DEFAULTS.roof[k]); });
+  m.estimate = Object.assign(clone(ESTIMATE_DEFAULTS), m.estimate || {});
   return m;
 }
