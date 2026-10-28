@@ -254,3 +254,51 @@ body.reportOpen { overflow: auto; }
 }
 #edit3d { gap: 5px; }
 #edit3d button { padding: 0 9px; }
+
+/* ---------- v3 price check: pre-check, labels, flags, build guide ---------- */
+.ph.est { color: #6a4a00; background: #fff6d6; border-color: #e7c35a; }
+.rp-price-src { background: #eef6ef; border: 1px solid #b9dcbf; color: #1d4a25; border-radius: 10px; padding: 8px 10px; font-size: 12.5px; line-height: 1.45; margin: 8px 0; }
+.rp-settings { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; margin: 10px 0 4px; }
+.rp-settings label { display: flex; flex-direction: column; font-size: 11px; font-weight: 700; color: var(--muted); gap: 3px; }
+.rp-settings label.ck { flex-direction: row; align-items: center; gap: 6px; grid-column: 1 / 3; color: var(--ink); font-size: 13px; }
+.rp-settings input[type=number], .rp-settings input[type=text], .rp-settings select { font-size: 16px; padding: 7px 8px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); min-width: 0; }
+.rp-break tr.sub td { border-top: 1px solid #cfc9bd; font-weight: 700; }
+.rp-warn { color: #a63a00; font-weight: 700; }
+.rp-flag { border-radius: 12px; padding: 10px 12px; margin: 8px 0; font-size: 13px; line-height: 1.45; border: 1px solid; }
+.rp-flag > b { display: block; font-size: 14px; }
+.rp-flag p { margin: 4px 0; }
+.rp-flag.ok { background: #eef6ef; border-color: #b9dcbf; }
+.rp-flag.warn { background: #fff6e5; border-color: #f0c27a; }
+.rp-flag.bad { background: #fdecea; border-color: #e6a59e; }
+.rp-flag.bad > b { color: #8c1d14; }
+.rp-flags { font-size: 13px; line-height: 1.45; padding-left: 18px; }
+.rp-flags li { margin: 4px 0; }
+.rp-est-src { font-size: 11px; color: #6a4a00; line-height: 1.35; }
+.rp-stale { background: #fff1e0; border: 2px solid #e06a00; border-radius: 12px; padding: 10px 12px; margin: 10px 0; font-size: 13px; color: #6b2e00; }
+.rp-stale b { display: block; font-size: 16px; color: #b34700; text-transform: uppercase; letter-spacing: .03em; }
+.rp-stale button { margin-top: 8px; display: block; width: 100%; font-size: 15px; padding: 10px; }
+.rp-fresh { margin: 8px 0; }
+.rp-guide .rp-phase { border-bottom: 1px solid #f0ece4; padding: 4px 0 10px; }
+.rp-guide h3 { font-size: 15px; margin: 12px 0 6px; }
+.rp-guide h4 { font-size: 13px; margin: 10px 0 4px; }
+.rp-guide ol, .rp-guide ul { padding-left: 22px; margin: 4px 0; font-size: 13px; line-height: 1.5; }
+.rp-guide li { margin: 4px 0; }
+.rp-guide p { font-size: 13px; line-height: 1.5; margin: 6px 0; }
+.rp-guide .sub { margin: 3px 0 0 4px; }
+.rp-guide blockquote { margin: 6px 0; padding: 4px 10px; border-left: 3px solid #f0b400; background: #fff8e1; font-size: 12.5px; }
+.rp-guide .miss { color: #b3261e; }
+.pc { max-width: 560px; }
+.pc-intro { font-size: 14px; line-height: 1.45; }
+.pc-card { border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px 12px; margin: 10px 0; background: #fff; }
+.pc-card.skipped { background: #f6f3ec; border-style: dashed; }
+.pc-h { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.pc-h b { flex: 1; font-size: 15px; }
+.pc-n { width: 24px; height: 24px; border-radius: 50%; background: var(--ink); color: #fff; font-weight: 800; font-size: 12px; display: grid; place-items: center; flex: none; }
+.pc-skip { border: 1px solid var(--line); background: #fff; border-radius: 16px; padding: 6px 12px; font-size: 12px; font-weight: 700; color: var(--muted); min-height: 32px; }
+.pc-card.skipped .pc-skip { background: var(--ink); color: #fff; border-color: var(--ink); }
+.pc-card label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; font-weight: 700; color: var(--muted); margin: 6px 0; }
+.pc-card input[type=text], .pc-card input[type=number] { font-size: 16px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 9px; color: var(--ink); }
+.pc-card label.pc-opt { flex-direction: row; align-items: flex-start; gap: 10px; font-weight: 400; color: var(--ink); font-size: 14px; padding: 8px; border: 1px solid var(--line); border-radius: 10px; }
+.pc-card label.pc-opt input { margin-top: 3px; width: 20px; height: 20px; flex: none; }
+.pc-run { display: block; width: 100%; border: 0; border-radius: 12px; background: var(--accent); color: #fff; font-weight: 800; font-size: 17px; padding: 14px; margin-top: 14px; }
+@media print { .rp-settings, .rp-stale button, .rp-fresh { display: none !important; } .rp-flag, .rp-stale, .ph.est { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }

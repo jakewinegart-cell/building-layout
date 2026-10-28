@@ -26,6 +26,7 @@ if (!model) { model = createDefaultModel(); regenerate(model, 'init'); } else re
 let pending = new Set();
 let pendingSource = null;
 let saveT = 0;
+let reportCtl = null; // price-check report controller (set when opened)
 const persist = () => { clearTimeout(saveT); saveT = setTimeout(() => save(model), 150); };
 
 const app = {
@@ -52,6 +53,7 @@ const app = {
     if (model.selection && !findObject(model, model.selection)) model.selection = null;
     persist();
     refresh({ all: true });
+    if (reportCtl && !$('#report').hidden) reportCtl.markStale();
   },
   onPierDrag(on) { $('#stage').classList.toggle('pierDragging', !!on); },
   revealPier(o) { requestAnimationFrame(() => { const pp = $('#pierPanel'); plan.ensureVisible(o.geometry.c, pp && !pp.hidden ? pp.offsetHeight + 8 : 0); }); },
@@ -181,15 +183,16 @@ $$('#menu [data-menu]').forEach((b) => b.addEventListener('click', () => {
   if (b.dataset.menu === 'reset' && confirm('Start over with the 32×24 sample? This clears the saved model on this device.')) { clear(); model = createDefaultModel(); regenerate(model, 'init'); save(model); refresh({ all: true }); setView('plan'); plan.fit(); }
 }));
 
-// ---------- "I'm done" → completion report (price + plan sheets + build steps)
+// ---------- "Price check" → pre-check → report (price + plan sheets + build steps).
+// Nothing in the app is priced until the user runs it; the report is frozen to that run.
 $('#doneBtn').addEventListener('click', () => openReport());
 async function openReport() {
   const rep = $('#report');
   rep.hidden = false; document.body.classList.add('reportOpen');
-  rep.innerHTML = '<div class="rp-loading">Pricing your addition…</div>';
+  rep.innerHTML = '<div class="rp-loading">Loading price check…</div>';
   try {
     const { renderReport } = await import('./report.js');
-    await renderReport(rep, { model, v3, onClose: closeReport, toast });
+    reportCtl = await renderReport(rep, { model, getModel: () => model, v3, onClose: closeReport, toast, commit: (s) => app.commit(s), persist });
   } catch (err) {
     console.error(err);
     rep.innerHTML = `<div class="rp-loading">Could not build the report: ${String(err && err.message || err)} <button class="btn" id="rpErrClose">Close</button></div>`;
