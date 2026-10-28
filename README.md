@@ -76,3 +76,39 @@ python3 tests/extras.py   # L-shape, bearing interior wall + piers, door, custom
 python3 tests/piers_v2.py # 32 checks, phone + CDP touch: spacing re-lay, drop/snap, drag, panel, regen, flags, reset, delete/dup, persistence, 3D; writes screenshots/v2/
 ```
 Needs Playwright plus Chrome (`/usr/bin/google-chrome`). `screenshots/` is git-ignored.
+
+## v3 — Edit from 3D + Price check (branch `v3`)
+
+### Edit from 3D
+Tap to select in 3D (same selection as Plan + Properties). Drag a wall/opening/pier or its ✥ handle, with whole-inch snapping and live dimensions. Corner ◉ handles reshape the footprint. You can also add or delete piers, walls, doors and windows. **X-ray** makes the layers above the active one see-through. Taps only pass through those ghosted layers to the active layer while X-ray is on. Without X-ray, the nearest object wins, so the ridge/roof can still be picked.
+
+### Price check (nothing is priced until you ask)
+- The plan and 3D views show **no price**. The top-left **Price check** button (renamed from "I'm done") opens a pre-check, and every step can be skipped:
+  1. **Location + sales tax %**: free text. The tax rate is blank by default. Blank or skipped means 0% tax, and the report flags it.
+  2. **Frost depth**: blank by default. Blank or skipped means piers and footings are priced at a 24 in **PLACEHOLDER**, and the report flags it.
+  3. **Mid-beam support**: shown only if the model has a mid girder. The choices are:
+     - "Add piers under the beam": adds beam-support piers. The beam is still FLAGGED for an engineer.
+     - "Use 2x12 joists spanning wall to wall instead": removes the girder and warns when the span is over ~17 ft.
+     - Skip: the beam stays unsupported, and the report flags it along with what the clear-span option would cost.
+- **Run price check** applies the answers to the **current** model and runs the takeoff. It then freezes that run (model, answers, signature, 3D snapshots) and opens the report.
+- Any edit after a run marks the report **Out of date** and shows **Re-run price check**. The report is never recalculated silently. The report's own tax, contingency, delivery and labor inputs are explicit edits to that frozen run.
+
+### Remodel Guide content-v3 (wired)
+- `js/content.js` loads `content-v3/takeoff-rules.json`, `homedepot-prices.json` and `instructions.md`. It also imports the reference engine `content-v3/reference/takeoff-reference.mjs`.
+- Prices are validated: each must have a date checked and a URL or estimate source, or it is shown as unpriced.
+- Lines read "Home Depot online price, checked Oct 28, 2026, not localized". `verified:false` lines show **est.** and their source.
+- The `content/` placeholder engine is used only if content-v3 fails to load.
+- Cross-check (`tests/v3.py`, tax 9.15 **in tests only**):
+
+  | Example | Total |
+  |---|---|
+  | 20x16 piers base | **$9,628.92** |
+  | bags80 | $10,222.04 |
+  | frost 36 | $9,842.55 |
+  | 2x12 clear span | $9,434.28 |
+
+  All match the reference to the cent, line by line.
+- `js/sheets.js` (A1, S1–S4 sheets) was written for this app in v3.
+
+### Tests
+`python3 tests/v3.py` runs 78 checks and writes screenshots to `screenshots/v3/`. The older suites also pass: `tests/verify.py` (50), `tests/extras.py` (9) and `tests/piers_v2.py` (32).

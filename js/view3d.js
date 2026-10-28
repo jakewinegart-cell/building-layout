@@ -122,7 +122,9 @@ export function createView3D(container, app) {
     if (first.object.userData.layerId === m.activeLayerId) return first;
     const firstAlpha = first.object.material && first.object.material.opacity;
     const act = hits.find((h) => h.object.userData.layerId === m.activeLayerId);
-    if (act && firstAlpha < 1) return act;
+    // X-ray on: taps go through the see-through layers to the active one. Otherwise the nearest member wins
+    // (so a ghosted ridge is still tappable, as in v1).
+    if (act && firstAlpha < 1 && m.xray) return act;
     return first;
   }
   function layerY(layerId) {

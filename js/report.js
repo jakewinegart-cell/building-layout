@@ -174,7 +174,7 @@ ${hd ? `<label>Concrete<select id="rpConc">${['auto', 'bags80', 'bags60', 'ready
     h += `<tr class="sum"><td>Total <span class="rp-meta">(tax rate used: ${T.taxSet ? T.taxRatePct + '%' : 'none — 0%'})</span></td><td class="n">${usd(T.total)}</td></tr></tbody></table>`;
     if (est.concreteAlternatives) {
       const ca = est.concreteAlternatives; const r = est.report;
-      h += `<p class="rp-meta">Concrete: ${r.concreteYd} cu yd (${r.concreteCuFt} cu ft) for ${r.pierCount || 0} piers + foundation. Using <b>${esc(r.concreteMode)}</b>. Alternatives (materials only): 80 lb bags ${usd(ca.bags80)} · 60 lb bags ${usd(ca.bags60)} · ready-mix ${usd(ca.readymix)}.</p>`;
+      h += `<p class="rp-meta">Concrete: ${r.concreteYd} cu yd (${r.concreteCuFt} cu ft) ${r.pierCount ? `incl. ${r.pierCount} piers` : 'for the foundation'}. Using <b>${esc(r.concreteMode)}</b>. Concrete cost by method (materials only): ${ca.bags80.qty} × 80 lb bags ${usd(ca.bags80.cost)} · ${ca.bags60.qty} × 60 lb bags ${usd(ca.bags60.cost)} · ready-mix ${ca.readymix.yd} yd ${usd(ca.readymix.cost)}${ca.readymix.estimate ? ' <span class="ph est">est.</span>' : ''}. Change it with the Concrete setting above.</p>`;
     }
     h += `</section>`;
 

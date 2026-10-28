@@ -75,7 +75,6 @@ with sync_playwright() as p:
     check('selected wall shows a move handle', any(h['kind'] == 'move' for h in hs), [h['kind'] for h in hs])
     pg.screenshot(path=SH + '02-3d-select-move-handle.png')
     check('selection sync: properties panel opens for the 3D selection', pg.is_visible('#propsPane') and len(pg.inner_text('#propsPane')) > 10)
-    pg.screenshot(path=SH + '04-3d-edit-panel.png')
     fp0 = pg.evaluate(f"{M}.footprint")
     h = [x for x in hs if x['kind'] == 'move'][0]['screen']
     t.ev('touchStart', [h])
@@ -110,6 +109,10 @@ with sync_playwright() as p:
     check('X-ray toggles see-through layers', len(pg.evaluate("window.__layout.v3.debug.xrayLayers()")) > 0)
     pg.screenshot(path=SH + '05-3d-xray.png')
     pg.click('#xrayBtn'); pg.wait_for_timeout(200)
+    pg.evaluate("window.__layout.app.select({layerId:'walls', objectId:'w-ext-2'})"); pg.wait_for_timeout(200)
+    pg.click('.tabs button[data-tab="props"]'); pg.wait_for_timeout(400)
+    check('3D edit panel open for the 3D selection', pg.is_visible('#propsPane') and 'Wall' in pg.inner_text('#propsPane'))
+    pg.screenshot(path=SH + '04-3d-edit-panel.png')
     no_price('after edits')
     check('no console errors (3D section)', not errs, errs[:3])
     ctx.close()
@@ -134,6 +137,7 @@ with sync_playwright() as p:
     check('no piers silently added under the beam', pg.evaluate(f"{M}.layers.find(l=>l.id==='foundation').objects.filter(o=>o.props&&o.props.beamSupport).length") == 0)
     for sid in ['rp-total', 'rp-check', 'rp-mat', 'rp-A1', 'rp-S1', 'rp-S2', 'rp-S3', 'rp-S4', 'rp-3d', 'rp-steps', 'rp-disc']:
         check(f'report section #{sid} present', pg.locator('#' + sid).count() == 1)
+    check('concrete alternatives priced (no NaN)', 'NaN' not in pg.inner_text('#rp-total') and 'bags' in pg.inner_text('#rp-total'))
     check('per-layer breakdown rows', pg.locator('#rpBreak tr[data-group]').count() >= 5)
     check('sheets have drawings (svg)', all(pg.locator(f'#rp-{k} svg').count() >= 1 for k in ['A1', 'S1', 'S2', 'S3', 'S4']))
     check('S3 has one elevation per wall', pg.locator('#rp-S3 .rp-sheet').count() >= 4)
@@ -152,7 +156,16 @@ with sync_playwright() as p:
     # report section screenshots
     pg.screenshot(path=SH + '10-report-total-top.png')
     for i, (sid, nm) in enumerate([('rp-total', 'total-breakdown'), ('rp-check', 'check-flags'), ('rp-mat', 'material-list'), ('rp-A1', 'A1-plan'), ('rp-S1', 'S1-foundation'), ('rp-S2', 'S2-floor'), ('rp-S3', 'S3-walls'), ('rp-S4', 'S4-roof'), ('rp-3d', 'A2-3d-views'), ('rp-steps', 'build-steps'), ('rp-disc', 'disclaimer')]):
-        pg.locator('#' + sid).screenshot(path=SH + f'{11 + i:02d}-report-{nm}.png')
+        if True:   # phone viewport scrolled to the section start (element shots of a scrolled overlay come out clipped)
+            pg.evaluate("(id) => { const r = document.getElementById('report'); r.scrollTop = document.getElementById(id).offsetTop - 100; }", sid); pg.wait_for_timeout(150)
+            pg.screenshot(path=SH + f'{11 + i:02d}-report-{nm}.png')
+        else:
+            pg.locator('#' + sid).screenshot(path=SH + f'{11 + i:02d}-report-{nm}.png')
+    pg.evaluate("() => { const r = document.getElementById('report'); const e = document.querySelector('#rp-mat tr.st-estimate'); r.scrollTop = e.getBoundingClientRect().top + r.scrollTop - 200; }"); pg.wait_for_timeout(150)
+    pg.screenshot(path=SH + '13b-report-material-list-estimates.png')
+    pg.evaluate("() => { const r = document.getElementById('report'); const e = document.getElementById('rpTaxRow'); r.scrollTop = e.getBoundingClientRect().top + r.scrollTop - 420; }"); pg.wait_for_timeout(150)
+    pg.screenshot(path=SH + '11b-report-breakdown-tax-total.png')
+    pg.evaluate("document.getElementById('report').scrollTop = 0")
     # tax editable in report, rate shown in the total
     pg.fill('#rpTax', '7.5'); pg.press('#rpTax', 'Tab'); pg.wait_for_timeout(300)
     check('tax rate editable; total states the rate used', '7.5%' in pg.inner_text('#rp-total') and money(pg.inner_text('#rpTotal')) > total_skip)
@@ -216,6 +229,7 @@ with sync_playwright() as p:
     pc = pg.evaluate("""async () => { const [{getContent}, {runEstimate}] = await Promise.all([import('./js/report.js'), import('./js/estimate.js')]);
         return runEstimate(window.__layout.getModel(), await getContent()).report.pierCount; }""")
     check('pier count in the takeoff includes the beam piers', pc == 14 + nbp, pc)
+    pg.evaluate("() => { const r = document.getElementById('report'); r.scrollTop = document.getElementById('rp-check').offsetTop - 100; }"); pg.wait_for_timeout(150)
     pg.screenshot(path=SH + '09-report-beam-piers.png')
     close_report(pg)
     # beam choice: 2x12 clear span (starting again from the example)
