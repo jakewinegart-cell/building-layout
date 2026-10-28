@@ -1,0 +1,226 @@
+{
+ "schema": "layout-build-steps/1",
+ "version": "placeholder-1",
+ "updated": "2026-10-28",
+ "author": "Building Layout v3 (generic steps, not engineered)",
+ "steps": [
+  {
+   "id": "permit",
+   "phase": "Before you dig",
+   "title": "Permit, utilities, frost depth",
+   "text": "Take these sheets to your building department and ask what they need stamped (they usually want engineered foundation and beam sizes). Call 811 at least a few days before digging so buried utilities get marked. Get your local frost depth — the plans use {pierDepthText}.",
+   "check": "Nothing here is engineered or stamped. The building department has the final say."
+  },
+  {
+   "id": "order",
+   "phase": "Before you dig",
+   "title": "Order materials",
+   "text": "Order from the material list. Long lumber and sheet goods are cheapest delivered in one drop; concrete comes to {concreteCy} cu yd, so get a ready-mix quote before you buy {concreteCf} cu ft in bags."
+  },
+  {
+   "id": "layout",
+   "phase": "Layout",
+   "title": "Lay out and square the footprint",
+   "text": "Set batter boards about 4 ft outside each corner and pull string lines for the {footprintW} × {footprintD} ft outside face of framing. Check square by measuring the diagonals — for a rectangle both should read {diagonalFt} ft. Paint the corner and pier/footing locations on the ground."
+  },
+  {
+   "id": "dig-piers",
+   "phase": "Foundation",
+   "title": "Dig the pier holes",
+   "text": "Dig {pierCount} holes for Ø {pierDiaList} in tubes, to {pierDepthText} below grade, at the centers on the Foundation / pier plan (sheet S1). Widen the bottom if your design uses a footing pad.",
+   "when": {
+    "foundationType": [
+     "piers"
+    ]
+   },
+   "check": "Have the holes inspected before you pour if your jurisdiction requires it."
+  },
+  {
+   "id": "set-tubes",
+   "phase": "Foundation",
+   "title": "Set tubes and rebar",
+   "text": "Set and plumb the form tubes, brace them, and backfill around the outside. Place 4 vertical #4 bars in each tube with 3 in of cover, long enough to tie into the grade beam steel.",
+   "when": {
+    "foundationType": [
+     "piers"
+    ]
+   }
+  },
+  {
+   "id": "pour-piers",
+   "phase": "Foundation",
+   "title": "Pour the piers",
+   "text": "Pour {pierConcreteCf} cu ft into the tubes, rodding as you fill to remove voids. Strike the tops at the grade beam bottom elevation.",
+   "when": {
+    "foundationType": [
+     "piers"
+    ]
+   }
+  },
+  {
+   "id": "gradebeam",
+   "phase": "Foundation",
+   "title": "Form and pour the grade beam",
+   "text": "Build {gradeBeamWidthIn} × {gradeBeamDepthIn} in forms on top of the piers along every wall line ({gradeBeamLf} LF), run 4 continuous #4 bars lapped at splices, then pour {gradeBeamCf} cu ft. Set {anchorBolts} anchor bolts in the wet concrete: within 12 in of each end and ≤ 6 ft o.c.",
+   "when": {
+    "foundationType": [
+     "piers"
+    ]
+   }
+  },
+  {
+   "id": "footings",
+   "phase": "Foundation",
+   "title": "Dig and pour footings",
+   "text": "Dig a {footingLf} LF trench to {pierDepthText}, set 2 continuous #4 bars on chairs, and pour {footingCf} cu ft of footing.",
+   "when": {
+    "foundationType": [
+     "crawlspace",
+     "basement",
+     "slab"
+    ]
+   }
+  },
+  {
+   "id": "stem",
+   "phase": "Foundation",
+   "title": "Form and pour the stem walls",
+   "text": "Form {stemLf} LF of stem wall, {stemHeightFt} ft tall, tie 2 horizontal bars, pour {stemCf} cu ft, and set {anchorBolts} anchor bolts (within 12 in of each end, ≤ 6 ft o.c.). Lay the {footprintAreaSf} sq ft vapor barrier on the crawlspace floor.",
+   "when": {
+    "foundationType": [
+     "crawlspace",
+     "basement"
+    ]
+   }
+  },
+  {
+   "id": "slab",
+   "phase": "Foundation",
+   "title": "Pour the slab",
+   "text": "Compact the base, lay vapor barrier and wire mesh over {slabAreaSf} sq ft, and pour {slabCf} cu ft with the thickened edges. Set {anchorBolts} anchor bolts at the edges.",
+   "when": {
+    "foundationType": [
+     "slab"
+    ]
+   }
+  },
+  {
+   "id": "cure",
+   "phase": "Foundation",
+   "title": "Let the concrete cure",
+   "text": "Wait for the concrete to gain strength before loading it (typically about a week; check the bag or your supplier)."
+  },
+  {
+   "id": "sill",
+   "phase": "Floor framing",
+   "title": "Sill plates",
+   "text": "Roll out sill gasket, drill the {sillSize} pressure-treated sills ({sillLf} LF) over the anchor bolts, and tighten nuts and washers. Shim to level.",
+   "when": {
+    "metricPositive": "hasFloorFraming"
+   }
+  },
+  {
+   "id": "girder",
+   "phase": "Floor framing",
+   "title": "Mid girder (FLAGGED)",
+   "text": "The joist span is {joistSpanFt} ft, so the plans show a 3-ply mid girder ({girderLf} LF). Its size and the posts or piers under it are NOT designed — get an engineer to size them before you build.",
+   "when": {
+    "metricPositive": "girderLf"
+   },
+   "check": "FLAGGED: not sized."
+  },
+  {
+   "id": "rim",
+   "phase": "Floor framing",
+   "title": "Rim joists",
+   "text": "Stand the {joistSize} rim joists ({rimLf} LF) on the sills, flush with the outside, and toenail them down.",
+   "when": {
+    "metricPositive": "hasFloorFraming"
+   }
+  },
+  {
+   "id": "joists",
+   "phase": "Floor framing",
+   "title": "Floor joists",
+   "text": "Mark {joistOcIn} in o.c. on the rim from one end (sheet S2) and install {joistCount} joist lines, crown up. Where joists land on the girder, use the {joistHangers} joist hangers with every nail hole filled.",
+   "when": {
+    "metricPositive": "hasFloorFraming"
+   }
+  },
+  {
+   "id": "subfloor",
+   "phase": "Floor framing",
+   "title": "Subfloor",
+   "text": "Glue and screw {subfloorSheets} sheets of 3/4 in T&G subfloor ({subfloorAreaSf} sq ft), long edge across the joists, staggering the end joints. Leave a 1/8 in gap at the edges.",
+   "when": {
+    "metricPositive": "hasFloorFraming"
+   }
+  },
+  {
+   "id": "wall-layout",
+   "phase": "Walls",
+   "title": "Plate layout",
+   "text": "Snap wall lines on the deck. Tack the bottom and top plates together and mark studs at {studOcIn} in o.c., plus king and jack studs at each opening: {openingList}."
+  },
+  {
+   "id": "wall-frame",
+   "phase": "Walls",
+   "title": "Frame and raise the walls",
+   "text": "Build each wall flat on the deck as shown on sheet S3 (exterior {extWallSize}, interior {intWallSize}, {plateHeightFt} ft plates): {studCount} studs, headers, and window rough sills. Sheathing the walls while they are flat is easier. Raise each wall, plumb and brace it, and nail the bottom plate through the subfloor into the joists or rim.",
+   "check": "Header sizes are an EXAMPLE table — verify each one."
+  },
+  {
+   "id": "top-plate",
+   "phase": "Walls",
+   "title": "Double top plate",
+   "text": "Add the second top plate, lapping the corners and tees so the walls lock together. Check the walls are plumb and the corners are square."
+  },
+  {
+   "id": "sheath",
+   "phase": "Walls",
+   "title": "Sheathing and wrap",
+   "text": "Sheathe the walls ({wallSheathSf} sq ft of 7/16 OSB) with 8d nails at 6 in on the edges and 12 in in the field. Wrap and tape the walls, lapping the wrap shingle-style."
+  },
+  {
+   "id": "ridge",
+   "phase": "Roof",
+   "title": "Ridge and rafters",
+   "text": "Set the {ridgeSize} ridge board ({ridgeLf} LF) on temporary posts at the ridge height (rise {rafterRiseFt} ft for a {pitch}:12 pitch). Cut one pattern rafter, test it at both ends of the ridge, then cut and install {rafterCount} {rafterSize} rafters at {rafterOcIn} in o.c. (sheet S4).",
+   "check": "Gable-end wall framing is not generated yet — frame it to suit."
+  },
+  {
+   "id": "ties",
+   "phase": "Roof",
+   "title": "Rafter ties and hurricane ties",
+   "text": "Install {tieCount} rafter ties or ceiling joists across the {tieSpanFt} ft span (they are not drawn in the model — the size is an example). Fit a hurricane tie on every rafter at the wall plate ({hurricaneTies}).",
+   "check": "Ties keep the walls from spreading — do not skip them."
+  },
+  {
+   "id": "roof-sheath",
+   "phase": "Roof",
+   "title": "Roof sheathing",
+   "text": "Sheathe the roof ({roofSf} sq ft) with staggered joints and clips or 1/8 in gaps between sheets."
+  },
+  {
+   "id": "roofing",
+   "phase": "Roof",
+   "title": "Drip edge, underlayment, shingles",
+   "text": "Fit drip edge at the eaves, then the underlayment, then drip edge on the rakes ({dripEdgeLf} LF total). Run the starter strip, then shingles ({roofSquares} squares), and finish with ridge cap."
+  },
+  {
+   "id": "openings",
+   "phase": "Close-in",
+   "title": "Doors and windows",
+   "text": "Flash the rough openings and set {doorCount} door(s) and {windowCount} window(s) plumb and level following the manufacturer's instructions.",
+   "when": {
+    "metricPositive": "openingCount"
+   }
+  },
+  {
+   "id": "inspect",
+   "phase": "Close-in",
+   "title": "Inspections",
+   "text": "Schedule framing inspection before any insulation or drywall. Electrical, plumbing and mechanical (the stubbed MEP layer) are not covered by these plans."
+  }
+ ]
+}

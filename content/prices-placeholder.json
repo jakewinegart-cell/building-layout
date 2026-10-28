@@ -1,0 +1,817 @@
+{
+ "schema": "layout-price-table/1",
+ "placeholder": true,
+ "label": "PLACEHOLDER prices — made up for layout testing, NOT real Home Depot prices",
+ "store": null,
+ "snapshotDate": null,
+ "createdDate": "2026-10-28",
+ "currency": "USD",
+ "searchUrlTemplate": "https://www.homedepot.com/s/{q}",
+ "items": {
+  "lumber-2x4-8": {
+   "name": "2x4 × 8 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 4.4,
+   "search": "2x4 8 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x4-8": {
+   "name": "2x4 × 8 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 5.72,
+   "search": "2x4 8 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x4-10": {
+   "name": "2x4 × 10 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 5.5,
+   "search": "2x4 10 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x4-10": {
+   "name": "2x4 × 10 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 7.15,
+   "search": "2x4 10 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x4-12": {
+   "name": "2x4 × 12 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 6.6,
+   "search": "2x4 12 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x4-12": {
+   "name": "2x4 × 12 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 8.58,
+   "search": "2x4 12 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x4-14": {
+   "name": "2x4 × 14 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 7.7,
+   "search": "2x4 14 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x4-14": {
+   "name": "2x4 × 14 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 10.01,
+   "search": "2x4 14 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x4-16": {
+   "name": "2x4 × 16 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 8.8,
+   "search": "2x4 16 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x4-16": {
+   "name": "2x4 × 16 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 11.44,
+   "search": "2x4 16 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x4-20": {
+   "name": "2x4 × 20 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 11.0,
+   "search": "2x4 20 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x4-20": {
+   "name": "2x4 × 20 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 14.3,
+   "search": "2x4 20 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x4-precut92": {
+   "name": "2x4 × 92-5/8 in precut stud",
+   "unit": "ea",
+   "price": 4.03,
+   "search": "2x4 92-5/8 in stud",
+   "placeholder": true
+  },
+  "lumber-2x4-precut104": {
+   "name": "2x4 × 104-5/8 in precut stud",
+   "unit": "ea",
+   "price": 4.56,
+   "search": "2x4 104-5/8 in stud",
+   "placeholder": true
+  },
+  "lumber-2x4-precut116": {
+   "name": "2x4 × 116-5/8 in precut stud",
+   "unit": "ea",
+   "price": 5.08,
+   "search": "2x4 116-5/8 in stud",
+   "placeholder": true
+  },
+  "lumber-2x6-8": {
+   "name": "2x6 × 8 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 6.8,
+   "search": "2x6 8 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x6-8": {
+   "name": "2x6 × 8 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 8.84,
+   "search": "2x6 8 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x6-10": {
+   "name": "2x6 × 10 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 8.5,
+   "search": "2x6 10 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x6-10": {
+   "name": "2x6 × 10 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 11.05,
+   "search": "2x6 10 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x6-12": {
+   "name": "2x6 × 12 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 10.2,
+   "search": "2x6 12 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x6-12": {
+   "name": "2x6 × 12 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 13.26,
+   "search": "2x6 12 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x6-14": {
+   "name": "2x6 × 14 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 11.9,
+   "search": "2x6 14 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x6-14": {
+   "name": "2x6 × 14 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 15.47,
+   "search": "2x6 14 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x6-16": {
+   "name": "2x6 × 16 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 13.6,
+   "search": "2x6 16 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x6-16": {
+   "name": "2x6 × 16 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 17.68,
+   "search": "2x6 16 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x6-20": {
+   "name": "2x6 × 20 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 17.0,
+   "search": "2x6 20 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x6-20": {
+   "name": "2x6 × 20 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 22.1,
+   "search": "2x6 20 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x6-precut92": {
+   "name": "2x6 × 92-5/8 in precut stud",
+   "unit": "ea",
+   "price": 6.23,
+   "search": "2x6 92-5/8 in stud",
+   "placeholder": true
+  },
+  "lumber-2x6-precut104": {
+   "name": "2x6 × 104-5/8 in precut stud",
+   "unit": "ea",
+   "price": 7.04,
+   "search": "2x6 104-5/8 in stud",
+   "placeholder": true
+  },
+  "lumber-2x6-precut116": {
+   "name": "2x6 × 116-5/8 in precut stud",
+   "unit": "ea",
+   "price": 7.85,
+   "search": "2x6 116-5/8 in stud",
+   "placeholder": true
+  },
+  "lumber-2x8-8": {
+   "name": "2x8 × 8 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 8.8,
+   "search": "2x8 8 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x8-8": {
+   "name": "2x8 × 8 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 11.44,
+   "search": "2x8 8 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x8-10": {
+   "name": "2x8 × 10 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 11.0,
+   "search": "2x8 10 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x8-10": {
+   "name": "2x8 × 10 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 14.3,
+   "search": "2x8 10 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x8-12": {
+   "name": "2x8 × 12 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 13.2,
+   "search": "2x8 12 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x8-12": {
+   "name": "2x8 × 12 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 17.16,
+   "search": "2x8 12 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x8-14": {
+   "name": "2x8 × 14 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 15.4,
+   "search": "2x8 14 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x8-14": {
+   "name": "2x8 × 14 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 20.02,
+   "search": "2x8 14 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x8-16": {
+   "name": "2x8 × 16 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 17.6,
+   "search": "2x8 16 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x8-16": {
+   "name": "2x8 × 16 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 22.88,
+   "search": "2x8 16 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x8-20": {
+   "name": "2x8 × 20 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 22.0,
+   "search": "2x8 20 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x8-20": {
+   "name": "2x8 × 20 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 28.6,
+   "search": "2x8 20 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x8-precut92": {
+   "name": "2x8 × 92-5/8 in precut stud",
+   "unit": "ea",
+   "price": 8.07,
+   "search": "2x8 92-5/8 in stud",
+   "placeholder": true
+  },
+  "lumber-2x8-precut104": {
+   "name": "2x8 × 104-5/8 in precut stud",
+   "unit": "ea",
+   "price": 9.11,
+   "search": "2x8 104-5/8 in stud",
+   "placeholder": true
+  },
+  "lumber-2x8-precut116": {
+   "name": "2x8 × 116-5/8 in precut stud",
+   "unit": "ea",
+   "price": 10.16,
+   "search": "2x8 116-5/8 in stud",
+   "placeholder": true
+  },
+  "lumber-2x10-8": {
+   "name": "2x10 × 8 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 11.6,
+   "search": "2x10 8 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x10-8": {
+   "name": "2x10 × 8 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 15.08,
+   "search": "2x10 8 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x10-10": {
+   "name": "2x10 × 10 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 14.5,
+   "search": "2x10 10 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x10-10": {
+   "name": "2x10 × 10 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 18.85,
+   "search": "2x10 10 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x10-12": {
+   "name": "2x10 × 12 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 17.4,
+   "search": "2x10 12 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x10-12": {
+   "name": "2x10 × 12 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 22.62,
+   "search": "2x10 12 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x10-14": {
+   "name": "2x10 × 14 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 20.3,
+   "search": "2x10 14 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x10-14": {
+   "name": "2x10 × 14 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 26.39,
+   "search": "2x10 14 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x10-16": {
+   "name": "2x10 × 16 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 23.2,
+   "search": "2x10 16 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x10-16": {
+   "name": "2x10 × 16 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 30.16,
+   "search": "2x10 16 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x10-20": {
+   "name": "2x10 × 20 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 29.0,
+   "search": "2x10 20 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x10-20": {
+   "name": "2x10 × 20 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 37.7,
+   "search": "2x10 20 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x10-precut92": {
+   "name": "2x10 × 92-5/8 in precut stud",
+   "unit": "ea",
+   "price": 10.63,
+   "search": "2x10 92-5/8 in stud",
+   "placeholder": true
+  },
+  "lumber-2x10-precut104": {
+   "name": "2x10 × 104-5/8 in precut stud",
+   "unit": "ea",
+   "price": 12.01,
+   "search": "2x10 104-5/8 in stud",
+   "placeholder": true
+  },
+  "lumber-2x10-precut116": {
+   "name": "2x10 × 116-5/8 in precut stud",
+   "unit": "ea",
+   "price": 13.39,
+   "search": "2x10 116-5/8 in stud",
+   "placeholder": true
+  },
+  "lumber-2x12-8": {
+   "name": "2x12 × 8 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 15.2,
+   "search": "2x12 8 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x12-8": {
+   "name": "2x12 × 8 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 19.76,
+   "search": "2x12 8 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x12-10": {
+   "name": "2x12 × 10 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 19.0,
+   "search": "2x12 10 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x12-10": {
+   "name": "2x12 × 10 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 24.7,
+   "search": "2x12 10 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x12-12": {
+   "name": "2x12 × 12 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 22.8,
+   "search": "2x12 12 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x12-12": {
+   "name": "2x12 × 12 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 29.64,
+   "search": "2x12 12 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x12-14": {
+   "name": "2x12 × 14 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 26.6,
+   "search": "2x12 14 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x12-14": {
+   "name": "2x12 × 14 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 34.58,
+   "search": "2x12 14 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x12-16": {
+   "name": "2x12 × 16 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 30.4,
+   "search": "2x12 16 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x12-16": {
+   "name": "2x12 × 16 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 39.52,
+   "search": "2x12 16 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x12-20": {
+   "name": "2x12 × 20 ft SPF/Doug fir lumber",
+   "unit": "ea",
+   "price": 38.0,
+   "search": "2x12 20 ft lumber",
+   "placeholder": true
+  },
+  "lumber-pt-2x12-20": {
+   "name": "2x12 × 20 ft pressure-treated lumber",
+   "unit": "ea",
+   "price": 49.4,
+   "search": "2x12 20 ft pressure treated",
+   "placeholder": true
+  },
+  "lumber-2x12-precut92": {
+   "name": "2x12 × 92-5/8 in precut stud",
+   "unit": "ea",
+   "price": 13.93,
+   "search": "2x12 92-5/8 in stud",
+   "placeholder": true
+  },
+  "lumber-2x12-precut104": {
+   "name": "2x12 × 104-5/8 in precut stud",
+   "unit": "ea",
+   "price": 15.74,
+   "search": "2x12 104-5/8 in stud",
+   "placeholder": true
+  },
+  "lumber-2x12-precut116": {
+   "name": "2x12 × 116-5/8 in precut stud",
+   "unit": "ea",
+   "price": 17.54,
+   "search": "2x12 116-5/8 in stud",
+   "placeholder": true
+  },
+  "sonotube-6in-4ft": {
+   "name": "Concrete form tube 6 in × 4 ft",
+   "unit": "ea",
+   "price": 10.3,
+   "search": "6 in x 4 ft concrete form tube",
+   "placeholder": true
+  },
+  "sonotube-8in-4ft": {
+   "name": "Concrete form tube 8 in × 4 ft",
+   "unit": "ea",
+   "price": 12.4,
+   "search": "8 in x 4 ft concrete form tube",
+   "placeholder": true
+  },
+  "sonotube-10in-4ft": {
+   "name": "Concrete form tube 10 in × 4 ft",
+   "unit": "ea",
+   "price": 14.5,
+   "search": "10 in x 4 ft concrete form tube",
+   "placeholder": true
+  },
+  "sonotube-12in-4ft": {
+   "name": "Concrete form tube 12 in × 4 ft",
+   "unit": "ea",
+   "price": 16.6,
+   "search": "12 in x 4 ft concrete form tube",
+   "placeholder": true
+  },
+  "sonotube-14in-4ft": {
+   "name": "Concrete form tube 14 in × 4 ft",
+   "unit": "ea",
+   "price": 18.7,
+   "search": "14 in x 4 ft concrete form tube",
+   "placeholder": true
+  },
+  "sonotube-16in-4ft": {
+   "name": "Concrete form tube 16 in × 4 ft",
+   "unit": "ea",
+   "price": 20.8,
+   "search": "16 in x 4 ft concrete form tube",
+   "placeholder": true
+  },
+  "sonotube-18in-4ft": {
+   "name": "Concrete form tube 18 in × 4 ft",
+   "unit": "ea",
+   "price": 22.9,
+   "search": "18 in x 4 ft concrete form tube",
+   "placeholder": true
+  },
+  "sonotube-20in-4ft": {
+   "name": "Concrete form tube 20 in × 4 ft",
+   "unit": "ea",
+   "price": 25.0,
+   "search": "20 in x 4 ft concrete form tube",
+   "placeholder": true
+  },
+  "sonotube-24in-4ft": {
+   "name": "Concrete form tube 24 in × 4 ft",
+   "unit": "ea",
+   "price": 29.2,
+   "search": "24 in x 4 ft concrete form tube",
+   "placeholder": true
+  },
+  "joist-hanger-2x6": {
+   "name": "Face-mount joist hanger for 2x6",
+   "unit": "ea",
+   "price": 1.2,
+   "search": "2x6 joist hanger",
+   "placeholder": true
+  },
+  "joist-hanger-2x8": {
+   "name": "Face-mount joist hanger for 2x8",
+   "unit": "ea",
+   "price": 1.5,
+   "search": "2x8 joist hanger",
+   "placeholder": true
+  },
+  "joist-hanger-2x10": {
+   "name": "Face-mount joist hanger for 2x10",
+   "unit": "ea",
+   "price": 1.9,
+   "search": "2x10 joist hanger",
+   "placeholder": true
+  },
+  "joist-hanger-2x12": {
+   "name": "Face-mount joist hanger for 2x12",
+   "unit": "ea",
+   "price": 2.4,
+   "search": "2x12 joist hanger",
+   "placeholder": true
+  },
+  "concrete-80lb": {
+   "name": "Concrete mix, 80 lb bag",
+   "unit": "bag",
+   "price": 6.0,
+   "search": "80 lb concrete mix",
+   "placeholder": true
+  },
+  "rebar-4-20ft": {
+   "name": "#4 rebar, 1/2 in × 20 ft",
+   "unit": "ea",
+   "price": 14.0,
+   "search": "#4 rebar 20 ft",
+   "placeholder": true
+  },
+  "rebar-tie-wire": {
+   "name": "Rebar tie wire roll",
+   "unit": "roll",
+   "price": 8.0,
+   "search": "rebar tie wire",
+   "placeholder": true
+  },
+  "anchor-bolt-1-2x10": {
+   "name": "Anchor bolt 1/2 in × 10 in with nut & washer",
+   "unit": "ea",
+   "price": 1.75,
+   "search": "1/2 in x 10 in anchor bolt",
+   "placeholder": true
+  },
+  "plywood-3-4-form-4x8": {
+   "name": "3/4 in plywood 4×8 (forms)",
+   "unit": "sheet",
+   "price": 48.0,
+   "search": "3/4 in plywood 4x8",
+   "placeholder": true
+  },
+  "poly-6mil-10x100": {
+   "name": "6 mil poly sheeting 10 × 100 ft",
+   "unit": "roll",
+   "price": 60.0,
+   "search": "6 mil plastic sheeting 10 x 100",
+   "placeholder": true
+  },
+  "wire-mesh-5x150": {
+   "name": "Welded wire mesh 5 × 150 ft",
+   "unit": "roll",
+   "price": 150.0,
+   "search": "welded wire mesh concrete 5 x 150",
+   "placeholder": true
+  },
+  "sill-gasket-50ft": {
+   "name": "Foam sill gasket 5-1/2 in × 50 ft",
+   "unit": "roll",
+   "price": 12.0,
+   "search": "sill seal gasket 5-1/2 in",
+   "placeholder": true
+  },
+  "hanger-nails-1lb": {
+   "name": "Joist hanger nails 1 lb",
+   "unit": "box",
+   "price": 9.0,
+   "search": "joist hanger nails",
+   "placeholder": true
+  },
+  "subfloor-3-4-tg-4x8": {
+   "name": "3/4 in T&G subfloor panel 4×8",
+   "unit": "sheet",
+   "price": 52.0,
+   "search": "3/4 in tongue and groove subfloor 4x8",
+   "placeholder": true
+  },
+  "adhesive-subfloor-28oz": {
+   "name": "Subfloor adhesive 28 oz",
+   "unit": "tube",
+   "price": 9.0,
+   "search": "subfloor adhesive 28 oz",
+   "placeholder": true
+  },
+  "screws-2in-5lb": {
+   "name": "#8 × 2 in construction screws 5 lb",
+   "unit": "box",
+   "price": 38.0,
+   "search": "#8 2 in construction screws 5 lb",
+   "placeholder": true
+  },
+  "nails-16d-5lb": {
+   "name": "16d framing nails 5 lb",
+   "unit": "box",
+   "price": 22.0,
+   "search": "16d framing nails 5 lb",
+   "placeholder": true
+  },
+  "nails-8d-5lb": {
+   "name": "8d sheathing nails 5 lb",
+   "unit": "box",
+   "price": 20.0,
+   "search": "8d common nails 5 lb",
+   "placeholder": true
+  },
+  "osb-7-16-4x8": {
+   "name": "7/16 in OSB sheathing 4×8",
+   "unit": "sheet",
+   "price": 18.0,
+   "search": "7/16 in OSB 4x8",
+   "placeholder": true
+  },
+  "housewrap-9x150": {
+   "name": "House wrap 9 × 150 ft",
+   "unit": "roll",
+   "price": 180.0,
+   "search": "house wrap 9 x 150",
+   "placeholder": true
+  },
+  "housewrap-tape": {
+   "name": "House wrap seam tape",
+   "unit": "roll",
+   "price": 14.0,
+   "search": "house wrap tape",
+   "placeholder": true
+  },
+  "hurricane-tie": {
+   "name": "Hurricane tie (rafter to plate)",
+   "unit": "ea",
+   "price": 1.1,
+   "search": "hurricane tie",
+   "placeholder": true
+  },
+  "underlayment-synthetic-10sq": {
+   "name": "Synthetic roof underlayment 10 sq (1000 sq ft)",
+   "unit": "roll",
+   "price": 120.0,
+   "search": "synthetic roofing underlayment",
+   "placeholder": true
+  },
+  "shingles-bundle": {
+   "name": "Architectural shingles (1/3 square)",
+   "unit": "bundle",
+   "price": 40.0,
+   "search": "architectural shingles bundle",
+   "placeholder": true
+  },
+  "starter-strip-bundle": {
+   "name": "Starter strip shingles",
+   "unit": "bundle",
+   "price": 50.0,
+   "search": "starter strip shingles",
+   "placeholder": true
+  },
+  "ridge-cap-bundle": {
+   "name": "Hip & ridge cap shingles",
+   "unit": "bundle",
+   "price": 70.0,
+   "search": "hip and ridge shingles",
+   "placeholder": true
+  },
+  "drip-edge-10ft": {
+   "name": "Drip edge 10 ft",
+   "unit": "ea",
+   "price": 9.0,
+   "search": "drip edge 10 ft",
+   "placeholder": true
+  },
+  "roofing-nails-5lb": {
+   "name": "Roofing nails 1-1/4 in 5 lb",
+   "unit": "box",
+   "price": 18.0,
+   "search": "roofing nails 1-1/4 in",
+   "placeholder": true
+  },
+  "door-ext-*": {
+   "name": "Exterior prehung door {key} in",
+   "unit": "ea",
+   "price": 350.0,
+   "search": "exterior prehung door",
+   "placeholder": true
+  },
+  "door-int-*": {
+   "name": "Interior prehung door {key} in",
+   "unit": "ea",
+   "price": 120.0,
+   "search": "interior prehung door",
+   "placeholder": true
+  },
+  "window-*": {
+   "name": "Vinyl window {key} in",
+   "unit": "ea",
+   "price": 260.0,
+   "search": "vinyl window",
+   "placeholder": true
+  }
+ }
+}

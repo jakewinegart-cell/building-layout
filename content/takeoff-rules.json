@@ -1,0 +1,618 @@
+{
+ "schema": "layout-takeoff-rules/1",
+ "version": "placeholder-1",
+ "author": "Building Layout v3 (placeholder rules — typical practice, not engineering)",
+ "updated": "2026-10-28",
+ "layers": [
+  {
+   "id": "foundation",
+   "name": "Foundation"
+  },
+  {
+   "id": "floor",
+   "name": "Floor framing"
+  },
+  {
+   "id": "walls",
+   "name": "Walls, doors & windows"
+  },
+  {
+   "id": "roof",
+   "name": "Roof framing & roofing"
+  }
+ ],
+ "notes": "qty = round_up( Σ metric·factor × (1 + wastePct/100) ÷ packSize ). Metrics come from js/takeoff.js measure(). \"map\" rules emit one line per key of a measured map, item id = itemTemplate with {key}.",
+ "rules": [
+  {
+   "id": "sonotubes",
+   "layer": "foundation",
+   "map": "sonotubes",
+   "itemTemplate": "sonotube-{key}in-4ft",
+   "round": "ceil",
+   "when": {
+    "foundationType": [
+     "piers"
+    ]
+   },
+   "basis": "{raw} × 4 ft tube lengths for Ø{key} in piers ({pierCount} piers, bottoms at {pierDepthText})"
+  },
+  {
+   "id": "concrete",
+   "layer": "foundation",
+   "item": "concrete-80lb",
+   "terms": [
+    {
+     "metric": "concreteCf",
+     "factor": 1
+    }
+   ],
+   "packSize": 0.6,
+   "wastePct": 10,
+   "round": "ceil",
+   "basis": "{concreteCf} cu ft ({concreteCy} cu yd: piers {pierConcreteCf} + grade beam {gradeBeamCf} + footings {footingCf} + stem {stemCf} + slab {slabCf}) ÷ 0.6 cu ft per 80 lb bag + 10% waste. Over ~1 cu yd, pricing ready-mix delivery is usually cheaper."
+  },
+  {
+   "id": "rebar",
+   "layer": "foundation",
+   "item": "rebar-4-20ft",
+   "terms": [
+    {
+     "metric": "pierRebarLf",
+     "factor": 1
+    },
+    {
+     "metric": "contRebarLf",
+     "factor": 1
+    }
+   ],
+   "packSize": 20,
+   "wastePct": 5,
+   "round": "ceil",
+   "basis": "{pierRebarLf} LF in piers (4 verticals each) + {contRebarLf} LF continuous (grade beam 4 bars / footing + stem 2 bars each, +10% laps) ÷ 20 ft bars + 5%"
+  },
+  {
+   "id": "tiewire",
+   "layer": "foundation",
+   "item": "rebar-tie-wire",
+   "terms": [
+    {
+     "metric": "pierCount",
+     "factor": 0.1
+    },
+    {
+     "metric": "gradeBeamLf",
+     "factor": 0.01
+    },
+    {
+     "metric": "footingLf",
+     "factor": 0.01
+    }
+   ],
+   "round": "ceil",
+   "min": 1,
+   "basis": "about 1 roll per 10 piers / 100 LF of beam or footing"
+  },
+  {
+   "id": "anchors",
+   "layer": "foundation",
+   "item": "anchor-bolt-1-2x10",
+   "terms": [
+    {
+     "metric": "anchorBolts",
+     "factor": 1
+    }
+   ],
+   "round": "ceil",
+   "basis": "{anchorBolts} bolts: ≤ 6 ft o.c. and within 12 in of each end on every bearing line (typical; check local code)"
+  },
+  {
+   "id": "gbforms",
+   "layer": "foundation",
+   "item": "lumber-2x12-16",
+   "terms": [
+    {
+     "metric": "formLf",
+     "factor": 1
+    }
+   ],
+   "packSize": 16,
+   "wastePct": 10,
+   "round": "ceil",
+   "when": {
+    "foundationType": [
+     "piers"
+    ]
+   },
+   "basis": "{formLf} LF of form boards (both sides of {gradeBeamLf} LF grade beam, {gradeBeamDepthIn} in deep) ÷ 16 ft + 10%"
+  },
+  {
+   "id": "stemforms",
+   "layer": "foundation",
+   "item": "plywood-3-4-form-4x8",
+   "terms": [
+    {
+     "metric": "stemFormSf",
+     "factor": 1
+    }
+   ],
+   "wastePct": 10,
+   "round": "ceil",
+   "when": {
+    "foundationType": [
+     "crawlspace",
+     "basement"
+    ]
+   },
+   "basis": "{stemLf} LF stem wall × 2 faces × {stemHeightFt} ft tall ÷ 32 sq ft — reusable forms; renting forms may be cheaper",
+   "packSize": 32
+  },
+  {
+   "id": "groundcover",
+   "layer": "foundation",
+   "item": "poly-6mil-10x100",
+   "terms": [
+    {
+     "metric": "footprintAreaSf",
+     "factor": 1
+    }
+   ],
+   "packSize": 1000,
+   "wastePct": 15,
+   "round": "ceil",
+   "when": {
+    "foundationType": [
+     "crawlspace",
+     "slab"
+    ]
+   },
+   "basis": "{footprintAreaSf} sq ft under the slab / crawlspace ground cover ÷ 1000 sq ft roll + 15% laps"
+  },
+  {
+   "id": "mesh",
+   "layer": "foundation",
+   "item": "wire-mesh-5x150",
+   "terms": [
+    {
+     "metric": "slabAreaSf",
+     "factor": 1
+    }
+   ],
+   "packSize": 750,
+   "wastePct": 10,
+   "round": "ceil",
+   "when": {
+    "foundationType": [
+     "slab",
+     "basement"
+    ]
+   },
+   "basis": "{slabAreaSf} sq ft slab ÷ 750 sq ft roll + 10%"
+  },
+  {
+   "id": "sill",
+   "layer": "floor",
+   "map": "sillBoards",
+   "itemTemplate": "lumber-pt-{key}",
+   "round": "ceil",
+   "basis": "{sillLf} LF pressure-treated sill ÷ 16 ft + 5%"
+  },
+  {
+   "id": "gasket",
+   "layer": "floor",
+   "item": "sill-gasket-50ft",
+   "terms": [
+    {
+     "metric": "sillLf",
+     "factor": 1
+    }
+   ],
+   "packSize": 50,
+   "round": "ceil",
+   "basis": "{sillLf} LF sill ÷ 50 ft roll"
+  },
+  {
+   "id": "rim",
+   "layer": "floor",
+   "map": "rimBoards",
+   "itemTemplate": "lumber-{key}",
+   "round": "ceil",
+   "basis": "{rimLf} LF rim joist ÷ 16 ft + 5%"
+  },
+  {
+   "id": "joists",
+   "layer": "floor",
+   "map": "joistStock",
+   "itemTemplate": "lumber-{key}",
+   "round": "ceil",
+   "basis": "{raw} joists cut from {key} stock ({joistCount} joist lines @ {joistOcIn} in o.c.; split at the mid girder when there is one)"
+  },
+  {
+   "id": "girder",
+   "layer": "floor",
+   "map": "girderBoards",
+   "itemTemplate": "lumber-{key}",
+   "round": "ceil",
+   "flag": "Not sized — engineer",
+   "basis": "{girderLf} LF mid girder × 3 plies ÷ 16 ft + 5% — FLAGGED: girder and its supports must be sized by an engineer"
+  },
+  {
+   "id": "hangers",
+   "layer": "floor",
+   "map": "hangers",
+   "itemTemplate": "joist-hanger-{key}",
+   "round": "ceil",
+   "basis": "{raw} hangers: 2 per joist line where joists land on the girder"
+  },
+  {
+   "id": "hangernails",
+   "layer": "floor",
+   "item": "hanger-nails-1lb",
+   "terms": [
+    {
+     "metric": "joistHangers",
+     "factor": 10
+    }
+   ],
+   "packSize": 150,
+   "round": "ceil",
+   "basis": "10 nails per hanger ÷ ~150 per 1 lb box"
+  },
+  {
+   "id": "subfloor",
+   "layer": "floor",
+   "item": "subfloor-3-4-tg-4x8",
+   "terms": [
+    {
+     "metric": "subfloorAreaSf",
+     "factor": 1
+    }
+   ],
+   "packSize": 32,
+   "wastePct": 8,
+   "round": "ceil",
+   "basis": "{subfloorAreaSf} sq ft ÷ 32 sq ft sheets + 8% waste"
+  },
+  {
+   "id": "adhesive",
+   "layer": "floor",
+   "item": "adhesive-subfloor-28oz",
+   "terms": [
+    {
+     "metric": "subfloorSheets",
+     "factor": 0.5
+    }
+   ],
+   "round": "ceil",
+   "basis": "about 1 tube per 2 sheets"
+  },
+  {
+   "id": "screws",
+   "layer": "floor",
+   "item": "screws-2in-5lb",
+   "terms": [
+    {
+     "metric": "subfloorSheets",
+     "factor": 40
+    }
+   ],
+   "packSize": 500,
+   "round": "ceil",
+   "basis": "~40 screws per sheet ÷ ~500 per 5 lb box"
+  },
+  {
+   "id": "floornails",
+   "layer": "floor",
+   "item": "nails-16d-5lb",
+   "terms": [
+    {
+     "metric": "joistPieces",
+     "factor": 8
+    },
+    {
+     "metric": "rimLf",
+     "factor": 1.5
+    }
+   ],
+   "packSize": 245,
+   "round": "ceil",
+   "basis": "~8 nails per joist + 1.5 per LF of rim ÷ ~245 per 5 lb box"
+  },
+  {
+   "id": "studs",
+   "layer": "walls",
+   "map": "studs",
+   "itemTemplate": "lumber-{key}",
+   "wastePct": 5,
+   "round": "ceil",
+   "basis": "{raw} studs ({key}): layout @ {studOcIn} in o.c. + kings, jacks, window sill cripples, corner and tee backers, + 5%"
+  },
+  {
+   "id": "plates",
+   "layer": "walls",
+   "map": "plateBoards",
+   "itemTemplate": "lumber-{key}",
+   "round": "ceil",
+   "basis": "plates: 1 bottom + 2 top per wall (+ window rough sills) ÷ 16 ft + 5%"
+  },
+  {
+   "id": "headers",
+   "layer": "walls",
+   "map": "headers",
+   "itemTemplate": "lumber-{key}",
+   "round": "ceil",
+   "flag": "EXAMPLE header sizes",
+   "basis": "{raw} header plies cut from {key} — header sizes are an EXAMPLE table, verify"
+  },
+  {
+   "id": "wallsheath",
+   "layer": "walls",
+   "item": "osb-7-16-4x8",
+   "terms": [
+    {
+     "metric": "wallSheathSf",
+     "factor": 1
+    }
+   ],
+   "packSize": 32,
+   "wastePct": 10,
+   "round": "ceil",
+   "basis": "{wallSheathSf} sq ft (perimeter {footprintPerimeterFt} ft × wall + rim height, minus openings) ÷ 32 + 10%"
+  },
+  {
+   "id": "wrap",
+   "layer": "walls",
+   "item": "housewrap-9x150",
+   "terms": [
+    {
+     "metric": "wallSheathSf",
+     "factor": 1
+    }
+   ],
+   "packSize": 1350,
+   "wastePct": 10,
+   "round": "ceil",
+   "basis": "{wallSheathSf} sq ft ÷ 1350 sq ft roll + 10%"
+  },
+  {
+   "id": "wraptape",
+   "layer": "walls",
+   "item": "housewrap-tape",
+   "terms": [
+    {
+     "metric": "wallSheathSf",
+     "factor": 1
+    }
+   ],
+   "packSize": 1350,
+   "round": "ceil",
+   "basis": "1 roll per wrap roll"
+  },
+  {
+   "id": "doorsExt",
+   "layer": "walls",
+   "map": "doorsExt",
+   "itemTemplate": "door-ext-{key}",
+   "round": "ceil",
+   "basis": "{raw} exterior door(s) {key} in"
+  },
+  {
+   "id": "doorsInt",
+   "layer": "walls",
+   "map": "doorsInt",
+   "itemTemplate": "door-int-{key}",
+   "round": "ceil",
+   "basis": "{raw} interior door(s) {key} in"
+  },
+  {
+   "id": "windows",
+   "layer": "walls",
+   "map": "windows",
+   "itemTemplate": "window-{key}",
+   "round": "ceil",
+   "basis": "{raw} window(s) {key} in"
+  },
+  {
+   "id": "wallnails",
+   "layer": "walls",
+   "item": "nails-16d-5lb",
+   "terms": [
+    {
+     "metric": "studCount",
+     "factor": 6
+    },
+    {
+     "metric": "plateLf",
+     "factor": 1
+    }
+   ],
+   "packSize": 245,
+   "round": "ceil",
+   "basis": "~6 nails per stud + 1 per LF of plate ÷ ~245 per 5 lb box"
+  },
+  {
+   "id": "wallsheathnails",
+   "layer": "walls",
+   "item": "nails-8d-5lb",
+   "terms": [
+    {
+     "metric": "wallSheets",
+     "factor": 60
+    }
+   ],
+   "packSize": 530,
+   "round": "ceil",
+   "basis": "~60 nails per sheet ÷ ~530 per 5 lb box"
+  },
+  {
+   "id": "rafters",
+   "layer": "roof",
+   "map": "rafterStock",
+   "itemTemplate": "lumber-{key}",
+   "round": "ceil",
+   "basis": "{raw} rafters from {key} stock ({rafterCount} total @ {rafterOcIn} in o.c., {pitch}:12, incl. overhang + 6 in for cuts)"
+  },
+  {
+   "id": "ridge",
+   "layer": "roof",
+   "map": "ridgeStock",
+   "itemTemplate": "lumber-{key}",
+   "round": "ceil",
+   "basis": "{ridgeLf} LF ridge board, one size deeper than the {rafterSize} rafters"
+  },
+  {
+   "id": "ties",
+   "layer": "roof",
+   "map": "tieStock",
+   "itemTemplate": "lumber-{key}",
+   "round": "ceil",
+   "flag": "Not in model — example",
+   "basis": "{raw} rafter ties / ceiling joists ({tieCount} across a {tieSpanFt} ft span) — NOT drawn in the model; size is an example"
+  },
+  {
+   "id": "hurricane",
+   "layer": "roof",
+   "item": "hurricane-tie",
+   "terms": [
+    {
+     "metric": "hurricaneTies",
+     "factor": 1
+    }
+   ],
+   "round": "ceil",
+   "basis": "1 per rafter at the wall plate"
+  },
+  {
+   "id": "roofsheath",
+   "layer": "roof",
+   "item": "osb-7-16-4x8",
+   "terms": [
+    {
+     "metric": "roofSf",
+     "factor": 1
+    }
+   ],
+   "packSize": 32,
+   "wastePct": 10,
+   "round": "ceil",
+   "basis": "{roofSf} sq ft of roof ({roofPlanSf} sq ft plan × slope) ÷ 32 + 10%"
+  },
+  {
+   "id": "underlay",
+   "layer": "roof",
+   "item": "underlayment-synthetic-10sq",
+   "terms": [
+    {
+     "metric": "roofSf",
+     "factor": 1
+    }
+   ],
+   "packSize": 1000,
+   "wastePct": 10,
+   "round": "ceil",
+   "basis": "{roofSf} sq ft ÷ 1000 sq ft roll + 10%"
+  },
+  {
+   "id": "shingles",
+   "layer": "roof",
+   "item": "shingles-bundle",
+   "terms": [
+    {
+     "metric": "roofSf",
+     "factor": 0.03
+    }
+   ],
+   "wastePct": 10,
+   "round": "ceil",
+   "basis": "{roofSquares} squares × 3 bundles per square + 10%"
+  },
+  {
+   "id": "starter",
+   "layer": "roof",
+   "item": "starter-strip-bundle",
+   "terms": [
+    {
+     "metric": "eaveLf",
+     "factor": 1
+    }
+   ],
+   "packSize": 105,
+   "round": "ceil",
+   "basis": "{eaveLf} LF of eave ÷ ~105 LF per bundle"
+  },
+  {
+   "id": "ridgecap",
+   "layer": "roof",
+   "item": "ridge-cap-bundle",
+   "terms": [
+    {
+     "metric": "ridgeLf",
+     "factor": 1
+    }
+   ],
+   "packSize": 31,
+   "round": "ceil",
+   "basis": "{ridgeLf} LF ridge ÷ ~31 LF per bundle"
+  },
+  {
+   "id": "drip",
+   "layer": "roof",
+   "item": "drip-edge-10ft",
+   "terms": [
+    {
+     "metric": "dripEdgeLf",
+     "factor": 1
+    }
+   ],
+   "packSize": 10,
+   "wastePct": 5,
+   "round": "ceil",
+   "basis": "{dripEdgeLf} LF eaves + rakes ÷ 10 ft + 5%"
+  },
+  {
+   "id": "roofnails",
+   "layer": "roof",
+   "item": "nails-16d-5lb",
+   "terms": [
+    {
+     "metric": "rafterCount",
+     "factor": 8
+    },
+    {
+     "metric": "tieCount",
+     "factor": 6
+    }
+   ],
+   "packSize": 245,
+   "round": "ceil",
+   "basis": "~8 nails per rafter + 6 per tie ÷ ~245 per 5 lb box"
+  },
+  {
+   "id": "roofsheathnails",
+   "layer": "roof",
+   "item": "nails-8d-5lb",
+   "terms": [
+    {
+     "metric": "roofSheets",
+     "factor": 60
+    }
+   ],
+   "packSize": 530,
+   "round": "ceil",
+   "basis": "~60 nails per sheet ÷ ~530 per 5 lb box"
+  },
+  {
+   "id": "roofingnails",
+   "layer": "roof",
+   "item": "roofing-nails-5lb",
+   "terms": [
+    {
+     "metric": "roofSf",
+     "factor": 3.2
+    }
+   ],
+   "packSize": 900,
+   "round": "ceil",
+   "basis": "~320 nails per square ÷ ~900 per 5 lb box"
+  }
+ ]
+}
