@@ -107,6 +107,9 @@ export function migrate(m) {
     delete p.pierMaxSpacingFt;
     Object.keys(DEFAULTS.foundation).forEach((k) => { if (!(k in p)) p[k] = clone(DEFAULTS.foundation[k]); });
     if (!Array.isArray(p.deletedAutoSlots)) p.deletedAutoSlots = [];
+    if (!Array.isArray(p.deletedContinuous)) p.deletedContinuous = [];
+    // hotfix: older saves keep their foundation type; just give Piers only its own top height
+    Object.keys(DEFAULTS.foundation.topAboveGradeIn).forEach((k) => { if (p.topAboveGradeIn[k] == null) p.topAboveGradeIn[k] = DEFAULTS.foundation.topAboveGradeIn[k]; });
   }
   const r = m.layers.find((l) => l.id === 'roof');
   if (r) Object.keys(DEFAULTS.roof).forEach((k) => { if (!(k in r.params)) r.params[k] = clone(DEFAULTS.roof[k]); });

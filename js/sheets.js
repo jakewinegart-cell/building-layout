@@ -5,7 +5,7 @@
 // elevations · S4 roof framing (+ section). 3D views (A2) come from view3d.snapshot().
 // Nothing here is engineered — every sheet carries "NOT FOR CONSTRUCTION".
 // ============================================================================
-import { LUMBER, LUMBER_T_IN, pierDepthIn } from './config.js';
+import { LUMBER, LUMBER_T_IN, pierDepthIn, pierShapeOf, pierShapeLabel, precastFrostWarning, FOUNDATION_TYPES, isPierType } from './config.js';
 import { getLayer } from './model.js';
 import { dist, lerp, bbox, inwardNormal, offsetPolygon, fmtFtIn, signedArea } from './geom.js';
 import { studLayout } from './homeplan-derived.js';
@@ -137,8 +137,10 @@ export function sheetFoundation(m) {
   });
   const piers = fnd.objects.filter((o) => o.type === 'pier');
   piers.forEach((o, i) => {
-    const c = o.geometry.c; const r = (o.props.diaIn * IN) / 2;
-    s += `<circle cx="${r3(c[0])}" cy="${r3(c[1])}" r="${r3(r)}" fill="${o.props.flags ? '#f2b8a6' : '#8b8f94'}" stroke="#1d2733" stroke-width="0.06"/>`;
+    const c = o.geometry.c; const sh = pierShapeOf(o, f); const r = sh.halfFt;
+    const pf = o.props.flags ? '#f2b8a6' : sh.shape === 'precast' ? '#d9cdb8' : '#8b8f94';
+    s += sh.shape === 'round' ? `<circle cx="${r3(c[0])}" cy="${r3(c[1])}" r="${r3(r)}" fill="${pf}" stroke="#1d2733" stroke-width="0.06"/>`
+      : `<rect x="${r3(c[0] - r)}" y="${r3(c[1] - r)}" width="${r3(2 * r)}" height="${r3(2 * r)}" fill="${pf}" stroke="#1d2733" stroke-width="0.06"${sh.shape === 'precast' ? ' stroke-dasharray="0.15 0.08"' : ''}/>`;
     s += line([c[0] - r - 0.25, c[1]], [c[0] + r + 0.25, c[1]], 'stroke="#1d2733" stroke-width="0.03"') + line([c[0], c[1] - r - 0.25], [c[0], c[1] + r + 0.25], 'stroke="#1d2733" stroke-width="0.03"');
     s += text([c[0] + 0.9, c[1] - 0.9], `P${i + 1}`, { size: 0.6, anchor: 'start', fill: '#33475b', weight: 700 });
   });
@@ -154,10 +156,17 @@ export function sheetFoundation(m) {
   s += northArrow(b, mg);
   const top = (fnd.zTop || 0) / IN;
   const frost = f.frostDepthIn != null && f.frostDepthIn !== '' ? `${pierDepthIn(f)} in (frost ${f.frostDepthIn} in)` : `${f.placeholderFrostIn} in — conservative PLACEHOLDER (frost depth unknown), enter your frost depth`;
-  const notes = [`Foundation type: ${f.type}. Bottom of footings/piers: ${frost} below grade.`, `Top of foundation ${r3(top)} in above grade.`];
-  if (f.type === 'piers') {
-    const dias = Array.from(new Set(piers.map((p) => p.props.diaIn))).join(', ');
-    notes.push(`${piers.length} piers, Sonotube Ø ${dias} in, 4 × #4 vertical bars each; ${f.gradeBeamWidthIn}×${f.gradeBeamDepthIn} in grade beam on all bearing lines with 4 × #4 continuous.`);
+  const ftl = (FOUNDATION_TYPES.find((t) => t[0] === f.type) || [f.type, f.type])[1];
+  const notes = [`Foundation type: ${ftl}. Bottom of footings/piers: ${frost} below grade.`, `Top of foundation ${r3(top)} in above grade.`];
+  if (isPierType(f.type)) {
+    const groups = {}; piers.forEach((p) => { const k = pierShapeLabel(p, f); groups[k] = (groups[k] || 0) + 1; });
+    const kinds = Object.entries(groups).map(([k, n]) => `${n} × ${k}`).join(', ');
+    if (f.type === 'piers') notes.push(`${piers.length} piers (${kinds}), #4 vertical bars each (EXAMPLE); ${f.gradeBeamWidthIn}×${f.gradeBeamDepthIn} in grade beam on all bearing lines with 4 × #4 continuous.`);
+    else notes.push(`PIERS ONLY — ${piers.length} individual piers (${kinds}). No grade beam, no footing, no continuous concrete. The sill/floor beam spans pier to pier (size it for that span).`);
+    const pre = piers.filter((p) => pierShapeOf(p, f).shape === 'precast').length;
+    if (pre) notes.push(`⚠ ${pre} precast block(s) (dashed squares): ${precastFrostWarning(f)}`);
+    const sqn = piers.filter((p) => pierShapeOf(p, f).shape === 'square').length;
+    if (sqn) notes.push(`Square formed piers (solid squares): depth max(frost + margin, 12 in) = ${pierDepthIn(f)} in below grade.`);
     notes.push(`Pier spacing ${f.pierSpacingMode === 'exact' ? 'exactly' : 'at most'} ${f.pierSpacingIn} in on center. Dimensions are to pier centers.`);
     const manual = piers.filter((p) => !p.derivedFrom).length; if (manual) notes.push(`${manual} pier(s) placed or edited by hand.`);
     const fl = piers.filter((p) => p.props.flags); if (fl.length) notes.push(`FLAGGED: ${fl.length} pier(s) off a wall line / outside the footprint (shown pink).`);

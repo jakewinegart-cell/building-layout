@@ -8,7 +8,7 @@
 import { getContentCached } from './content.js';
 import { runEstimate } from './estimate.js';
 import { getLayer, findObject } from './model.js';
-import { LUMBER } from './config.js';
+import { LUMBER, pierShapeOf, pierShapeLabel, precastFrostWarning } from './config.js';
 
 const r2 = (x) => Math.round(x * 100) / 100;
 const plen = (o) => Math.hypot(o.geometry.b[0] - o.geometry.a[0], o.geometry.b[1] - o.geometry.a[1]);
@@ -244,15 +244,35 @@ export function inspectInfo(X, hit) {
       return { label: `${bags.toFixed(2)} bags ${mode === 'bags60' ? '60' : '80'} lb concrete`, detail: `${v.toFixed(2)} cu ft (${what}, +${(D.waste.concrete || 0) * 100}% waste) · ${usd(up)} per bag`, amount: up == null ? null : r2(up * bags), est: !X.verified(ref) };
     };
     const rebarRow = (lf, what) => { const up = X.unit('rebar_4_20'); return { label: `${lf.toFixed(1)} ft #4 rebar (EXAMPLE)`, detail: `${what} · ${usd(up)} per 20 ft bar — share`, amount: up == null ? null : r2(up * lf / D.rebar.stockFt), est: !X.verified('rebar_4_20') }; };
+    if (o.type === 'pier' && pierShapeOf(o, l.params).shape !== 'round') {
+      const sh = pierShapeOf(o, l.params), fo = l.params, h = o.height, half = sh.halfFt;
+      const sq = [[o.geometry.c[0] - half, o.geometry.c[1] - half], [o.geometry.c[0] + half, o.geometry.c[1] - half], [o.geometry.c[0] + half, o.geometry.c[1] + half], [o.geometry.c[0] - half, o.geometry.c[1] + half]];
+      mark = { poly: sq };
+      if (sh.shape === 'precast') {
+        const rows = [{ label: '1 precast concrete pier / deck block', detail: 'no Home Depot price in homedepot-prices.json — needs a price', amount: null, est: true }];
+        return out(`${pierShapeLabel(o, fo)} (sits on grade)`, rows, { sub: `${o.props.manual ? 'Manual' : 'Auto'} pier · ${precastFrostWarning(fo)}` });
+      }
+      const s = sh.sizeIn, vol = (s / 12) ** 2 * h;
+      const bars = D.rebar.pierVerticalsEXAMPLE.find((x) => s <= x.maxDiaIn) || D.rebar.pierVerticalsEXAMPLE[D.rebar.pierVerticalsEXAMPLE.length - 1];
+      const barFt = (h * 12 - D.rebar.coverIn) / 12; const tie = X.unit('tie_wire_roll');
+      const formSf = 4 * (s / 12) * Math.max(0, h + o.z + 0.5);
+      const rows = [
+        { label: `Square form boards ${s}×${s} in (~${formSf.toFixed(1)} sq ft)`, detail: 'no Home Depot price for square pier forms — needs a price', amount: null, est: true },
+        concreteRow(vol, `${s}×${s} in × ${fmtLen(h)}`),
+        rebarRow(bars.bars * barFt, `${bars.bars} verticals × ${barFt.toFixed(2)} ft`),
+        { label: '2 rebar ties', detail: `tie-wire roll ${usd(tie)} / ~${D.rebar.tiesPerRollEstimate} ties`, amount: tie == null ? null : r2(tie * 2 / D.rebar.tiesPerRollEstimate), est: !X.verified('tie_wire_roll') },
+      ];
+      return out(`${pierShapeLabel(o, fo)}, ${fmtLen(h)} tall`, rows, { sub: `${o.props.manual ? 'Manual' : 'Auto'} pier · bottom ${Math.round(-o.z * 12)} in below grade${fo.frostDepthIn ? ` · frost ${fo.frostDepthIn} in (depth = max(frost + margin, 12 in))` : ' · frost depth unknown (placeholder, FLAGGED)'}` });
+    }
     if (o.type === 'pier') {
-      const dia = o.props.diaIn, h = o.height; const vol = Math.PI * (dia / 24) ** 2 * h;
+      const dia = o.props.diaIn, h = o.height; const dowel = l.params.type === 'piersOnly' ? 0 : D.rebar.pierDowelIntoBeamIn; const vol = Math.PI * (dia / 24) ** 2 * h;
       const tref = D.formTube.diameterPriceRef[dia]; const need = h * 12 + D.formTube.extraIn; const tup = tref ? X.unit(tref) : null;
-      const bars = D.rebar.pierVerticalsEXAMPLE.find((x) => dia <= x.maxDiaIn).bars; const blf = bars * (h * 12 - D.rebar.coverIn + D.rebar.pierDowelIntoBeamIn) / 12;
+      const bars = D.rebar.pierVerticalsEXAMPLE.find((x) => dia <= x.maxDiaIn).bars; const blf = bars * (h * 12 - D.rebar.coverIn + dowel) / 12;
       const tie = X.unit('tie_wire_roll');
       const rows = [
         { label: `${need.toFixed(0)} in of ${dia} in Sonotube`, detail: tup == null ? `no price for a ${dia} in tube` : `${D.formTube.stockLengthIn} in tube at ${usd(tup)} — ${need > D.formTube.stockLengthIn ? 'needs an extension' : 'this pier\'s share'}`, amount: tup == null ? null : r2(tup * need / D.formTube.stockLengthIn), est: tref ? !X.verified(tref) : true },
         concreteRow(vol, `Ø${dia} in × ${fmtLen(h)}`),
-        rebarRow(blf, `${bars} verticals × ${((h * 12 - D.rebar.coverIn + D.rebar.pierDowelIntoBeamIn) / 12).toFixed(2)} ft`),
+        rebarRow(blf, `${bars} verticals × ${((h * 12 - D.rebar.coverIn + dowel) / 12).toFixed(2)} ft${dowel ? '' : ' (Piers only: no beam dowel)'}`),
         { tie: true, label: '2 rebar ties', detail: `tie-wire roll ${usd(tie)} / ~${D.rebar.tiesPerRollEstimate} ties`, amount: tie == null ? null : r2(tie * 2 / D.rebar.tiesPerRollEstimate), est: !X.verified('tie_wire_roll') },
       ];
       mark = { circle: [o.geometry.c, (dia / 12) / 2] };
@@ -429,7 +449,7 @@ export function createInspector({ app, plan, v3, stage, button }) {
   function markFor(hit) {
     const o = findObject(app.getModel(), hit); if (!o || !o.geometry) return null;
     const g = o.geometry;
-    if (g.c && o.type === 'pier') return { circle: [g.c, (o.props.diaIn / 12) / 2] };
+    if (g.c && o.type === 'pier') { const fl = getLayer(app.getModel(), 'foundation'); const sh = pierShapeOf(o, fl.params); if (sh.shape !== 'round') { const h = sh.halfFt; return { poly: [[g.c[0] - h, g.c[1] - h], [g.c[0] + h, g.c[1] - h], [g.c[0] + h, g.c[1] + h], [g.c[0] - h, g.c[1] + h]] }; } return { circle: [g.c, (o.props.diaIn / 12) / 2] }; }
     if (g.a && g.b) return { seg: [g.a, g.b], wFt: (o.props.widthIn || (o.props.thicknessIn) || 1.5) / 12 };
     if (g.pts) return { poly: g.pts };
     if (o.type === 'opening') { const w = getLayer(app.getModel(), 'walls').objects.find((x) => x.id === g.wallId); if (w) { const L = plen(w), t0 = (g.t - o.props.widthIn / 24) / L, t1 = (g.t + o.props.widthIn / 24) / L; const P = (t) => [w.geometry.a[0] + (w.geometry.b[0] - w.geometry.a[0]) * t, w.geometry.a[1] + (w.geometry.b[1] - w.geometry.a[1]) * t]; return { seg: [P(t0), P(t1)], wFt: w.props.thicknessIn / 12 }; } }

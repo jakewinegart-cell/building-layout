@@ -1,6 +1,6 @@
 // App shell: state, layer panel, properties, Plan/3D toggle, regeneration notes.
-import { ASSUMPTIONS, DEFAULTS, PLAN, LUMBER, LAYER_COLORS, PIERS } from './config.js';
-import { ensureManual, movePier, deletePier, duplicatePier, resetToAuto, restoreAutoLayout, isManual, originOf, pierDefaults, parseFtIn, allPiers, pierSlotKey } from './piers.js';
+import { ASSUMPTIONS, DEFAULTS, PLAN, LUMBER, LAYER_COLORS, PIERS, FOUNDATION_TYPES, PIER_SHAPES, pierShapeOf, pierShapeLabel, precastFrostWarning, isPierType } from './config.js';
+import { ensureManual, movePier, deletePier, duplicatePier, resetToAuto, restoreAutoLayout, isManual, originOf, pierDefaults, parseFtIn, allPiers, pierSlotKey, isContinuousConcrete, deleteContinuous, restoreContinuous, continuousConcrete } from './piers.js';
 import { createDefaultModel, load, save, clear, getLayer, findObject, stackOrder, uid } from './model.js';
 import { regenerate, headerFor } from './generate.js';
 import { createPlan } from './plan.js';
@@ -176,6 +176,7 @@ function deletable() {
   const o = findObject(model, model.selection); if (!o) return null;
   const l = getLayer(model, model.selection.layerId);
   if (o.type === 'pier') return o;
+  if (isContinuousConcrete(o)) return o;   // hotfix: grade beam / footing / stem wall / slab can be deleted
   if (o.derivedFrom) return null;
   if (o.type === 'wall' && o.props.exterior) return null;
   return o && l ? o : null;
@@ -185,13 +186,20 @@ function deleteSelected() {
   const l = getLayer(model, model.selection.layerId);
   if (l.locked) { toast(`${l.name} is locked`); return; }
   if (o.type === 'pier') { deletePier(model, o); model.selection = null; app.commit('foundation'); toast('Pier deleted'); return; }
+  if (isContinuousConcrete(o)) { deleteConcrete(o); return; }
   l.objects = l.objects.filter((x) => x !== o && !(x.type === 'opening' && x.geometry.wallId === o.id));
   model.selection = null; app.commit(l.id); toast(`${cap(o.props.kind || o.type)} deleted`);
 }
 $('#del3dBtn').addEventListener('click', deleteSelected);
+function deleteConcrete(o) {
+  const l = getLayer(model, 'foundation');
+  if (l.locked) { toast('Foundation is locked'); return; }
+  deleteContinuous(model, o); app.commit('foundation');
+  toast(`${o.props.label || 'Concrete'} deleted — stays deleted (Restore on the Foundation card)`);
+}
 window.addEventListener('keydown', (e) => {
   if (e.target && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
-  if ((e.key === 'Delete' || e.key === 'Backspace') && model.view === '3d' && deletable()) { e.preventDefault(); deleteSelected(); }
+  if ((e.key === 'Delete' || e.key === 'Backspace') && (model.view === '3d' || isContinuousConcrete(findObject(model, model.selection))) && deletable()) { e.preventDefault(); deleteSelected(); }
   if (e.key === 'Escape' && model.view === '3d' && v3.getAddMode()) setAdd3d(null);
 });
 $$('#tools3d [data-cam]').forEach((b) => b.addEventListener('click', () => v3.preset(b.dataset.cam)));
@@ -207,6 +215,7 @@ $('#menuBtn').addEventListener('click', (e) => { e.stopPropagation(); $('#menu')
 document.addEventListener('click', () => { $('#menu').hidden = true; });
 $$('#menu [data-menu]').forEach((b) => b.addEventListener('click', () => {
   if (b.dataset.menu === 'fit') plan.fit();
+  if (b.dataset.menu === 'foundation') { model.activeLayerId = 'foundation'; persist(); refresh({ all: true }); showTab('props', true); const c = $('#fndType'); if (c) c.scrollIntoView({ block: 'nearest' }); }
   if (b.dataset.menu === 'zip') zipModal.open({ zip: (model.site || {}).zip });
   if (b.dataset.menu === 'done') openReport();
   if (b.dataset.menu === 'reset' && confirm('Start over with the 32×24 sample? This clears the saved model on this device.')) { clear(); model = createDefaultModel(); regenerate(model, 'init'); save(model); refresh({ all: true }); setView('plan'); plan.fit(); }
@@ -345,7 +354,7 @@ function renderLayers() {
 // ---------- properties pane
 const OPTS = {
   lumber: Object.keys(LUMBER), oc: [12, 16, 19.2, 24],
-  ftype: [['slab', 'Slab on grade'], ['crawlspace', 'Crawlspace (perimeter footing)'], ['basement', 'Basement'], ['piers', 'Piers (under wall lines)']],
+  ftype: FOUNDATION_TYPES,
 };
 function field(label, html) { return `<div class="field"><span>${label}</span>${html}</div>`; }
 function sel(key, value, options) { return `<select data-k="${key}">${options.map((o) => { const [v, t] = Array.isArray(o) ? o : [o, o]; return `<option value="${v}" ${String(v) === String(value) ? 'selected' : ''}>${t}</option>`; }).join('')}</select>`; }
@@ -359,10 +368,12 @@ function layerParamsHTML(l) {
       + (p.grade.type === 'slope' ? field('Slope %', num('grade.slopePct', p.grade.slopePct, 0.5)) + field('Downhill toward', sel('grade.downhill', p.grade.downhill, ['N', 'S', 'E', 'W'])) : '')
       + field('Front setback (S), ft', num('setbacksFt.front', p.setbacksFt.front)) + field('Rear setback (N), ft', num('setbacksFt.rear', p.setbacksFt.rear)) + field('Side setbacks, ft', num('setbacksFt.side', p.setbacksFt.side))
       + '<div class="btnRow"><button class="btn" data-add="existing">+ Existing building</button></div><div class="muted">Use the Line tool on this layer for utilities (water, sewer, power, gas).</div>';
-    case 'foundation': return field('Type', sel('type', p.type, OPTS.ftype))
+    case 'foundation': return foundationTypeHTML(l) + field('Type', sel('type', p.type, OPTS.ftype))
+      + pierShapeHTML(l)
       + field('Frost depth (in) — required', num('frostDepthIn', p.frostDepthIn, 1, 'enter local code'))
-      + field(`Top above grade (in), ${p.type}`, num(`topAboveGradeIn.${p.type}`, p.topAboveGradeIn[p.type], 1))
-      + (p.type === 'piers' ? pierSpacingHTML(l) : field('Footing width (in)', num('footingWidthIn', p.footingWidthIn)) + field('Footing depth (in)', num('footingDepthIn', p.footingDepthIn)) + manualPierNote(l));
+      + field(`Top above grade (in), ${p.type === 'piersOnly' ? 'top of piers' : p.type}`, num(`topAboveGradeIn.${p.type}`, p.topAboveGradeIn[p.type], 1))
+      + (isPierType(p.type) ? pierSpacingHTML(l) : field('Footing width (in)', num('footingWidthIn', p.footingWidthIn)) + field('Footing depth (in)', num('footingDepthIn', p.footingDepthIn)) + manualPierNote(l))
+      + concreteRestoreHTML(l);
     case 'floor': return field('Joist size', sel('joistSize', p.joistSize, OPTS.lumber.slice(2))) + field('Spacing (in o.c.)', sel('joistOcIn', p.joistOcIn, OPTS.oc))
       + field('Joist direction', sel('direction', p.direction, [['auto', 'Auto (short span)'], ['y', 'North–south'], ['x', 'East–west']]))
       + field('Show subfloor (3D)', chk('showSubfloor', p.showSubfloor))
@@ -378,6 +389,46 @@ function layerParamsHTML(l) {
       + '<div class="btnRow"><button class="btn danger" data-del-layer>Delete layer</button></div>';
     default: return '<div class="muted">Placeholder layer — coming in a later version.</div>';
   }
+}
+
+// ---------- hotfix: Piers only + pier shape (round Sonotube / square formed pier / precast block)
+function foundationTypeHTML(l) {
+  const p = l.params; const cc = continuousConcrete(model);
+  const names = Array.from(new Set(cc.map((o) => (o.props.role === 'gradeBeam' ? 'grade beams' : o.props.role === 'stem' ? (p.type === 'basement' ? 'basement walls' : 'stem walls') : o.props.role === 'slab' ? 'slab' : 'footings'))));
+  return `<div class="fndType" id="fndType">
+    <div class="seg2 big" role="group" aria-label="Foundation type">
+      <button type="button" data-ftype="piersOnly" class="${p.type === 'piersOnly' ? 'on' : ''}" aria-pressed="${p.type === 'piersOnly'}">Piers only</button>
+      <button type="button" data-ftype="piers" class="${p.type === 'piers' ? 'on' : ''}" aria-pressed="${p.type === 'piers'}">Piers + grade beam</button>
+      <button type="button" data-ftype="crawlspace" class="${!isPierType(p.type) ? 'on' : ''}" aria-pressed="${!isPierType(p.type)}">Footing / slab…</button></div>
+    ${p.type === 'piersOnly' ? `<div class="muted">Individual piers only — <b>no continuous concrete</b> (no grade beam, footing, stem wall or slab).</div>` : ''}
+    ${cc.length ? `<div class="flag warn" id="ccNote">This plan has continuous concrete: ${cc.length} piece(s) (${names.join(', ')}). Tap one to select and delete it, or <button type="button" class="btn sm" id="toPiersOnly">Switch to Piers only</button></div>` : ''}
+  </div>`;
+}
+function shapeSeg(attr, cur, { follow = false, layerShape = null, compact = false } = {}) {
+  const opts = compact ? [['round', '◯ Round'], ['square', '■ Square'], ['precast', '▣ Block']] : [['round', '◯ Round Sonotube'], ['square', '■ Square pier'], ['precast', '▣ Precast block']];
+  return `<div class="seg2 ${compact ? 'compact' : 'big'} shapeSeg" role="group" aria-label="Pier shape">${follow ? `<button type="button" ${attr}="" class="${!cur ? 'on' : ''}" aria-pressed="${!cur}" title="Follow the layer setting (${PIER_SHAPES[layerShape].label})">Layer${compact ? '' : ` (${PIER_SHAPES[layerShape].short})`}</button>` : ''}${opts.map(([v, t]) => `<button type="button" ${attr}="${v}" class="${cur === v ? 'on' : ''}" aria-pressed="${cur === v}">${t}</button>`).join('')}</div>`;
+}
+function sqChips(attr, value) { return `<div class="chips">${PIER_SHAPES.square.sizesIn.map((d) => `<button type="button" ${attr}="${d}" class="${Number(value) === d ? 'on' : ''}" aria-pressed="${Number(value) === d}">${d}×${d}"</button>`).join('')}</div>`; }
+function pierShapeHTML(l) {
+  const p = l.params; const sh = p.pierShape || 'round';
+  return `<div class="pierShape" id="pierShape"><div class="field"><span><b>Pier shape</b> (all piers)</span></div>${shapeSeg('data-pshape', sh)}
+    ${sh === 'square' ? `<div class="field"><span>Square size</span>${sqChips('data-psq', p.pierSquareIn)}</div><div class="muted">Formed square concrete pier: concrete priced; square form boards <b>need a price</b>. Depth keeps the frost rule max(frost + margin, 12 in).</div>` : ''}
+    ${sh === 'precast' ? `<div class="flag warn bad" id="precastWarn">⚠ ${precastFrostWarning(p)}</div><div class="muted">Precast concrete pier / deck block: <b>needs a price</b> (no Home Depot price in the price file).</div>` : ''}
+    ${sh === 'round' ? '<div class="muted">Round cardboard form tube (Sonotube), priced from the Home Depot file.</div>' : ''}</div>`;
+}
+function concreteRestoreHTML(l) {
+  const n = (l.params.deletedContinuous || []).length;
+  return n ? `<div class="btnRow"><button type="button" class="btn" id="restoreConcrete">Restore deleted concrete (${n})</button></div>` : '';
+}
+function bindFoundationCard(lc, al) {
+  if (al.kind !== 'foundation') return;
+  const guard = () => { if (al.locked) { toast(`${al.name} is locked`); renderProps(); return false; } return true; };
+  const setType = (t) => { if (!guard()) return; al.params.type = t; app.commit('foundation'); toast(t === 'piersOnly' ? 'Piers only — no grade beam, footing, stem wall or slab' : `Foundation: ${(FOUNDATION_TYPES.find((x) => x[0] === t) || [t, t])[1]}`); };
+  lc.querySelectorAll('[data-ftype]').forEach((b) => b.addEventListener('click', () => { const t = b.dataset.ftype; if (t === 'crawlspace' && !isPierType(al.params.type)) return; setType(t); }));
+  const tp = lc.querySelector('#toPiersOnly'); if (tp) tp.addEventListener('click', () => setType('piersOnly'));
+  lc.querySelectorAll('[data-pshape]').forEach((b) => b.addEventListener('click', () => { if (!guard()) return; al.params.pierShape = b.dataset.pshape; app.commit('foundation'); toast(`All piers: ${PIER_SHAPES[b.dataset.pshape].label}`); }));
+  lc.querySelectorAll('[data-psq]').forEach((b) => b.addEventListener('click', () => { if (!guard()) return; al.params.pierSquareIn = Number(b.dataset.psq); app.commit('foundation'); }));
+  const rc = lc.querySelector('#restoreConcrete'); if (rc) rc.addEventListener('click', () => { if (!guard()) return; const n = restoreContinuous(model); app.commit('foundation'); toast(`Restored ${n} concrete element(s)`); });
 }
 
 // ---------- piers v2: spacing control (layer card), pier panel (floating), place-pier options
@@ -408,7 +459,7 @@ function pierSpacingHTML(l) {
 }
 function manualPierNote() {
   const c = pierCounts();
-  return `<div class="muted" style="margin-top:6px">Auto Sonotubes along the walls come with Type → Piers. You can still drop piers anywhere (e.g. under a mid beam) with ◎ Pier.</div>${c.manual ? pierLegend() : ''}`;
+  return `<div class="muted" style="margin-top:6px">Auto piers along the walls come with Type → Piers only (or Piers + grade beam). You can still drop piers anywhere (e.g. under a mid beam) with ◎ Pier.</div>${c.manual ? pierLegend() : ''}`;
 }
 function bindPierSpacing(lc, al) {
   const box = lc.querySelector('#pierSpacing'); if (!box) return;
@@ -454,13 +505,17 @@ function renderPierPanel() {
   const [xf, xi] = ftIn((o.geometry.c[0] - org[0]) * 12), [yf, yi] = ftIn((o.geometry.c[1] - org[1]) * 12);
   const dis = l.locked ? 'disabled' : '';
   const topNow = o.props.topIn ?? null, depNow = o.props.depthIn ?? null;
+  const psh = pierShapeOf(o, l.params);
   pp.innerHTML = `
-    <div class="pp-head"><b>Sonotube</b>${man ? '<span class="tag man">◆ Manual</span>' : '<span class="tag auto">Auto</span>'}
+    <div class="pp-head"><b id="ppTitle">${pierShapeLabel(o, l.params)}</b>${man ? '<span class="tag man">◆ Manual</span>' : '<span class="tag auto">Auto</span>'}
       <span class="pp-sub">${fmtFtIn((o.height || 0))} tall · ${fmtFtIn(-(o.z || 0))} below grade</span>
       <button type="button" class="pp-x" data-pp="close" aria-label="Close">×</button></div>
     ${l.locked ? '<div class="flag">Foundation is locked — unlock it to edit.</div>' : ''}
     ${(o.props.flags || []).map((f) => `<div class="flag warn">FLAGGED: ${f}</div>`).join('')}
-    <div class="pp-row"><span class="k">Ø</span>${chips('data-dia', o.props.diaIn).replace(/<button/g, `<button ${dis}`)}<span class="u">in</span></div>
+    <div class="pp-row ppShape"><span class="k">Shape</span>${shapeSeg('data-oshape', o.props.shape || null, { follow: true, layerShape: l.params.pierShape || 'round', compact: true }).replace(/<button/g, `<button ${dis}`)}</div>
+    ${psh.shape === 'round' ? `<div class="pp-row"><span class="k">Ø</span>${chips('data-dia', o.props.diaIn).replace(/<button/g, `<button ${dis}`)}<span class="u">in</span></div>` : ''}
+    ${psh.shape === 'square' ? `<div class="pp-row"><span class="k">Size</span>${sqChips('data-osq', psh.sizeIn).replace(/<button/g, `<button ${dis}`)}</div>` : ''}
+    ${psh.shape === 'precast' ? `<div class="flag warn bad" id="ppPrecastWarn">⚠ ${precastFrostWarning(l.params)}</div>` : ''}
     <div class="pp-row xy"><span class="k">X</span><input ${dis} type="number" inputmode="decimal" data-xy="x" data-part="ft" value="${xf}" aria-label="X feet"><b>'</b><input ${dis} type="number" inputmode="decimal" data-xy="x" data-part="in" value="${xi}" aria-label="X inches"><b>"</b>
       <span class="k">Y</span><input ${dis} type="number" inputmode="decimal" data-xy="y" data-part="ft" value="${yf}" aria-label="Y feet"><b>'</b><input ${dis} type="number" inputmode="decimal" data-xy="y" data-part="in" value="${yi}" aria-label="Y inches"><b>"</b></div>
     <div class="pp-row"><span class="k">Top</span><input ${dis} type="number" inputmode="decimal" data-pk="topIn" value="${topNow ?? ''}" placeholder="${d.topIn}" aria-label="Top above grade (in)"><span class="u">in above grade</span>
@@ -472,6 +527,8 @@ function renderPierPanel() {
     </div>
     <div class="muted pp-note">X/Y = center from the W / N outside face. Blank top/depth follow the layer${d.frostEntered ? '' : ' (depth = placeholder until you enter frost depth)'}.${man ? '' : ' Editing an auto pier makes it manual so regeneration keeps it.'}</div>`;
   const guard = () => { if (l.locked) { toast('Foundation is locked'); return false; } return true; };
+  pp.querySelectorAll('[data-oshape]').forEach((b) => b.addEventListener('click', () => { if (!guard()) return; ensureManual(model, o); if (b.dataset.oshape) o.props.shape = b.dataset.oshape; else delete o.props.shape; app.commit('foundation'); }));
+  pp.querySelectorAll('[data-osq]').forEach((b) => b.addEventListener('click', () => { if (!guard()) return; ensureManual(model, o); o.props.shape = 'square'; o.props.sizeIn = Number(b.dataset.osq); app.commit('foundation'); }));
   pp.querySelectorAll('[data-dia]').forEach((b) => b.addEventListener('click', () => { if (!guard()) return; ensureManual(model, o); o.props.diaIn = Number(b.dataset.dia); app.commit('foundation'); }));
   // X/Y: apply when focus leaves the X/Y row (or on Enter), so hopping ft → in doesn't re-render mid-entry
   const xyRow = pp.querySelector('.pp-row.xy');
@@ -501,7 +558,10 @@ function renderPierPanel() {
 }
 
 function objHTML(o, l) {
-  if (o.type === 'pier') return `<h3>Sonotube <span class="muted">on ${l.name}</span></h3><div class="sub">Ø${o.props.diaIn} in · ${isManual(o) ? 'manual' : 'auto'} · ${fmtFtIn(o.height || 0)} tall</div><div class="muted">Edit it in the pier panel over the plan (diameter, X/Y, top/depth, duplicate, delete${isManual(o) && o.props.autoSlot ? ', reset to auto' : ''}).</div>`
+  if (isContinuousConcrete(o)) return `<h3>${o.props.label || cap(o.type)} <span class="muted">on ${l.name}</span></h3><div class="sub">Continuous concrete · ${fmtFtIn(o.geometry.a ? dist(o.geometry.a, o.geometry.b) : 0)}${o.height ? ` · ${fmtFtIn(o.height)} tall` : ''}</div>`
+    + `<div class="muted">Generated from ${o.derivedFrom && o.derivedFrom.startsWith('w-') ? 'wall ' + o.derivedFrom : 'the footprint'}. Delete just this piece, or switch the whole foundation to Piers only.</div>`
+    + `<div class="btnRow"><button class="btn danger" data-del-concrete>Delete this ${o.props.role === 'gradeBeam' ? 'grade beam' : o.props.role === 'stem' ? 'wall' : o.props.role === 'slab' ? 'slab' : 'footing'}</button>${l.params.type !== 'piersOnly' ? '<button class="btn" data-pionly>Switch to Piers only</button>' : ''}</div>`;
+  if (o.type === 'pier') return `<h3>${pierShapeLabel(o, l.params)} <span class="muted">on ${l.name}</span></h3><div class="sub">${PIER_SHAPES[pierShapeOf(o, l.params).shape].label} · ${isManual(o) ? 'manual' : 'auto'} · ${fmtFtIn(o.height || 0)} tall</div><div class="muted">Edit it in the pier panel over the plan (diameter, X/Y, top/depth, duplicate, delete${isManual(o) && o.props.autoSlot ? ', reset to auto' : ''}).</div>`
     + (o.props.flags || []).map((f) => `<div class="flag warn">FLAGGED: ${f}</div>`).join('');
   const head = `<h3>${o.props.kind ? cap(o.props.kind) : cap(o.type)} <span class="muted">on ${l.name}</span></h3>`;
   const lockNote = l.locked ? '<div class="flag">Layer is locked — unlock it to edit.</div>' : '';
@@ -541,6 +601,8 @@ function renderProps() {
       if (k === 'kind') Object.assign(o.props, DEFAULTS.openings[o.props.kind]);
       app.commit(ol.id === 'walls' ? 'walls' : ol.id);
     }));
+    const dc = sc.querySelector('[data-del-concrete]'); if (dc) dc.addEventListener('click', () => deleteConcrete(o));
+    const po = sc.querySelector('[data-pionly]'); if (po) po.addEventListener('click', () => { if (ol.locked) { toast(`${ol.name} is locked`); return; } ol.params.type = 'piersOnly'; model.selection = null; app.commit('foundation'); toast('Piers only — no grade beam, footing, stem wall or slab'); });
     const del = sc.querySelector('[data-del]');
     if (del) del.addEventListener('click', () => {
       if (ol.locked) { toast(`${ol.name} is locked`); return; }
@@ -567,6 +629,7 @@ function bindLayerCard(lc, al) {
     const k = inp.dataset.L; al[k] = inp.type === 'number' ? Number(inp.value) : inp.value; persist(); refresh({ all: true });
   }));
   bindPierSpacing(lc, al);
+  bindFoundationCard(lc, al);
   const dl = lc.querySelector('[data-del-layer]');
   if (dl) dl.addEventListener('click', () => { model.layers = model.layers.filter((x) => x !== al); model.activeLayerId = 'walls'; if (model.isolateLayerId === al.id) model.isolateLayerId = null; persist(); refresh({ all: true }); });
   const ex = lc.querySelector('[data-add="existing"]');

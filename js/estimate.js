@@ -11,6 +11,7 @@ import { getLayer } from './model.js';
 import { regenerate } from './generate.js';
 import { takeoff as placeholderTakeoff, measure } from './takeoff.js';
 import { applyRoofingFixes, withFixPrices } from './roofing-fixes.js';
+import { prepareEngineModel, applyPierOptions } from './pier-options.js';
 
 const r2 = (x) => Math.round(x * 100) / 100;
 export const GROUPS = [
@@ -43,7 +44,9 @@ export function runEstimate(m, C, optsOverride = {}) {
     const J = siteJurisdiction(m, C);
     const opts = Object.assign(engineOpts(m), J ? { jurisdiction: J } : {}, C.fastenerSchedule ? { fastenerSchedule: C.fastenerSchedule } : {}, optsOverride);
     withFixPrices(C.prices);
-    const r = C.engine.takeoff(mm, C.rules, C.prices, opts);
+    const em = JSON.parse(JSON.stringify(mm)); const split = prepareEngineModel(em);   // engine sees round Sonotubes only
+    const r = C.engine.takeoff(em, C.rules, C.prices, opts);
+    applyPierOptions(r, mm, split, Object.assign({}, C, { concreteMode: opts.concreteMode }));
     // Remodel Guide roofing fixes (ice-barrier courses, 19/32 at 24 in o.c., double underlayment 2:12–<4:12)
     if (!optsOverride.noRoofingFixes) applyRoofingFixes(r, getLayer(mm, 'roof').params, C.prices.prices, { defaults: C.rules.defaults, hoverCopy: C.engine.hoverCopy });
     const P = C.prices.prices;

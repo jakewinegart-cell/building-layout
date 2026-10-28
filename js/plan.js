@@ -4,6 +4,7 @@ import { PLAN, LUMBER, PIERS } from './config.js';
 import { stackOrder, layerDisplay, getLayer, findObject, uid } from './model.js';
 import { bbox, dist, distToSeg, offsetPolygon, inwardNormal, pointInPoly, fmtFtIn, lerp } from './geom.js';
 import { snapPier, pierDims, dropPier, movePier, isManual, originOf } from './piers.js';
+import { pierShapeOf } from './config.js';
 import { applyDrag, beginDrag, snapPoint, openingPts as openingPtsShared } from './edit-ops.js';
 
 const IN = 1 / 12;
@@ -198,7 +199,8 @@ export function createPlan(canvas, app) {
           else doubleLine(o.geometry.a, o.geometry.b, o.props.widthIn * IN, col, s ? 2 : 1, [6, 4]);
         } else if (o.type === 'pier') {
           const live = drag && drag.kind === 'pier' && drag.obj === o && drag.moved;
-          if (!live) drawPier(o.geometry.c, o.props.diaIn, { sel: s, manual: isManual(o), flagged: !!(o.props.flags && o.props.flags.length) });
+          const sh = pierShapeOf(o, l.params);
+          if (!live) drawPier(o.geometry.c, o.props.diaIn, { sel: s, manual: isManual(o), flagged: !!(o.props.flags && o.props.flags.length), shape: sh.shape, halfFt: sh.halfFt });
         } else if (o.type === 'beam') doubleLine(o.geometry.a, o.geometry.b, o.props.widthIn * IN, col, s ? 2 : 1.1);
         else if (o.type === 'area' && o.props.role === 'slab') { poly(o.geometry.pts, { stroke: col, w: 1 }); hatch(o.geometry.pts, 'rgba(95,99,104,.45)', 10); }
       });
@@ -271,13 +273,16 @@ export function createPlan(canvas, app) {
   // Sonotube symbol. auto = grey with a cross; manual = blue ring + blue diamond tag;
   // flagged = red dashed halo + "!". Selected = orange.
   const MAN = '#1d5fa8', FLAG = '#c0392b';
-  function drawPier(c, diaIn, { sel = false, manual = false, flagged = false } = {}) {
-    const [x, y] = toScreen(c); const r = Math.max(4, (diaIn * IN / 2) * view.scale);
+  function drawPier(c, diaIn, { sel = false, manual = false, flagged = false, shape = 'round', halfFt = null } = {}) {
+    const [x, y] = toScreen(c); const r = Math.max(4, (halfFt != null ? halfFt : diaIn * IN / 2) * view.scale);
     const col = sel ? SEL : manual ? MAN : '#5f6368';
+    const sq = shape === 'square' || shape === 'precast';
+    const outline = (k) => { ctx.beginPath(); if (sq) ctx.rect(x - r - k, y - r - k, 2 * (r + k), 2 * (r + k)); else ctx.arc(x, y, r + k, 0, Math.PI * 2); };
     ctx.save();
-    if (flagged) { ctx.beginPath(); ctx.arc(x, y, r + 6, 0, Math.PI * 2); ctx.setLineDash([4, 3]); ctx.lineWidth = 2; ctx.strokeStyle = FLAG; ctx.stroke(); ctx.setLineDash([]); }
-    if (sel) { ctx.beginPath(); ctx.arc(x, y, r + 4, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,106,0,.18)'; ctx.fill(); }
-    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+    if (flagged) { outline(6); ctx.setLineDash([4, 3]); ctx.lineWidth = 2; ctx.strokeStyle = FLAG; ctx.stroke(); ctx.setLineDash([]); }
+    if (sel) { outline(4); ctx.fillStyle = 'rgba(255,106,0,.18)'; ctx.fill(); }
+    if (shape === 'precast') { outline(0); ctx.fillStyle = 'rgba(208,69,58,.18)'; ctx.fill(); }
+    outline(0);
     ctx.fillStyle = sel ? 'rgba(255,106,0,.4)' : manual ? 'rgba(29,95,168,.28)' : 'rgba(140,143,148,.35)'; ctx.fill();
     ctx.lineWidth = sel ? 2.5 : manual ? 2.2 : 1.5; ctx.strokeStyle = col; ctx.stroke();
     ctx.beginPath(); ctx.moveTo(x - r, y); ctx.lineTo(x + r, y); ctx.moveTo(x, y - r); ctx.lineTo(x, y + r); ctx.lineWidth = 0.7; ctx.stroke();
@@ -447,7 +452,7 @@ export function createPlan(canvas, app) {
         let d = Infinity;
         const g = o.geometry;
         if (o.type === 'opening') { const q = openingPts(m, o); if (q && distToSeg(p, q.a, q.b).d < (q.w.props.thicknessIn * IN) / 2 + tol && dist(q.c, p) <= (o.props.widthIn * IN) / 2 + tol * 0.3) d = -0.001; }
-        else if (o.type === 'pier') d = Math.max(0, dist(g.c, p) - (o.props.diaIn * IN) / 2) - tol * 0.6; // piers win over the grade beam under them
+        else if (o.type === 'pier') d = Math.max(0, dist(g.c, p) - pierShapeOf(o, l.params).halfFt) - tol * 0.6; // piers win over the grade beam under them
         else if (g && g.a && g.b) { d = distToSeg(p, g.a, g.b).d; if (o.type === 'wall') d = Math.max(0, d - (o.props.thicknessIn * IN) / 2); }
         else if (o.type === 'label') d = dist(g.c, p) - 1;
         else if (o.type === 'area' && g.pts) {
@@ -465,7 +470,7 @@ export function createPlan(canvas, app) {
     const m = M(); const l = getLayer(m, 'foundation');
     if (!layerDisplay(m, l).shown) return null;
     let best = null, bd = tolPx / view.scale;
-    l.objects.forEach((o) => { if (o.type !== 'pier') return; const d = Math.max(0, dist(o.geometry.c, p) - (o.props.diaIn * IN) / 2); if (d < bd) { bd = d; best = o; } });
+    l.objects.forEach((o) => { if (o.type !== 'pier') return; const d = Math.max(0, dist(o.geometry.c, p) - pierShapeOf(o, l.params).halfFt); if (d < bd) { bd = d; best = o; } });
     return best;
   }
   function hitVertex(p) {
