@@ -57,8 +57,15 @@ export const DEFAULTS = {
     stemWallIn: 8,
     basementWallFt: 8,
     slabIn: 4,
-    pierMaxSpacingFt: 6,               // spec: corners + every 6–8 ft along wall lines
-    pierDiaIn: 12,
+    // Auto piers (Sonotubes) along exterior + bearing wall lines (spec: corners + every 6–8 ft).
+    pierSpacingMode: 'max',            // 'max' = equal gaps no larger than pierSpacingIn | 'exact' = every pierSpacingIn o.c. from each corner
+    pierSpacingIn: 72,                 // 6 ft, entered in ft + in in the UI
+    pierDiaIn: 12,                     // auto pier tube diameter
+    deletedAutoSlots: [],              // auto pier slots the user deleted (kept out of regeneration)
+    // "Place pier" tool defaults for new manual piers (null = follow the layer default)
+    placeDiaIn: 12,
+    placeTopIn: null,                  // top of tube above grade, in (null = under grade beam / foundation top)
+    placeDepthIn: null,                // bottom below grade, in (null = frost depth, or the placeholder)
     gradeBeamDepthIn: 12,
     gradeBeamWidthIn: 12,
   },
@@ -82,6 +89,16 @@ export const DEFAULTS = {
     door: { widthIn: 36, heightIn: 80, sillIn: 0 },
     window: { widthIn: 36, heightIn: 48, sillIn: 30 },
   },
+};
+
+/** Sonotube / pier editing (v2). */
+export const PIERS = {
+  diametersIn: [8, 10, 12, 16],      // tube sizes offered in the UI
+  offWallTolFt: 0.5,                 // a manual pier that was on a wall line is FLAGGED if it ends up farther than this
+  snapPx: 18,                        // snap radius (screen px) for mouse
+  snapPxTouch: 26,                   // snap radius for a finger
+  duplicateOffsetFt: 2,              // Duplicate puts the copy this far along the wall (or east)
+  mergeFt: 1,                        // an auto slot within this distance of a manual pier is not generated (no overlaps)
 };
 
 /** EXAMPLE header table — verify with your building department / engineer. */

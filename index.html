@@ -43,10 +43,13 @@
       <button data-tool="wall" data-needs="walls" title="Interior wall (Walls layer)">Wall</button>
       <button data-tool="door" data-needs="walls" title="Door (tap a wall)">Door</button>
       <button data-tool="window" data-needs="walls" title="Window (tap a wall)">Window</button>
+ <button data-tool="pier" data-needs="foundation" title="Place pier: tap to drop a Sonotube (snaps to grid + wall lines); tap a tube to edit it">◎ Pier</button>
       <button data-tool="line" data-needs="site,custom" title="Line (Site utilities or custom layer)">Line</button>
       <label class="snap">Snap <select id="snapSel"></select></label>
       <button id="polyDone" class="primary" hidden>Done</button>
     </div>
+
+    <div id="pierOpts" class="pierOpts" hidden aria-label="Place pier options"></div>
 
     <div id="tools3d" class="toolbar" role="toolbar" aria-label="3D tools" hidden>
       <button data-cam="aerial">3/4</button>
@@ -55,9 +58,11 @@
       <button data-cam="top">Top</button>
       <button id="explodeBtn" class="toggle" aria-pressed="false">Exploded</button>
       <button id="wallModeBtn" class="toggle">Studs</button>
+      <button id="pier3dBtn" class="toggle" aria-pressed="false" title="Tap the ground to drop a Sonotube">◎ Drop pier</button>
       <button id="sheathBtn" class="toggle" aria-pressed="false">Roof sheathing</button>
     </div>
 
+    <div id="pierPanel" class="pierPanel" hidden role="dialog" aria-label="Selected pier"></div>
     <div id="status" class="status" aria-live="polite"></div>
     <div id="regenBanner" class="regen" hidden role="status"></div>
     <div id="toast" class="toast" hidden></div>

@@ -17,22 +17,32 @@
 
 const keyPt = (x, y) => `${Math.round(x * 100)}|${Math.round(y * 100)}`;
 
-/** segments: [{a:[x,y], b:[x,y], wallId}] → [{c:[x,y], wallId}] */
-export function piersAlongLines(segments, maxSpacingFt) {
-  const sp = Math.max(2, Math.min(20, maxSpacingFt || 6));
+/**
+ * segments: [{a:[x,y], b:[x,y], wallId}] → [{c:[x,y], wallId}]
+ * mode 'max'   (default): equal gaps, none larger than spacingFt (ceil).
+ * mode 'exact': a pier every spacingFt o.c. measured from each segment start; the last
+ *               gap (into the far corner) is whatever is left. A leftover under 2 in is
+ *               merged into the previous gap so two tubes never sit on top of each other.
+ */
+export function piersAlongLines(segments, spacingFt, mode = 'max') {
+  const sp = Math.max(1, Math.min(20, spacingFt || 6));
   const map = new Map();
   const add = (x, y, wallId) => { const k = keyPt(x, y); if (!map.has(k)) map.set(k, { c: [x, y], wallId }); };
   segments.forEach(({ a, b, wallId }) => {
     const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
     if (len < 0.05) return;
-    const n = Math.max(2, Math.ceil(len / sp) + 1);
-    for (let i = 0; i < n; i++) {
-      const t = i / (n - 1);
-      add(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, wallId);
+    const at = (d) => add(a[0] + (b[0] - a[0]) * d / len, a[1] + (b[1] - a[1]) * d / len, wallId);
+    if (mode === 'exact') {
+      for (let d = 0; d < len - 2 / 12 + 1e-9; d += sp) at(d);
+      at(len);
+    } else {
+      const n = Math.max(2, Math.ceil(len / sp - 1e-9) + 1);
+      for (let i = 0; i < n; i++) at((len * i) / (n - 1));
     }
   });
   return Array.from(map.values());
 }
+export const pierSlotKey = (c) => keyPt(c[0], c[1]);
 
 /**
  * Stud positions (distance from wall start, ft) for a wall of length len.

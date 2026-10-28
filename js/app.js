@@ -1,5 +1,6 @@
 // App shell: state, layer panel, properties, Plan/3D toggle, regeneration notes.
-import { ASSUMPTIONS, DEFAULTS, PLAN, LUMBER, LAYER_COLORS } from './config.js';
+import { ASSUMPTIONS, DEFAULTS, PLAN, LUMBER, LAYER_COLORS, PIERS } from './config.js';
+import { ensureManual, movePier, deletePier, duplicatePier, resetToAuto, restoreAutoLayout, isManual, originOf, pierDefaults, parseFtIn, allPiers, pierSlotKey } from './piers.js';
 import { createDefaultModel, load, save, clear, getLayer, findObject, stackOrder, uid } from './model.js';
 import { regenerate, headerFor } from './generate.js';
 import { createPlan } from './plan.js';
@@ -21,7 +22,7 @@ const ICON = {
 
 let model = load();
 const fresh = !model;
-if (!model) { model = createDefaultModel(); regenerate(model, 'init'); }
+if (!model) { model = createDefaultModel(); regenerate(model, 'init'); } else regenerate(model, 'init'); // v2: re-lay auto piers with stable ids
 let pending = new Set();
 let pendingSource = null;
 let saveT = 0;
@@ -52,8 +53,13 @@ const app = {
     persist();
     refresh({ all: true });
   },
+  onPierDrag(on) { $('#stage').classList.toggle('pierDragging', !!on); },
+  revealPier(o) { requestAnimationFrame(() => { const pp = $('#pierPanel'); plan.ensureVisible(o.geometry.c, pp && !pp.hidden ? pp.offsetHeight + 8 : 0); }); },
   onTool(t) {
     $$('#planTools [data-tool]').forEach((b) => b.classList.toggle('on', b.dataset.tool === t));
+    $('#pierOpts').hidden = t !== 'pier' || model.view !== 'plan';
+    $('#stage').classList.toggle('pierTool', t === 'pier');
+    if (t === 'pier') renderPierOpts();
     $('#polyDone').hidden = t !== 'poly';
     refreshStatus();
   },
@@ -69,6 +75,7 @@ function setView(v) {
   $$('#viewToggle button').forEach((b) => { b.classList.toggle('on', b.dataset.view === v); b.setAttribute('aria-selected', b.dataset.view === v); });
   $('#plan').hidden = v !== 'plan';
   $('#planTools').hidden = v !== 'plan';
+  $('#pierOpts').hidden = v !== 'plan' || plan.getTool() !== 'pier';
   $('#view3d').hidden = v !== '3d';
   $('#tools3d').hidden = v !== '3d';
   if (v === '3d') { if (!v3.show()) toast('3D could not start (no WebGL)'); }
@@ -99,6 +106,11 @@ PLAN.snapOptionsIn.forEach((v) => { const o = document.createElement('option'); 
 snapSel.value = model.snapIn;
 snapSel.addEventListener('change', () => { model.snapIn = Number(snapSel.value); persist(); plan.render(); });
 
+$('#pier3dBtn').addEventListener('click', () => {
+  const on = !v3.getDropMode();
+  if (on) { const f = getLayer(model, 'foundation'); if (f.locked) { toast('Foundation is locked'); return; } model.activeLayerId = 'foundation'; if (!f.visible) f.visible = true; refresh({ all: true }); toast('Tap the ground to drop a Sonotube (snaps to walls)'); }
+  v3.setDropMode(on); $('#pier3dBtn').setAttribute('aria-pressed', on);
+});
 $$('#tools3d [data-cam]').forEach((b) => b.addEventListener('click', () => v3.preset(b.dataset.cam)));
 $('#explodeBtn').addEventListener('click', () => { model.exploded = !model.exploded; persist(); refresh({ all: true }); v3.preset('aerial'); });
 $('#wallModeBtn').addEventListener('click', () => { model.wallMode = model.wallMode === 'studs' ? 'solid' : 'studs'; persist(); refresh({ all: true }); });
@@ -223,7 +235,7 @@ function layerParamsHTML(l) {
     case 'foundation': return field('Type', sel('type', p.type, OPTS.ftype))
       + field('Frost depth (in) — required', num('frostDepthIn', p.frostDepthIn, 1, 'enter local code'))
       + field(`Top above grade (in), ${p.type}`, num(`topAboveGradeIn.${p.type}`, p.topAboveGradeIn[p.type], 1))
-      + (p.type === 'piers' ? field('Max pier spacing (ft)', num('pierMaxSpacingFt', p.pierMaxSpacingFt, 0.5)) + field('Pier diameter (in)', num('pierDiaIn', p.pierDiaIn, 1)) : field('Footing width (in)', num('footingWidthIn', p.footingWidthIn)) + field('Footing depth (in)', num('footingDepthIn', p.footingDepthIn)));
+      + (p.type === 'piers' ? pierSpacingHTML(l) : field('Footing width (in)', num('footingWidthIn', p.footingWidthIn)) + field('Footing depth (in)', num('footingDepthIn', p.footingDepthIn)) + manualPierNote(l));
     case 'floor': return field('Joist size', sel('joistSize', p.joistSize, OPTS.lumber.slice(2))) + field('Spacing (in o.c.)', sel('joistOcIn', p.joistOcIn, OPTS.oc))
       + field('Joist direction', sel('direction', p.direction, [['auto', 'Auto (short span)'], ['y', 'North–south'], ['x', 'East–west']]))
       + field('Show subfloor (3D)', chk('showSubfloor', p.showSubfloor))
@@ -241,7 +253,123 @@ function layerParamsHTML(l) {
   }
 }
 
+// ---------- piers v2: spacing control (layer card), pier panel (floating), place-pier options
+const ftIn = (inches) => { const tot = Math.round(Number(inches) * 4) / 4; return [Math.floor(tot / 12), +(tot - Math.floor(tot / 12) * 12).toFixed(2)]; };
+const chips = (attr, value) => `<div class="chips">${PIERS.diametersIn.map((d) => `<button type="button" ${attr}="${d}" class="${Number(value) === d ? 'on' : ''}" aria-pressed="${Number(value) === d}">${d}"</button>`).join('')}</div>`;
+function pierCounts() {
+  const ps = allPiers(model);
+  return { auto: ps.filter((o) => !isManual(o)).length, manual: ps.filter(isManual).length, flagged: ps.filter((o) => o.props.flags && o.props.flags.length).length, removed: (getLayer(model, 'foundation').params.deletedAutoSlots || []).length, converted: ps.filter((o) => isManual(o) && o.props.autoSlot).length };
+}
+function pierLegend() {
+  const c = pierCounts();
+  return `<div class="pierLegend"><span><i class="lg auto"></i>${c.auto} auto</span><span><i class="lg man"></i>${c.manual} manual</span>${c.flagged ? `<span class="bad"><i class="lg flag"></i>${c.flagged} flagged</span>` : ''}</div>`;
+}
+function pierSpacingHTML(l) {
+  const p = l.params; const [ft, inch] = ftIn(p.pierSpacingIn);
+  const c = pierCounts();
+  return `<div class="pierSpacing" id="pierSpacing">
+    <div class="field"><span>Pier spacing</span><div class="seg2" role="group" aria-label="Spacing mode">
+      <button type="button" data-spmode="max" class="${p.pierSpacingMode !== 'exact' ? 'on' : ''}">Max</button><button type="button" data-spmode="exact" class="${p.pierSpacingMode === 'exact' ? 'on' : ''}">Exact o.c.</button></div></div>
+    <div class="field"><span>${p.pierSpacingMode === 'exact' ? 'Every' : 'No more than'}</span><div class="ftin">
+      <input type="number" inputmode="numeric" id="spFt" min="1" max="20" step="1" value="${ft}" aria-label="Spacing feet"><b>ft</b>
+      <input type="number" inputmode="decimal" id="spIn" min="0" max="11.75" step="0.5" value="${inch}" aria-label="Spacing inches"><b>in</b></div></div>
+    <div class="muted">${p.pierSpacingMode === 'exact' ? 'A tube every ' + fmtFtIn(p.pierSpacingIn / 12) + ' on center from each corner along exterior + bearing walls; the last gap is what is left.' : 'Equal gaps along each exterior + bearing wall, none longer than ' + fmtFtIn(p.pierSpacingIn / 12) + '. Corners always get a tube.'} Changing this re-lays the auto piers; manual ones stay.</div>
+    <div class="field"><span>Auto tube Ø</span>${chips('data-autodia', p.pierDiaIn)}</div>
+    ${pierLegend()}
+    <div class="btnRow"><button type="button" class="btn" id="pierToolBtn">◎ Place pier</button>${c.converted || c.removed ? `<button type="button" class="btn" id="restoreAuto">Restore auto layout (${c.converted + c.removed})</button>` : ''}</div>
+  </div>`;
+}
+function manualPierNote() {
+  const c = pierCounts();
+  return `<div class="muted" style="margin-top:6px">Auto Sonotubes along the walls come with Type → Piers. You can still drop piers anywhere (e.g. under a mid beam) with ◎ Pier.</div>${c.manual ? pierLegend() : ''}`;
+}
+function bindPierSpacing(lc, al) {
+  const box = lc.querySelector('#pierSpacing'); if (!box) return;
+  const guard = () => { if (al.locked) { toast(`${al.name} is locked`); renderProps(); return false; } return true; };
+  box.querySelectorAll('[data-spmode]').forEach((b) => b.addEventListener('click', () => { if (!guard()) return; al.params.pierSpacingMode = b.dataset.spmode; app.commit('foundation'); toast(`Auto piers re-laid: ${b.dataset.spmode === 'exact' ? 'exact' : 'max'} ${fmtFtIn(al.params.pierSpacingIn / 12)}`); }));
+  const setSp = () => {
+    if (!guard()) return;
+    const ft = Number($('#spFt', box).value) || 0, inch = Number($('#spIn', box).value) || 0;
+    const tot = Math.max(12, Math.min(240, ft * 12 + inch));
+    al.params.pierSpacingIn = tot; app.commit('foundation');
+    toast(`Auto piers re-laid at ${al.params.pierSpacingMode === 'exact' ? 'exactly' : 'max'} ${fmtFtIn(tot / 12)}`);
+  };
+  ['#spFt', '#spIn'].forEach((sel) => $(sel, box).addEventListener('change', setSp));
+  box.querySelectorAll('[data-autodia]').forEach((b) => b.addEventListener('click', () => { if (!guard()) return; al.params.pierDiaIn = Number(b.dataset.autodia); app.commit('foundation'); }));
+  const pt = $('#pierToolBtn', box); if (pt) pt.addEventListener('click', () => { if (model.view !== 'plan') setView('plan'); plan.setTool('pier'); setSheet('peek'); });
+  const ra = $('#restoreAuto', box); if (ra) ra.addEventListener('click', () => { if (!guard()) return; const n = restoreAutoLayout(model); app.commit('foundation'); toast(`Restored ${n} auto pier slot(s); piers you placed by hand stay`); });
+}
+
+function renderPierOpts() {
+  const f = getLayer(model, 'foundation').params; const d = pierDefaults(model);
+  $('#pierOpts').innerHTML = `<span class="lbl">Ø</span>${chips('data-placedia', f.placeDiaIn || 12)}
+    <label>Top <input type="number" inputmode="decimal" id="poTop" value="${f.placeTopIn ?? ''}" placeholder="${d.topIn}">"</label>
+    <label>Depth <input type="number" inputmode="decimal" id="poDepth" value="${f.placeDepthIn ?? ''}" placeholder="${d.depthIn}">"</label>
+    <span class="hint">Tap the plan to drop · tap a tube to edit</span>`;
+  $$('#pierOpts [data-placedia]').forEach((b) => b.addEventListener('click', () => { f.placeDiaIn = Number(b.dataset.placedia); persist(); renderPierOpts(); plan.render(); }));
+  $('#poTop').addEventListener('change', (e) => { f.placeTopIn = e.target.value === '' ? null : Number(e.target.value); persist(); });
+  $('#poDepth').addEventListener('change', (e) => { f.placeDepthIn = e.target.value === '' ? null : Number(e.target.value); persist(); });
+}
+
+function selectedPier() {
+  const o = findObject(model, model.selection);
+  return o && o.type === 'pier' && model.selection.layerId === 'foundation' ? o : null;
+}
+function renderPierPanel() {
+  const pp = $('#pierPanel');
+  const o = selectedPier();
+  pp.hidden = !o;
+  $('#stage').classList.toggle('pierOpen', !!o);
+  if (!o) return;
+  const l = getLayer(model, 'foundation');
+  const man = isManual(o);
+  const org = originOf(model); const d = pierDefaults(model);
+  const [xf, xi] = ftIn((o.geometry.c[0] - org[0]) * 12), [yf, yi] = ftIn((o.geometry.c[1] - org[1]) * 12);
+  const dis = l.locked ? 'disabled' : '';
+  const topNow = o.props.topIn ?? null, depNow = o.props.depthIn ?? null;
+  pp.innerHTML = `
+    <div class="pp-head"><b>Sonotube</b>${man ? '<span class="tag man">◆ Manual</span>' : '<span class="tag auto">Auto</span>'}
+      <span class="pp-sub">${fmtFtIn((o.height || 0))} tall · ${fmtFtIn(-(o.z || 0))} below grade</span>
+      <button type="button" class="pp-x" data-pp="close" aria-label="Close">×</button></div>
+    ${l.locked ? '<div class="flag">Foundation is locked — unlock it to edit.</div>' : ''}
+    ${(o.props.flags || []).map((f) => `<div class="flag warn">FLAGGED: ${f}</div>`).join('')}
+    <div class="pp-row"><span class="k">Ø</span>${chips('data-dia', o.props.diaIn).replace(/<button/g, `<button ${dis}`)}<span class="u">in</span></div>
+    <div class="pp-row xy"><span class="k">X</span><input ${dis} type="number" inputmode="decimal" data-xy="x" data-part="ft" value="${xf}" aria-label="X feet"><b>'</b><input ${dis} type="number" inputmode="decimal" data-xy="x" data-part="in" value="${xi}" aria-label="X inches"><b>"</b>
+      <span class="k">Y</span><input ${dis} type="number" inputmode="decimal" data-xy="y" data-part="ft" value="${yf}" aria-label="Y feet"><b>'</b><input ${dis} type="number" inputmode="decimal" data-xy="y" data-part="in" value="${yi}" aria-label="Y inches"><b>"</b></div>
+    <div class="pp-row"><span class="k">Top</span><input ${dis} type="number" inputmode="decimal" data-pk="topIn" value="${topNow ?? ''}" placeholder="${d.topIn}" aria-label="Top above grade (in)"><span class="u">in above grade</span>
+      <span class="k">Depth</span><input ${dis} type="number" inputmode="decimal" data-pk="depthIn" value="${depNow ?? ''}" placeholder="${d.depthIn}" aria-label="Depth below grade (in)"><span class="u">in</span></div>
+    <div class="pp-btns">
+      <button type="button" class="btn" data-pp="dup" ${dis}>Duplicate</button>
+      ${man && o.props.autoSlot ? `<button type="button" class="btn" data-pp="reset" ${dis}>Reset to auto</button>` : ''}
+      <button type="button" class="btn danger" data-pp="del" ${dis}>Delete</button>
+    </div>
+    <div class="muted pp-note">X/Y = center from the W / N outside face. Blank top/depth follow the layer${d.frostEntered ? '' : ' (depth = placeholder until you enter frost depth)'}.${man ? '' : ' Editing an auto pier makes it manual so regeneration keeps it.'}</div>`;
+  const guard = () => { if (l.locked) { toast('Foundation is locked'); return false; } return true; };
+  pp.querySelectorAll('[data-dia]').forEach((b) => b.addEventListener('click', () => { if (!guard()) return; ensureManual(model, o); o.props.diaIn = Number(b.dataset.dia); app.commit('foundation'); }));
+  pp.querySelectorAll('[data-xy]').forEach((inp) => inp.addEventListener('change', () => {
+    if (!guard()) return;
+    const v = (ax) => { const f = Number(pp.querySelector(`[data-xy="${ax}"][data-part="ft"]`).value) || 0, i = Number(pp.querySelector(`[data-xy="${ax}"][data-part="in"]`).value) || 0; return f + i / 12; };
+    movePier(model, o, [org[0] + v('x'), org[1] + v('y')]); app.commit('foundation');
+  }));
+  pp.querySelectorAll('[data-pk]').forEach((inp) => inp.addEventListener('change', () => { if (!guard()) return; ensureManual(model, o); o.props[inp.dataset.pk] = inp.value === '' ? null : Number(inp.value); app.commit('foundation'); }));
+  pp.querySelectorAll('[data-pp]').forEach((b) => b.addEventListener('click', () => {
+    const a = b.dataset.pp;
+    if (a === 'close') { app.select(null, true); return; }
+    if (!guard()) return;
+    if (a === 'dup') { const c = duplicatePier(model, o); model.selection = { layerId: 'foundation', objectId: c.id }; app.commit('foundation'); toast(`Duplicated ${PIERS.duplicateOffsetFt} ft over — drag it into place`); }
+    if (a === 'del') { deletePier(model, o); app.commit('foundation'); toast(man && !o.props.autoSlot ? 'Pier deleted' : 'Pier deleted — its auto slot stays empty (Restore auto layout brings it back)'); }
+    if (a === 'reset') {
+      const slot = o.props.autoSlot; resetToAuto(model, o); app.commit('foundation');
+      const back = allPiers(model).find((p) => !isManual(p) && pierSlotKey(p.geometry.c) === slot);
+      if (back) app.select({ layerId: 'foundation', objectId: back.id }, true);
+      toast(back ? 'Back to auto — it will follow the spacing again' : 'Removed — that auto slot no longer exists at the current spacing');
+    }
+  }));
+}
+
 function objHTML(o, l) {
+  if (o.type === 'pier') return `<h3>Sonotube <span class="muted">on ${l.name}</span></h3><div class="sub">Ø${o.props.diaIn} in · ${isManual(o) ? 'manual' : 'auto'} · ${fmtFtIn(o.height || 0)} tall</div><div class="muted">Edit it in the pier panel over the plan (diameter, X/Y, top/depth, duplicate, delete${isManual(o) && o.props.autoSlot ? ', reset to auto' : ''}).</div>`
+    + (o.props.flags || []).map((f) => `<div class="flag warn">FLAGGED: ${f}</div>`).join('');
   const head = `<h3>${o.props.kind ? cap(o.props.kind) : cap(o.type)} <span class="muted">on ${l.name}</span></h3>`;
   const lockNote = l.locked ? '<div class="flag">Layer is locked — unlock it to edit.</div>' : '';
   if (o.type === 'opening') return head + lockNote + field('Kind', sel('kind', o.props.kind, ['door', 'window'])) + field('Width (in)', num('widthIn', o.props.widthIn)) + field('Height (in)', num('heightIn', o.props.heightIn))
@@ -299,6 +427,7 @@ function renderProps() {
   lc.querySelectorAll('[data-L]').forEach((inp) => inp.addEventListener('change', () => {
     const k = inp.dataset.L; al[k] = inp.type === 'number' ? Number(inp.value) : inp.value; persist(); refresh({ all: true });
   }));
+  bindPierSpacing(lc, al);
   const dl = lc.querySelector('[data-del-layer]');
   if (dl) dl.addEventListener('click', () => { model.layers = model.layers.filter((x) => x !== al); model.activeLayerId = 'walls'; if (model.isolateLayerId === al.id) model.isolateLayerId = null; persist(); refresh({ all: true }); });
   const ex = lc.querySelector('[data-add="existing"]');
@@ -330,7 +459,8 @@ function showRegen(source, layers) {
 }
 
 function refresh() {
-  renderLayers(); renderProps(); refreshStatus();
+  renderLayers(); renderProps(); renderPierPanel(); refreshStatus();
+  if (plan.getTool() === 'pier' && !$('#pierOpts').hidden) renderPierOpts();
   plan.render();
   if (model.view === '3d' || v3.isReady()) v3.build();
 }

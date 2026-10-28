@@ -1,8 +1,9 @@
 // Plan view (2D canvas): to scale, snap-to-grid, cut at 4 ft, automatic exterior dims,
 // per-layer symbols (spec §2 "Plan view shows"), touch pan / pinch zoom.
-import { PLAN, LUMBER } from './config.js';
+import { PLAN, LUMBER, PIERS } from './config.js';
 import { stackOrder, layerDisplay, getLayer, findObject, uid } from './model.js';
 import { bbox, dist, distToSeg, offsetPolygon, inwardNormal, pointInPoly, fmtFtIn, lerp } from './geom.js';
+import { snapPier, pierDims, dropPier, movePier, isManual, originOf } from './piers.js';
 
 const IN = 1 / 12;
 
@@ -168,10 +169,8 @@ export function createPlan(canvas, app) {
           if (o.props.role === 'stem') doubleLine(o.geometry.a, o.geometry.b, o.props.widthIn * IN, col, s ? 2.2 : 1.3);
           else doubleLine(o.geometry.a, o.geometry.b, o.props.widthIn * IN, col, s ? 2 : 1, [6, 4]);
         } else if (o.type === 'pier') {
-          const [x, y] = toScreen(o.geometry.c); const r = Math.max(3, (o.props.diaIn * IN / 2) * view.scale);
-          ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = s ? 'rgba(255,106,0,.35)' : 'rgba(140,143,148,.35)'; ctx.fill();
-          ctx.lineWidth = s ? 2.5 : 1.5; ctx.strokeStyle = col; ctx.stroke();
-          ctx.beginPath(); ctx.moveTo(x - r, y); ctx.lineTo(x + r, y); ctx.moveTo(x, y - r); ctx.lineTo(x, y + r); ctx.lineWidth = 0.7; ctx.stroke();
+          const live = drag && drag.kind === 'pier' && drag.obj === o && drag.moved;
+          if (!live) drawPier(o.geometry.c, o.props.diaIn, { sel: s, manual: isManual(o), flagged: !!(o.props.flags && o.props.flags.length) });
         } else if (o.type === 'beam') doubleLine(o.geometry.a, o.geometry.b, o.props.widthIn * IN, col, s ? 2 : 1.1);
         else if (o.type === 'area' && o.props.role === 'slab') { poly(o.geometry.pts, { stroke: col, w: 1 }); hatch(o.geometry.pts, 'rgba(95,99,104,.45)', 10); }
       });
@@ -239,6 +238,60 @@ export function createPlan(canvas, app) {
         else if (o.type === 'label') text(o.props.text, o.geometry.c, { color: c, size: 12 });
       });
     }
+  }
+
+  // Sonotube symbol. auto = grey with a cross; manual = blue ring + blue diamond tag;
+  // flagged = red dashed halo + "!". Selected = orange.
+  const MAN = '#1d5fa8', FLAG = '#c0392b';
+  function drawPier(c, diaIn, { sel = false, manual = false, flagged = false } = {}) {
+    const [x, y] = toScreen(c); const r = Math.max(4, (diaIn * IN / 2) * view.scale);
+    const col = sel ? SEL : manual ? MAN : '#5f6368';
+    ctx.save();
+    if (flagged) { ctx.beginPath(); ctx.arc(x, y, r + 6, 0, Math.PI * 2); ctx.setLineDash([4, 3]); ctx.lineWidth = 2; ctx.strokeStyle = FLAG; ctx.stroke(); ctx.setLineDash([]); }
+    if (sel) { ctx.beginPath(); ctx.arc(x, y, r + 4, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,106,0,.18)'; ctx.fill(); }
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = sel ? 'rgba(255,106,0,.4)' : manual ? 'rgba(29,95,168,.28)' : 'rgba(140,143,148,.35)'; ctx.fill();
+    ctx.lineWidth = sel ? 2.5 : manual ? 2.2 : 1.5; ctx.strokeStyle = col; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - r, y); ctx.lineTo(x + r, y); ctx.moveTo(x, y - r); ctx.lineTo(x, y + r); ctx.lineWidth = 0.7; ctx.stroke();
+    if (manual) { // diamond tag at upper right = manual (regeneration won't move it)
+      const tx = x + r * 0.75 + 2, ty = y - r * 0.75 - 2, k = 4;
+      ctx.beginPath(); ctx.moveTo(tx, ty - k); ctx.lineTo(tx + k, ty); ctx.lineTo(tx, ty + k); ctx.lineTo(tx - k, ty); ctx.closePath();
+      ctx.fillStyle = sel ? SEL : MAN; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = '#fff'; ctx.stroke();
+    }
+    if (flagged) text('!', Object.assign([x - r - 7, y - r - 5], { screen: true }), { color: '#fff', bg: FLAG, size: 11, weight: 800 });
+    ctx.restore();
+  }
+  // dimension line between two plan points with a label (live pier dims)
+  function dimSeg(a, b, label, color, offPx = 0) {
+    let [x1, y1] = toScreen(a), [x2, y2] = toScreen(b);
+    const L = Math.hypot(x2 - x1, y2 - y1) || 1; const nx = -(y2 - y1) / L * offPx, ny = (x2 - x1) / L * offPx;
+    x1 += nx; y1 += ny; x2 += nx; y2 += ny;
+    ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    const ang = Math.atan2(y2 - y1, x2 - x1);
+    [[x1, y1], [x2, y2]].forEach(([x, y]) => { ctx.save(); ctx.translate(x, y); ctx.rotate(ang - Math.PI / 4); ctx.fillRect(-5, -0.9, 10, 1.8); ctx.restore(); });
+    let ta = ang; if (ta > Math.PI / 2 || ta < -Math.PI / 2) ta += Math.PI;
+    if (L > 18) text(label, Object.assign([(x1 + x2) / 2, (y1 + y2) / 2], { screen: true }), { color: '#fff', bg: color, size: 12, rot: ta, weight: 700 });
+    ctx.restore();
+  }
+  function drawPierDims(m, c, selfId) {
+    const d = pierDims(m, c, selfId);
+    const WALL = '#1d4f7a', NB = '#7b3fa0';
+    const base = d.wall && d.wall.d > 0.04 ? d.wall.foot : c;
+    if (d.wall && d.wall.d > 0.04) dimSeg(c, d.wall.foot, `${fmtFtIn(d.wall.d)} to wall`, WALL);
+    d.ends.forEach((e) => dimSeg(base, e.p, `${fmtFtIn(e.d)}`, WALL, -16));
+    d.neighbors.forEach((n) => {
+      const [x1, y1] = toScreen(c), [x2, y2] = toScreen(n.p);
+      ctx.save(); ctx.setLineDash([5, 4]); ctx.strokeStyle = NB; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.restore();
+      if (Math.hypot(x2 - x1, y2 - y1) > 30) text(`${fmtFtIn(n.d)} o.c.`, lerp(c, n.p, 0.5), { color: '#fff', bg: NB, size: 12, weight: 700 });
+    });
+    const o = originOf(m);
+    text(`X ${fmtFtIn(c[0] - o[0])} · Y ${fmtFtIn(c[1] - o[1])}  (from W / N face)`, Object.assign([cssW / 2, 112], { screen: true }), { color: '#fff', bg: 'rgba(29,79,122,.92)', size: 13, weight: 700 });
+    return d;
+  }
+  function snapBadge(c, kind) {
+    const [x, y] = toScreen(c);
+    text(kind === 'corner' ? 'corner' : kind === 'wall' ? 'on wall' : 'grid', Object.assign([x, y + Math.max(14, 0.6 * view.scale) + 10], { screen: true }), { color: '#fff', bg: kind === 'grid' ? '#555' : '#ff6a00', size: 10, weight: 700 });
   }
 
   function wallOf(m, id) { return getLayer(m, 'walls').objects.find((w) => w.id === id); }
@@ -312,6 +365,24 @@ export function createPlan(canvas, app) {
   }
 
   function drawDraft(m) {
+    if (drag && drag.kind === 'pier' && drag.moved) {
+      const o = drag.obj;
+      ctx.save(); ctx.globalAlpha = 0.35; drawPier(drag.c0, o.props.diaIn, { manual: true }); ctx.restore(); // where it was
+      drawPierDims(m, o.geometry.c, o.id);
+      drawPier(o.geometry.c, o.props.diaIn, { sel: true, manual: true });
+      if (drag.snap) snapBadge(o.geometry.c, drag.snap);
+      return;
+    }
+    if (draft && draft.kind === 'pier') {
+      drawPierDims(m, draft.c, null);
+      drawPier(draft.c, draft.diaIn, { sel: true, manual: true });
+      snapBadge(draft.c, draft.snap);
+      return;
+    }
+    if (tool === 'pier' && hover && !draft) {
+      ctx.save(); ctx.globalAlpha = 0.6; drawPier(hover, getLayer(m, 'foundation').params.placeDiaIn || 12, { manual: true }); ctx.restore();
+      return;
+    }
     if (!draft) {
       if (hover && (tool !== 'select')) { const [x, y] = toScreen(hover); ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fillStyle = hover[2] ? '#ff6a00' : '#1d4f7a'; ctx.fill(); }
       return;
@@ -333,9 +404,9 @@ export function createPlan(canvas, app) {
   }
 
   // ---------- hit testing
-  function hitTest(p) {
+  function hitTest(p, tolPx = 10) {
     const m = M();
-    const tol = 10 / view.scale;
+    const tol = tolPx / view.scale;
     const order = stackOrder(m).filter((l) => layerDisplay(m, l).shown);
     // active layer first, then top-down
     const active = order.find((l) => l.id === m.activeLayerId);
@@ -346,7 +417,7 @@ export function createPlan(canvas, app) {
         let d = Infinity;
         const g = o.geometry;
         if (o.type === 'opening') { const q = openingPts(m, o); if (q && distToSeg(p, q.a, q.b).d < (q.w.props.thicknessIn * IN) / 2 + tol && dist(q.c, p) <= (o.props.widthIn * IN) / 2 + tol * 0.3) d = -0.001; }
-        else if (o.type === 'pier') d = Math.max(0, dist(g.c, p) - (o.props.diaIn * IN) / 2);
+        else if (o.type === 'pier') d = Math.max(0, dist(g.c, p) - (o.props.diaIn * IN) / 2) - tol * 0.6; // piers win over the grade beam under them
         else if (g && g.a && g.b) { d = distToSeg(p, g.a, g.b).d; if (o.type === 'wall') d = Math.max(0, d - (o.props.thicknessIn * IN) / 2); }
         else if (o.type === 'label') d = dist(g.c, p) - 1;
         else if (o.type === 'area' && g.pts) {
@@ -358,6 +429,14 @@ export function createPlan(canvas, app) {
       if (best) return { layerId: l.id, objectId: best.id };
     }
     return null;
+  }
+  /** nearest pier within tolPx (foundation layer shown), for the pier tool */
+  function hitPier(p, tolPx) {
+    const m = M(); const l = getLayer(m, 'foundation');
+    if (!layerDisplay(m, l).shown) return null;
+    let best = null, bd = tolPx / view.scale;
+    l.objects.forEach((o) => { if (o.type !== 'pier') return; const d = Math.max(0, dist(o.geometry.c, p) - (o.props.diaIn * IN) / 2); if (d < bd) { bd = d; best = o; } });
+    return best;
   }
   function hitVertex(p) {
     const fp = M().footprint; const tol = 14 / view.scale;
@@ -396,6 +475,7 @@ export function createPlan(canvas, app) {
     if (pointers.size === 2) {
       // second finger: cancel any single-finger op and start pinch/pan
       if (drag && drag.kind !== 'pan' && drag.commit === false) { /* noop */ }
+      if (drag && drag.kind === 'pier') { app.onPierDrag && app.onPierDrag(false); if (drag.moved) app.commit('foundation'); }
       drag = null; if (draft && draft.kind !== 'poly') draft = null;
       const [p1, p2] = Array.from(pointers.values());
       pinch = { d0: Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) || 1, s0: view.scale, mid: [(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2], ox: view.ox, oy: view.oy };
@@ -406,6 +486,20 @@ export function createPlan(canvas, app) {
     const m = M();
     if (e.button === 1 || e.button === 2) { drag = { kind: 'pan', sx: sp[0], sy: sp[1], ox: view.ox, oy: view.oy }; return; }
 
+    const touch = e.pointerType === 'touch' || e.pointerType === 'pen';
+    if (tool === 'pier') {
+      const fl = requireLayer((l) => l.kind === 'foundation', 'Make Foundation the active layer to place piers');
+      if (!fl) return;
+      const hp = hitPier(w, touch ? 14 : 8);
+      if (hp) { // tap an existing tube = select it (drag moves it), not a new drop
+        app.select({ layerId: 'foundation', objectId: hp.id }, true);
+        drag = { kind: 'pier', obj: hp, w0: w, c0: hp.geometry.c.slice(), moved: false, sx: sp[0], sy: sp[1] };
+        return;
+      }
+      const sn = snapPier(m, w, (touch ? PIERS.snapPxTouch : PIERS.snapPx) / view.scale);
+      draft = { kind: 'pier', c: sn.c, snap: sn.snap, diaIn: fl.params.placeDiaIn || 12, touch };
+      render(); return;
+    }
     if (tool === 'select') {
       const wl = getLayer(m, 'walls');
       const wallsEditable = m.activeLayerId === 'walls' && !wl.locked && layerDisplay(m, wl).shown;
@@ -413,12 +507,14 @@ export function createPlan(canvas, app) {
         const vi = hitVertex(w);
         if (vi >= 0) { drag = { kind: 'vertex', i: vi, start: m.footprint.map((p) => p.slice()), moved: false, sx: sp[0], sy: sp[1] }; return; }
       }
-      const hit = hitTest(w);
+      const hit = hitTest(w, touch ? 16 : 10);
       if (hit) {
-        app.select(hit);
         const obj = findObject(m, hit);
         const lay = getLayer(m, hit.layerId);
-        if (obj && !lay.locked && hit.layerId === 'walls' && obj.props.exterior && wallsEditable) {
+        app.select(hit, obj && obj.type === 'pier');   // piers edit in the floating pier panel, not the sheet
+        if (obj && obj.type === 'pier' && !lay.locked) {
+          drag = { kind: 'pier', obj, w0: w, c0: obj.geometry.c.slice(), moved: false, sx: sp[0], sy: sp[1] };
+        } else if (obj && !lay.locked && hit.layerId === 'walls' && obj.props.exterior && wallsEditable) {
           drag = { kind: 'edge', i: obj.geometry.edge, w0: w, start: m.footprint.map((p) => p.slice()), moved: false, sx: sp[0], sy: sp[1] };
         } else if (obj && !lay.locked && obj.type === 'opening') {
           drag = { kind: 'opening', obj, moved: false, sx: sp[0], sy: sp[1] };
@@ -469,6 +565,14 @@ export function createPlan(canvas, app) {
       if (drag.kind === 'pan') { if (moved) drag.tap = false; view.ox = drag.ox + sp[0] - drag.sx; view.oy = drag.oy + sp[1] - drag.sy; render(); return; }
       if (!moved && !drag.moved) return;
       drag.moved = true;
+      if (drag.kind === 'pier') {
+        const raw = [drag.c0[0] + w[0] - drag.w0[0], drag.c0[1] + w[1] - drag.w0[1]];
+        const sn = snapPier(m, raw, ((e.pointerType === 'touch') ? PIERS.snapPxTouch : PIERS.snapPx) / view.scale);
+        if (!drag.started) { drag.started = true; app.onPierDrag && app.onPierDrag(true); }
+        movePier(m, drag.obj, sn.c);   // first move converts an auto pier to manual
+        drag.snap = sn.snap;
+        render(); return;
+      }
       if (drag.kind === 'vertex') {
         const s = snap(w, { noPoints: true });
         m.footprint = drag.start.map((p) => p.slice()); m.footprint[drag.i] = [s[0], s[1]];
@@ -494,6 +598,12 @@ export function createPlan(canvas, app) {
       }
       return;
     }
+    if (tool === 'pier') {
+      const sn = snapPier(m, w, ((e.pointerType === 'touch') ? PIERS.snapPxTouch : PIERS.snapPx) / view.scale);
+      if (draft && draft.kind === 'pier') { draft.c = sn.c; draft.snap = sn.snap; hover = null; }
+      else if (e.pointerType === 'mouse') hover = sn.c;
+      render(); return;
+    }
     if (tool !== 'select') {
       hover = snap(w);
       if (draft && draft.kind === 'rect') draft.b = hover;
@@ -515,6 +625,11 @@ export function createPlan(canvas, app) {
     if (drag) {
       const d = drag; drag = null;
       if (d.kind === 'pan' && d.tap) app.select(null);
+      if (d.kind === 'pier') {
+        app.onPierDrag && app.onPierDrag(false);
+        if (!d.moved) { render(); app.revealPier && app.revealPier(d.obj); return; }
+        app.select({ layerId: 'foundation', objectId: d.obj.id }, true); app.commit('foundation'); return;
+      }
       if (d.moved) {
         if (d.kind === 'vertex') app.commit('footprint');
         else if (d.kind === 'edge') app.commit('walls');
@@ -523,6 +638,15 @@ export function createPlan(canvas, app) {
       render(); return;
     }
     if (!draft) return;
+    if (draft.kind === 'pier') {
+      const d = draft; draft = null;
+      const o = dropPier(m, d.c, { diaIn: d.diaIn });
+      app.select({ layerId: 'foundation', objectId: o.id }, true);
+      app.commit('foundation');
+      app.revealPier && app.revealPier(o);
+      app.toast(`Sonotube Ø${d.diaIn} in dropped${d.snap === 'grid' ? '' : ' on the wall line'} — drag it to adjust`);
+      return;
+    }
     if (draft.kind === 'rect') {
       const { a, b } = draft; draft = null;
       const w = Math.abs(b[0] - a[0]), h = Math.abs(b[1] - a[1]);
@@ -586,7 +710,7 @@ export function createPlan(canvas, app) {
   canvas.addEventListener('pointerdown', onDown);
   canvas.addEventListener('pointermove', onMove);
   canvas.addEventListener('pointerup', onUp);
-  canvas.addEventListener('pointercancel', (e) => { pointers.delete(e.pointerId); pinch = null; drag = null; });
+  canvas.addEventListener('pointercancel', (e) => { pointers.delete(e.pointerId); pinch = null; if (drag && drag.kind === 'pier') { app.onPierDrag && app.onPierDrag(false); if (drag.moved) app.commit('foundation'); } drag = null; if (draft && draft.kind === 'pier') draft = null; });
   canvas.addEventListener('wheel', onWheel, { passive: false });
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   canvas.addEventListener('dblclick', () => { if (tool === 'poly') finishPoly(); });
@@ -600,6 +724,14 @@ export function createPlan(canvas, app) {
 
   return {
     render, resize, fit, setTool, getTool: () => tool, finishPoly,
+    /** pan so plan point c is visible above a bottom panel of insetPx */
+    ensureVisible(c, insetPx = 0) {
+      const [x, y] = toScreen(c); const top = 130, bot = cssH - insetPx - 30;
+      if (bot <= top) return;
+      if (y > bot) view.oy -= (y - bot); else if (y < top) view.oy += (top - y);
+      if (x < 30) view.ox += 30 - x; else if (x > cssW - 30) view.ox -= x - (cssW - 30);
+      render();
+    },
     debug: { view, toScreen, toWorld },
   };
 }

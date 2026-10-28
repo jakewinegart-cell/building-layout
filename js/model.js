@@ -92,7 +92,20 @@ export function load() {
     if (!raw) return null;
     const m = JSON.parse(raw);
     if (!m || m.schema !== SCHEMA_VERSION || !Array.isArray(m.layers)) return null;
-    return m;
+    return migrate(m);
   } catch (e) { return null; }
 }
 export function clear() { try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* ignore */ } }
+
+/** Fill params added after a model was saved (v2 piers) without losing the user's work. */
+export function migrate(m) {
+  const f = m.layers.find((l) => l.id === 'foundation');
+  if (f) {
+    const p = f.params;
+    if (p.pierSpacingIn == null) p.pierSpacingIn = p.pierMaxSpacingFt != null ? Math.round(p.pierMaxSpacingFt * 12) : DEFAULTS.foundation.pierSpacingIn;
+    delete p.pierMaxSpacingFt;
+    Object.keys(DEFAULTS.foundation).forEach((k) => { if (!(k in p)) p[k] = clone(DEFAULTS.foundation[k]); });
+    if (!Array.isArray(p.deletedAutoSlots)) p.deletedAutoSlots = [];
+  }
+  return m;
+}

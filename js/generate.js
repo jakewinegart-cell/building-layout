@@ -1,9 +1,9 @@
 // Regeneration engine (spec §6): footprint → exterior walls → foundation → floor → roof,
 // plus elevation stacking. Any layer whose content changes because of an upstream
 // edit gets a visible note ("Updated from walls").
-import { LUMBER, LUMBER_T_IN, HEADER_EXAMPLE } from './config.js';
-import { offsetPolygon, bbox, scanline, isAxisRect, dist } from './geom.js';
-import { piersAlongLines, gableGeometry } from './homeplan-derived.js';
+import { LUMBER, LUMBER_T_IN, HEADER_EXAMPLE, PIERS } from './config.js';
+import { offsetPolygon, bbox, scanline, isAxisRect, dist, distToSeg, pointInPoly, fmtFtIn } from './geom.js';
+import { piersAlongLines, pierSlotKey, gableGeometry } from './homeplan-derived.js';
 import { getLayer } from './model.js';
 
 const IN = 1 / 12;
@@ -95,10 +95,20 @@ export function regenerate(m, source) {
   const footTop = footBot + f.footingDepthIn * IN;
   const lines = bearingLines(walls);
   const fo = [];
+  // Manual piers (dropped, or auto piers the user edited) survive every regeneration.
+  const manual = fnd.objects.filter((o) => o.type === 'pier' && !o.derivedFrom);
+  const skipSlots = new Set(f.deletedAutoSlots || []);
+  manual.forEach((o) => { if (o.props.autoSlot) skipSlots.add(o.props.autoSlot); });
   if (type === 'piers') {
-    const piers = piersAlongLines(lines, f.pierMaxSpacingFt);
+    const spFt = (Number(f.pierSpacingIn) || 72) * IN;
+    const piers = piersAlongLines(lines, spFt, f.pierSpacingMode === 'exact' ? 'exact' : 'max');
     const gbBot = topZ - f.gradeBeamDepthIn * IN;
-    piers.forEach((p, i) => fo.push({ id: `pier-${i}`, type: 'pier', derivedFrom: p.wallId, geometry: { c: p.c }, z: footBot, height: gbBot - footBot, props: { diaIn: f.pierDiaIn, label: `Pier Ø${f.pierDiaIn} in` } }));
+    piers.forEach((p) => {
+      const k = pierSlotKey(p.c);
+      if (skipSlots.has(k)) return;
+      if (manual.some((mp) => dist(mp.geometry.c, p.c) < PIERS.mergeFt)) return; // no tube on top of a manual one
+      fo.push({ id: `pa_${k.replace('|', '_')}`, type: 'pier', derivedFrom: p.wallId, geometry: { c: p.c }, z: footBot, height: gbBot - footBot, props: { diaIn: f.pierDiaIn, auto: true, label: `Sonotube Ø${f.pierDiaIn} in (auto)` } });
+    });
     lines.forEach((ln, i) => fo.push({ id: `gbeam-${i}`, type: 'beam', derivedFrom: ln.wallId, geometry: { a: ln.a, b: ln.b }, z: gbBot, height: f.gradeBeamDepthIn * IN, props: { role: 'gradeBeam', widthIn: f.gradeBeamWidthIn, label: 'Grade beam' } }));
   } else if (type === 'slab') {
     fo.push({ id: 'slab', type: 'area', derivedFrom: 'footprint', geometry: { pts: fp.map((p) => p.slice()) }, z: topZ - f.slabIn * IN, height: f.slabIn * IN, props: { role: 'slab', label: `${f.slabIn} in slab` } });
@@ -113,8 +123,27 @@ export function regenerate(m, source) {
     });
     if (type === 'basement') fo.push({ id: 'bslab', type: 'area', derivedFrom: 'footprint', geometry: { pts: fp.map((p) => p.slice()) }, z: wallBot, height: 4 * IN, props: { role: 'slab', label: 'Basement slab' } });
   }
+  // manual piers: elevation follows the layer defaults unless the user set top/depth; flag, never delete
+  const defTopIn = (type === 'piers' ? topZ - f.gradeBeamDepthIn * IN : topZ) / IN;
+  const defDepthIn = frostIn != null ? frostIn : f.placeholderFrostIn;
+  const wl = walls.objects.filter((o) => o.type === 'wall');
+  let nFlag = 0;
+  manual.forEach((o) => {
+    const top = o.props.topIn != null && o.props.topIn !== '' ? Number(o.props.topIn) : defTopIn;
+    const depth = o.props.depthIn != null && o.props.depthIn !== '' ? Number(o.props.depthIn) : defDepthIn;
+    o.z = -depth * IN; o.height = Math.max(1 * IN, (top + depth) * IN);
+    o.props.label = `Sonotube Ø${o.props.diaIn} in`;
+    const c = o.geometry.c;
+    const pf = [];
+    const edge = Math.min(...fp.map((a, i) => distToSeg(c, a, fp[(i + 1) % fp.length]).d));
+    if (!pointInPoly(c, fp) && edge > 0.01) pf.push(`outside the footprint (${fmtFtIn(edge)} out)`);
+    const near = wl.length ? Math.min(...wl.map((w) => distToSeg(c, w.geometry.a, w.geometry.b).d)) : Infinity;
+    if (o.props.onWall && near > PIERS.offWallTolFt) pf.push(`no longer under a wall line (${fmtFtIn(near)} away)`);
+    if (pf.length) { o.props.flags = pf; nFlag++; } else delete o.props.flags;
+  });
+  if (nFlag) flags.foundation.push(`${nFlag} manual pier(s) FLAGGED after a footprint/wall change (outside the footprint or off a wall line). They were kept, not deleted — move or delete them.`);
   fnd.objects = fo.concat(fnd.objects.filter((o) => !o.derivedFrom));
-  fnd.zBase = Math.min(footBot, ...fo.map((o) => o.z != null ? o.z : 0));
+  fnd.zBase = Math.min(footBot, ...fnd.objects.map((o) => o.z != null ? o.z : 0));
   fnd.zTop = topZ;
 
   // ---- Floor framing
