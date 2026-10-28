@@ -1,0 +1,531 @@
+{
+ "meta": {
+  "version": "wizard-v1",
+  "date": "2026-10-28",
+  "default_context": "20x16 example (content-v3/reference/example-20x16.model.json): footprint [[0,0],[20,0],[20,16],[0,16]], piers, 2x10@16 floor, 2x6@16 walls plate 8 ft, gable 4:12 2x8@24 12in overhang ridge E-W, door d1 on w-ext-2 (S) t=10, win1 on w-ext-0 (N) t=10, win2 on w-ext-1 (E) t=8, covering asphalt_shingle, no existing house unless stated",
+  "how_to_run": "(1) LLM parse check: send phrase + model summary + llm_tools; compare tool/intent/slots. (2) Deterministic check: feed expected slots to the resolver/validator; compare expected_change and validations on a structuredClone after regenerate().",
+  "money": "All $ EXAMPLE (content-v3 snapshot 2026-10-28, not Denver)."
+ },
+ "tests": [
+  {
+   "id": "T01",
+   "phrase": "put the roof higher at one end so it goes from 10ft to 8feet",
+   "context": "default",
+   "tool": "ask_clarification",
+   "intent": "roof.make_shed",
+   "slots": {
+    "highHeight": "10ft",
+    "lowHeight": "8feet",
+    "highSide": "one end",
+    "heightMeaning": "wall"
+   },
+   "clarification": {
+    "question": "Which side is the high (10 ft) side?",
+    "options": [
+     "North (back) · 1.5:12",
+     "South (front) · 1.5:12",
+     "East · 1.2:12",
+     "West · 1.2:12"
+    ]
+   },
+   "followup": {
+    "answer": "North (back) · 1.5:12",
+    "tool": "propose_edit",
+    "expected_change": {
+     "roof.params.shape": "shed",
+     "roof.params.shed": {
+      "highWallId": "w-ext-0",
+      "highPlateFt": 10,
+      "lowPlateFt": 8
+     },
+     "roof.params.pitch": 1.5,
+     "w-ext-0.props.plateHeightFt": 10,
+     "w-ext-1.props": {
+      "plateHeightFt": 10,
+      "plateHeightEndFt": 8
+     },
+     "w-ext-3.props": {
+      "plateHeightFt": 8,
+      "plateHeightEndFt": 10
+     },
+     "w-ext-2": "8 (default)",
+     "rafters": "24 -> 12, length 18.14 ft, zA 11.333 zB 13.583",
+     "ridge": "removed"
+    },
+    "validations": [
+     "V-ROOF-01 block (asphalt 2:12 min, IRC R905.2.2) -> covering chips",
+     "V-ROOF-05 warn (span ~15.5 ft)",
+     "V-ROOF-04 info",
+     "V-ROOF-07 info",
+     "V-WALL-01 pass (115.5 in studs)",
+     "V-GEN-SHED block if shed generation not built"
+    ]
+   },
+   "expected_change": "none until the side is answered",
+   "validations": []
+  },
+  {
+   "id": "T02",
+   "phrase": "put the roof higher at one end so it goes from 10ft to 8feet",
+   "context": "default + site existing house touching the north wall (or m.attachToExistingWallId='w-ext-0')",
+   "tool": "ask_clarification",
+   "intent": "roof.make_shed",
+   "slots": {
+    "highHeight": "10ft",
+    "lowHeight": "8feet",
+    "highSide": "one end"
+   },
+   "clarification": {
+    "question": "High side against the house, sloping away?",
+    "options": [
+     "Yes, high at house (recommended)",
+     "No, pick another side"
+    ]
+   },
+   "followup": {
+    "answer": "Yes",
+    "expected_change": "same as T01 followup (high = w-ext-0)",
+    "validations": [
+     "as T01",
+     "V-ATTACH-01 warn"
+    ]
+   },
+   "expected_change": "none until confirmed",
+   "validations": []
+  },
+  {
+   "id": "T03",
+   "phrase": "shed roof, 10 ft on the east wall down to 8 on the west",
+   "context": "default",
+   "tool": "propose_edit",
+   "intent": "roof.make_shed",
+   "slots": {
+    "highHeight": "10 ft",
+    "lowHeight": "8",
+    "highSide": "east"
+   },
+   "expected_change": {
+    "roof.params.shape": "shed",
+    "roof.params.shed": {
+     "highWallId": "w-ext-1",
+     "highPlateFt": 10,
+     "lowPlateFt": 8
+    },
+    "roof.params.pitch": 1.2,
+    "rake walls": "w-ext-0 (N) and w-ext-2 (S), 20 ft each",
+    "rafters": "10 @ 22.11 ft"
+   },
+   "validations": [
+    "V-ROOF-01 block",
+    "V-ROOF-06 warn (22.6 ft > 20 ft stock)",
+    "V-ROOF-05 warn (~19.5 ft span)"
+   ]
+  },
+  {
+   "id": "T04",
+   "phrase": "make it metal standing seam",
+   "context": "after T01 pending/applied (shed 1.5:12)",
+   "tool": "propose_edit",
+   "intent": "roof.set_covering",
+   "slots": {
+    "covering": "metal_standing_seam"
+   },
+   "expected_change": {
+    "roof.params.roofing.covering": "metal_standing_seam",
+    "takeoff": "shingles/starter/roofing nails/ridge cap lines removed; standing seam line 'needs a price'"
+   },
+   "validations": [
+    "V-ROOF-01 pass (1.5 >= 0.25, R905.10.2 item 3)",
+    "V-ROOF-03 warn",
+    "V-PRICE-MISSING info"
+   ]
+  },
+  {
+   "id": "T05",
+   "phrase": "what pitch is that?",
+   "context": "after T01 applied",
+   "tool": "answer_question",
+   "intent": "ask.value",
+   "slots": {
+    "topic": "roof pitch"
+   },
+   "followup": {
+    "expected_answer": "1.5:12 (about 7.1°, 12.5%): 10 ft at the north wall down to 8 ft at the south wall over 16 ft. On wall centerlines it's 1.54:12."
+   },
+   "expected_change": "none",
+   "validations": []
+  },
+  {
+   "id": "T06",
+   "phrase": "what pitch is that?",
+   "context": "default",
+   "tool": "answer_question",
+   "intent": "ask.value",
+   "slots": {
+    "topic": "roof pitch"
+   },
+   "followup": {
+    "expected_answer": "4:12 (about 18.4°). The roof rises 2' 8\" to the ridge, which runs east–west."
+   },
+   "expected_change": "none",
+   "validations": []
+  },
+  {
+   "id": "T07",
+   "phrase": "can I still use shingles?",
+   "context": "shed 1.5:12",
+   "tool": "answer_question",
+   "intent": "ask.code",
+   "slots": {
+    "topic": "asphalt shingles min slope"
+   },
+   "followup": {
+    "expected_answer": "No. Asphalt shingles need at least 2:12 (IRC R905.2.2), plus double underlayment up to 4:12. Raise the high wall to 10' 8\" for 2:12, or use standing-seam metal or a membrane."
+   },
+   "expected_change": "none",
+   "validations": []
+  },
+  {
+   "id": "T08",
+   "phrase": "make the roof steeper so I can keep shingles",
+   "context": "shed 1.5:12, high north",
+   "tool": "propose_edit",
+   "intent": "roof.set_pitch",
+   "slots": {
+    "relative": "steeper",
+    "pitch": "min for asphalt_shingle"
+   },
+   "clarification": {
+    "question": "Raise the high wall or lower the low wall?",
+    "options": [
+     "Raise north wall to 10' 8\" (2:12)",
+     "Lower south wall to 7' 4\" (2:12)"
+    ]
+   },
+   "expected_change": "ask which wall moves; default chip 'Raise high wall to 10\\' 8\\\" (2:12)' -> roof.params.shed.highPlateFt 10.667, pitch 2.0, rake walls 10.667->8",
+   "validations": [
+    "V-ROOF-02 warn (double underlayment 2:12-4:12)",
+    "V-WALL-01 warn (10' 8\" plate -> ~123.5 in studs > 120 in, Table R602.3(5))"
+   ]
+  },
+  {
+   "id": "T09",
+   "phrase": "make the walls 9 feet",
+   "context": "default",
+   "tool": "propose_edit",
+   "intent": "walls.set_height",
+   "slots": {
+    "height": "9 feet"
+   },
+   "expected_change": {
+    "walls.params.plateHeightFt": 9,
+    "studs": "92-5/8 -> 104-5/8 precut (lumber_2x6_stud104)",
+    "roof": "gable raised 1 ft"
+   },
+   "validations": [
+    "V-WALL-01 pass"
+   ]
+  },
+  {
+   "id": "T10",
+   "phrase": "raise the north wall to 10'",
+   "context": "default",
+   "tool": "ask_clarification",
+   "intent": "walls.set_height",
+   "slots": {
+    "height": "10'",
+    "wall": "north"
+   },
+   "clarification": {
+    "question": "Make it a shed roof, or raise all walls?",
+    "options": [
+     "Shed: north 10', south 8' (1.5:12)",
+     "Raise all walls to 10'"
+    ]
+   },
+   "expected_change": "none yet",
+   "validations": []
+  },
+  {
+   "id": "T11",
+   "phrase": "move the east wall out 2 feet",
+   "context": "default",
+   "tool": "propose_edit",
+   "intent": "walls.move_exterior",
+   "slots": {
+    "wall": "east",
+    "distance": "2 feet",
+    "direction": "out"
+   },
+   "expected_change": {
+    "m.footprint": "[[0,0],[22,0],[22,16],[0,16]]",
+    "walls": "w-ext-0/w-ext-2 22 ft",
+    "piers": "auto re-laid",
+    "win2 on w-ext-1": "kept (same wall id, moved with it)"
+   },
+   "validations": [
+    "V-SITE-01 check",
+    "V-FND-02 if manual piers"
+   ]
+  },
+  {
+   "id": "T12",
+   "phrase": "make it 24 by 16",
+   "context": "default",
+   "tool": "ask_clarification",
+   "intent": "footprint.resize",
+   "slots": {
+    "width": "24",
+    "depth": "16"
+   },
+   "clarification": {
+    "question": "Which way should it grow?",
+    "options": [
+     "East",
+     "West",
+     "Both sides evenly"
+    ]
+   },
+   "followup": {
+    "answer": "East",
+    "expected_change": {
+     "m.footprint": [
+      [
+       0,
+       0
+      ],
+      [
+       24,
+       0
+      ],
+      [
+       24,
+       16
+      ],
+      [
+       0,
+       16
+      ]
+     ]
+    },
+    "validations": [
+     "V-FND-03 (span still 16 ft -> mid beam flag)"
+    ]
+   },
+   "expected_change": "none yet",
+   "validations": []
+  },
+  {
+   "id": "T13",
+   "phrase": "add a 36 inch window on the west wall",
+   "context": "default",
+   "tool": "propose_edit",
+   "intent": "openings.add",
+   "slots": {
+    "kind": "window",
+    "wall": "west",
+    "width": "36 inch"
+   },
+   "expected_change": {
+    "new opening": {
+     "type": "opening",
+     "geometry": {
+      "wallId": "w-ext-3",
+      "t": "≈7.77 (centered on 15.54 ft centerline)"
+     },
+     "props": {
+      "kind": "window",
+      "widthIn": 36,
+      "heightIn": 48,
+      "sillIn": 30,
+      "header": "2-2x6 (EXAMPLE)"
+     }
+    }
+   },
+   "validations": [
+    "V-WALL-02 info (EXAMPLE header)",
+    "V-WALL-03 pass"
+   ]
+  },
+  {
+   "id": "T14",
+   "phrase": "move the door 3 ft to the left",
+   "context": "default",
+   "tool": "propose_edit",
+   "intent": "openings.move",
+   "slots": {
+    "opening": "the door",
+    "distance": "3 ft",
+    "direction": "left"
+   },
+   "expected_change": {
+    "d1.geometry.t": "10 -> 13 (seen from outside the south wall, left = west; w-ext-2 runs east->west from (20,16), so t increases)"
+   },
+   "validations": [
+    "V-WALL-03",
+    "V-WALL-04 if within 2 ft of corner"
+   ]
+  },
+  {
+   "id": "T15",
+   "phrase": "make the door 8 feet wide",
+   "context": "default",
+   "tool": "propose_edit",
+   "intent": "openings.resize",
+   "slots": {
+    "opening": "the door",
+    "width": "8 feet"
+   },
+   "expected_change": {
+    "d1.props.widthIn": 96,
+    "d1.props.header": "2-2x12 (verify — long span)"
+   },
+   "validations": [
+    "V-WALL-02 warn (>72 in, engineered header)",
+    "V-WALL-03 check"
+   ]
+  },
+  {
+   "id": "T16",
+   "phrase": "remove the window on the east wall",
+   "context": "default",
+   "tool": "propose_edit",
+   "intent": "openings.remove",
+   "slots": {
+    "opening": "window on the east wall"
+   },
+   "expected_change": {
+    "removed": "win2"
+   },
+   "validations": []
+  },
+  {
+   "id": "T17",
+   "phrase": "add a pier under the middle of the floor",
+   "context": "default",
+   "tool": "propose_edit",
+   "intent": "foundation.add_pier",
+   "slots": {
+    "location": "middle of the floor"
+   },
+   "clarification": {
+    "question": "Piers only go under walls. Want one of these instead?",
+    "options": [
+     "2x12 joists, no mid beam",
+     "Add a bearing wall there",
+     "Cancel"
+    ]
+   },
+   "expected_change": "blocked; no change",
+   "validations": [
+    "V-FND-01 block"
+   ]
+  },
+  {
+   "id": "T18",
+   "phrase": "frost depth is 36 inches",
+   "context": "default",
+   "tool": "propose_edit",
+   "intent": "foundation.set_params",
+   "slots": {
+    "frostDepth": "36 inches"
+   },
+   "expected_change": {
+    "foundation.params.frostDepthIn": 36,
+    "piers": "54 in tall",
+    "takeoff": "EXAMPLE +$213.63 total per content-v3 pricing-rules variant"
+   },
+   "validations": [
+    "V-FND-04 cleared"
+   ]
+  },
+  {
+   "id": "T19",
+   "phrase": "switch to 2x12 joists so I don't need the middle beam",
+   "context": "default",
+   "tool": "propose_edit",
+   "intent": "floor.set_framing",
+   "slots": {
+    "joistSize": "2x12"
+   },
+   "expected_change": {
+    "floor.params.joistSize": "2x12",
+    "mid beam": "removed only if clear-span accepted (content-v3 2x12 clear-span variant, verify span table)",
+    "takeoff": "EXAMPLE −$194.64 total per content-v3 pricing-rules"
+   },
+   "validations": [
+    "V-FND-03 note: verify span table"
+   ]
+  },
+  {
+   "id": "T20",
+   "phrase": "what does this cost?",
+   "context": "default",
+   "tool": "answer_question",
+   "intent": "ask.cost",
+   "slots": {
+    "scope": "total"
+   },
+   "followup": {
+    "expected_answer": "Materials about $8,019.75, total about $9,628.92 with EXAMPLE 9.15% tax and 10% contingency (content-v3 example). Home Depot online snapshot 10/28/2026, not a Denver store. Ready-mix and the door are estimates. Re-computed live from the current model in the app."
+   },
+   "expected_change": "none",
+   "validations": []
+  },
+  {
+   "id": "T21",
+   "phrase": "why do I need a grade beam?",
+   "context": "default",
+   "tool": "answer_question",
+   "intent": "ask.why",
+   "slots": {
+    "topic": "grade beam"
+   },
+   "followup": {
+    "expected_answer": "Your piers sit only under the walls and at corners, never mid-span. The grade beam runs along those wall lines, ties the piers together and carries the wall between them."
+   },
+   "expected_change": "none",
+   "validations": []
+  },
+  {
+   "id": "T22",
+   "phrase": "undo",
+   "context": "default",
+   "tool": "meta",
+   "intent": "meta.undo",
+   "slots": {},
+   "expected_change": "restore the snapshot from before the last applied change; regenerate(model,'init'); toast 'Undid: …'",
+   "validations": []
+  },
+  {
+   "id": "T23",
+   "phrase": "make it a hip roof",
+   "context": "default",
+   "tool": "propose_edit",
+   "intent": "roof.set_shape",
+   "slots": {
+    "shape": "hip"
+   },
+   "expected_change": "blocked; no change",
+   "validations": [
+    "V-ROOF-08 block"
+   ]
+  },
+  {
+   "id": "T24",
+   "phrase": "tax here is 8.81%",
+   "context": "default",
+   "tool": "propose_edit",
+   "intent": "estimate.set",
+   "slots": {
+    "taxRatePct": "8.81"
+   },
+   "expected_change": {
+    "m.estimate.taxRatePct": 8.81
+   },
+   "validations": [
+    "V-RANGE pass"
+   ]
+  }
+ ]
+}

@@ -11,6 +11,7 @@ import { getLayer } from './model.js';
 import { regenerate } from './generate.js';
 import { takeoff as placeholderTakeoff, measure } from './takeoff.js';
 import { applyRoofingFixes, withFixPrices } from './roofing-fixes.js';
+import { applyRoofV4 } from './roof-takeoff.js';
 
 const r2 = (x) => Math.round(x * 100) / 100;
 export const GROUPS = [
@@ -45,7 +46,10 @@ export function runEstimate(m, C, optsOverride = {}) {
     withFixPrices(C.prices);
     const r = C.engine.takeoff(mm, C.rules, C.prices, opts);
     // Remodel Guide roofing fixes (ice-barrier courses, 19/32 at 24 in o.c., double underlayment 2:12–<4:12)
-    if (!optsOverride.noRoofingFixes) applyRoofingFixes(r, getLayer(mm, 'roof').params, C.prices.prices, { defaults: C.rules.defaults, hoverCopy: C.engine.hoverCopy });
+    // v4: full roofing-v1 roof takeoff for a shed (always) or when the Roof steps turned it on; else the v3 fixes
+    const rpp = getLayer(mm, 'roof').params;
+    if (rpp.shape === 'shed' || rpp.takeoffV4) applyRoofV4(r, mm, C.prices.prices, { iceBarrier: opts.iceBarrier, spans: C.spans });
+    else if (!optsOverride.noRoofingFixes) applyRoofingFixes(r, rpp, C.prices.prices, { defaults: C.rules.defaults, hoverCopy: C.engine.hoverCopy });
     const P = C.prices.prices;
     const lines = r.lines.map((l) => {
       const p = l.price_ref ? P[l.price_ref] : null;
@@ -65,7 +69,7 @@ export function runEstimate(m, C, optsOverride = {}) {
       jurisdiction: J,
       totals: { materials: t.materials, fromEstimates: t.materials_from_estimated_prices, unpriced: t.unpriced_lines, taxSet: t.taxSource ? t.taxSource !== 'unknown' : taxSet, taxSource: t.taxSource || (taxSet ? 'user' : 'unknown'), taxRatePct: (t.taxSource ? t.taxSource !== 'unknown' : taxSet) ? t.taxRatePct : null, tax: t.tax, contingencyPct: t.contingencyPct, contingency: t.contingency, delivery: t.delivery, labor: t.labor === 'not included' ? null : t.labor, total: t.total },
       snapshotDate: C.snapshotDate, raw: r,
-      pieces: r.pieces || [], fasteners: r.fasteners || null, roofingFixes: r.roofingFixes || [],
+      pieces: r.pieces || [], fasteners: r.fasteners || null, roofingFixes: r.roofingFixes || [], roofV4: r.roofV4 || null,
     };
   }
   // placeholder engine

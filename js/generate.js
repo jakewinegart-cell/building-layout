@@ -3,7 +3,8 @@
 // edit gets a visible note ("Updated from walls").
 import { LUMBER, LUMBER_T_IN, HEADER_EXAMPLE, PIERS, pierDepthIn } from './config.js';
 import { offsetPolygon, bbox, scanline, isAxisRect, dist, distToSeg, pointInPoly, fmtFtIn } from './geom.js';
-import { piersAlongLines, pierSlotKey, gableGeometry } from './homeplan-derived.js';
+import { piersAlongLines, pierSlotKey, gableGeometry, shedGeometry } from './homeplan-derived.js';
+import { shedFrame, wallIdForSide, edgeSide, wallEdge, fmtPitch, r2 as rr2 } from './roof-calc.js';
 import { getLayer } from './model.js';
 
 const IN = 1 / 12;
@@ -184,19 +185,69 @@ export function regenerate(m, source) {
   floor.objects = flo.concat(floor.objects.filter((o) => !o.derivedFrom));
   floor.zBase = topZ; floor.zTop = floorTop;
 
-  // ---- Walls elevation
-  walls.zBase = floorTop; walls.zTop = floorTop + wp.plateHeightFt;
-  walls.objects.forEach((o) => { if (o.type === 'wall') { o.z = walls.zBase; o.height = wp.plateHeightFt; } });
+  // ---- Walls elevation (v4: a shed gives the exterior walls their own plate heights; rake walls slope)
+  const rp = roof.params;
+  const isShed = rp.shape === 'shed';
+  let SF = null;
+  if (isShed) {
+    if (!rp.shed || typeof rp.shed !== 'object') rp.shed = {};
+    const sh = rp.shed;
+    if (!sh.highWallId || wallEdge(sh.highWallId) < 0 || wallEdge(sh.highWallId) >= fp.length) sh.highWallId = m.attachToExistingWallId || wallIdForSide(fp, 'N') || 'w-ext-0';
+    if (!(Number(sh.lowPlateFt) > 0)) sh.lowPlateFt = wp.plateHeightFt;
+    if (!(Number(sh.highPlateFt) > 0)) sh.highPlateFt = sh.lowPlateFt + 2;
+    SF = shedFrame(fp, sh.highWallId, sh.highPlateFt, sh.lowPlateFt);
+    rp.pitch = Math.round(SF.pitch * 10000) / 10000; // derived; heights are the source of truth
+  }
+  const maxPlate = isShed ? Math.max(rp.shed.highPlateFt, rp.shed.lowPlateFt, wp.plateHeightFt) : wp.plateHeightFt;
+  walls.zBase = floorTop; walls.zTop = floorTop + maxPlate;
+  walls.objects.forEach((o) => {
+    if (o.type !== 'wall') return;
+    o.z = walls.zBase;
+    if (isShed && o.props.exterior) {
+      // heights at the wall's extended ends (outside faces): exact high/low at the faces, linear between
+      const t = (o.props.thicknessIn || 5.5) * IN / 2; const a = o.geometry.a, b = o.geometry.b; const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+      const ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L;
+      const side = edgeSide(fp, wallEdge(o.id));
+      let hA = SF.plateAt([a[0] - ux * t, a[1] - uy * t]), hB = SF.plateAt([b[0] + ux * t, b[1] + uy * t]);
+      if (side === SF.highSide) hA = hB = rp.shed.highPlateFt; else if (side === SF.lowSide) hA = hB = rp.shed.lowPlateFt;
+      const snap = (h) => Math.round(h * 1e4) / 1e4;
+      o.props.plateHeightFt = snap(hA); o.props.plateHeightEndFt = snap(hB); o.props.extEndFt = t;
+      o.height = Math.max(hA, hB);
+    } else {
+      delete o.props.plateHeightFt; delete o.props.plateHeightEndFt; delete o.props.extEndFt;
+      o.height = wp.plateHeightFt;
+    }
+  });
   m.levels[0].floorZ = floorTop;
 
-  // ---- Roof (gable over the footprint's bounding rectangle in v1)
-  const rp = roof.params;
   const ro = [];
+  const rd = LUMBER[rp.rafterSize] * IN;
+  const oc = rp.rafterOcIn * IN;
+  if (isShed) {
+    // ---- Shed: one plane, rafters low eave tip → high eave tip, end stations are barge rafters, no ridge
+    const g = shedGeometry(SF.run, floorTop + rp.shed.lowPlateFt, floorTop + rp.shed.highPlateFt, rp.overhangIn);
+    const ohr = (Number(rp.rakeOverhangIn) || 0) * IN;
+    const alongX = SF.axis === 'y'; // slope runs along y → rafters along y, stations along x
+    const A0 = (alongX ? fb.minX : fb.minY) - ohr, A1 = (alongX ? fb.maxX : fb.maxY) + ohr;
+    const hiC = { N: fb.minY, S: fb.maxY, W: fb.minX, E: fb.maxX }[SF.highSide], loC = { N: fb.minY, S: fb.maxY, W: fb.minX, E: fb.maxX }[SF.lowSide];
+    const sgn = hiC < loC ? -1 : 1; const CH = hiC + sgn * g.oh, CL = loC - sgn * g.oh;
+    const P = (along, cross) => (alongX ? [along, cross] : [cross, along]);
+    const stations = []; for (let s0 = A0; s0 < A1 - 0.05; s0 += oc) stations.push(s0); stations.push(A1);
+    stations.forEach((s0, k) => ro.push({ id: `rafter-${k}`, type: 'rafter', derivedFrom: 'roof', geometry: { a: P(s0, CL), b: P(s0, CH) }, z: g.eaveLowZ, height: rd, props: { zA: g.eaveLowZ, zB: g.eaveHighZ, size: rp.rafterSize, widthIn: LUMBER_T_IN, role: k === 0 || k === stations.length - 1 ? 'barge' : 'common', label: `${k === 0 || k === stations.length - 1 ? 'Barge rafter' : 'Rafter'} ${rp.rafterSize} @ ${rp.rafterOcIn} in o.c.` } }));
+    ro.push({ id: 'roof-outline', type: 'area', derivedFrom: 'walls', geometry: { pts: [P(A0, CL), P(A1, CL), P(A1, CH), P(A0, CH)] }, z: g.eaveLowZ, height: 0, props: { role: 'outline', label: 'Roof outline' } });
+    ro.push({ id: 'roof-high-edge', type: 'line', derivedFrom: 'roof', geometry: { a: P(A0, CH), b: P(A1, CH) }, z: g.eaveHighZ, height: 0, props: { role: 'eave', label: 'High eave' } });
+    ro.push({ id: 'roof-pitch', type: 'label', derivedFrom: 'roof', geometry: { c: P((A0 + A1) / 2, (CH + CL) / 2) }, props: { text: fmtPitch(rp.pitch), arrow: alongX ? 'y' : 'x', down: SF.lowSide, dir: sgn } });
+    roof.objects = ro.concat(roof.objects.filter((o) => !o.derivedFrom));
+    roof.zBase = floorTop + Math.min(rp.shed.lowPlateFt, rp.shed.highPlateFt); roof.zTop = g.eaveHighZ + rd;
+    roof.params.computed = { shed: true, ridgeAlongX: alongX, shedAxis: SF.axis, highEdge: SF.highEdge, highSide: SF.highSide, lowSide: SF.lowSide, rise: g.rise, highZ: g.highZ, lowZ: g.lowZ, eaveLowZ: g.eaveLowZ, eaveHighZ: g.eaveHighZ, runFt: SF.run, ridgeZ: g.eaveHighZ };
+    if (!isAxisRect(fp)) flags.roof.push('Non-rectangular footprint: the shed is drawn over the bounding rectangle. Check / edit manually.');
+    flags.roof.push(`Shed: ${fmtFtIn(rp.shed.highPlateFt)} ${({ N: 'north', S: 'south', E: 'east', W: 'west' })[SF.highSide]} wall down to ${fmtFtIn(rp.shed.lowPlateFt)} ${({ N: 'north', S: 'south', E: 'east', W: 'west' })[SF.lowSide]} wall over ${fmtFtIn(SF.run)} = ${fmtPitch(rp.pitch)}.`);
+    flags.roof.push('Interior walls keep the wall layer plate height; they are not sloped.');
+  } else {
+  // ---- Roof (gable over the footprint's bounding rectangle in v1)
   const ridgeAlongX = rp.ridge === 'long' ? fb.w >= fb.h : fb.w < fb.h;
   const span = ridgeAlongX ? fb.h : fb.w;
   const g = gableGeometry(span, rp.pitch, rp.overhangIn, walls.zTop);
-  const rd = LUMBER[rp.rafterSize] * IN;
-  const oc = rp.rafterOcIn * IN;
   const A0 = (ridgeAlongX ? fb.minX : fb.minY) - g.oh, A1 = (ridgeAlongX ? fb.maxX : fb.maxY) + g.oh;
   const C0 = (ridgeAlongX ? fb.minY : fb.minX) - g.oh, C1 = (ridgeAlongX ? fb.maxY : fb.maxX) + g.oh, Cm = ridgeAlongX ? fb.cy : fb.cx;
   const P = (along, cross) => (ridgeAlongX ? [along, cross] : [cross, along]);
@@ -209,13 +260,14 @@ export function regenerate(m, source) {
   });
   ro.push({ id: 'ridge', type: 'beam', derivedFrom: 'roof', geometry: { a: P(A0, Cm), b: P(A1, Cm) }, z: g.ridgeZ, height: rd + 1.5 * IN, props: { role: 'ridge', widthIn: LUMBER_T_IN, label: 'Ridge board' } });
   ro.push({ id: 'roof-outline', type: 'area', derivedFrom: 'walls', geometry: { pts: [P(A0, C0), P(A1, C0), P(A1, C1), P(A0, C1)] }, z: g.eaveTipZ, height: 0, props: { role: 'outline', label: 'Roof outline' } });
-  ro.push({ id: 'roof-pitch', type: 'label', derivedFrom: 'roof', geometry: { c: P((A0 + A1) / 2, (C0 + Cm) / 2) }, props: { text: `${rp.pitch}:12`, arrow: ridgeAlongX ? 'y' : 'x' } });
+  ro.push({ id: 'roof-pitch', type: 'label', derivedFrom: 'roof', geometry: { c: P((A0 + A1) / 2, (C0 + Cm) / 2) }, props: { text: `${Math.round(rp.pitch * 100) / 100}:12`, arrow: ridgeAlongX ? 'y' : 'x' } });
   roof.objects = ro.concat(roof.objects.filter((o) => !o.derivedFrom));
   roof.zBase = walls.zTop; roof.zTop = g.ridgeZ + rd;
   roof.params.computed = { ridgeAlongX, rise: g.rise, ridgeZ: g.ridgeZ };
   if (!isAxisRect(fp)) flags.roof.push('Non-rectangular footprint: v1 roof is a gable over the bounding rectangle. Check / edit manually.');
-  if (rp.shape !== 'gable') flags.roof.push('Only gable is generated in v1; shed and hip are coming.');
+  if (rp.shape !== 'gable') flags.roof.push(`A ${String(rp.shape).replace('_', '-')} roof isn't drawn yet: showing a gable. Gable and shed are generated.`);
   flags.roof.push('Gable-end wall framing is not generated yet.');
+  }
 
   // ---- custom layers keep their own z; stubs sit on top of the roof
   m.layers.forEach((l) => { if (flags[l.id]) l.flags = flags[l.id]; });

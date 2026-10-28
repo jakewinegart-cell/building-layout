@@ -1,0 +1,962 @@
+{
+ "generated": "roofing-v1 reference, 2026-10-28",
+ "inputs": {
+  "footprint": {
+   "alongHouseFt": 20,
+   "outFromHouseFt": 16,
+   "note": "20 ft wall against the house, 16 ft out (wizard option A)."
+  },
+  "walls": {
+   "plateHeightFt": 8,
+   "studSize": "2x6",
+   "thicknessIn": 5.5
+  },
+  "snow": {
+   "pgAsdPsfEXAMPLE": 50,
+   "sensitivity": [
+    30,
+    70
+   ],
+   "source": "UNVERIFIED site value. content-v4/jurisdictions.json: ground snow site-specific/unverified; min roof snow 30 psf (MT R301.6); ice barrier required statewide. Get pg from https://snowload.montana.edu/ or the ASCE 7 Hazard Tool (x0.7 if strength-level)."
+  },
+  "existing": {
+   "pitchEXAMPLE": 4,
+   "roofTopAtWallFtEXAMPLE": 8.5,
+   "eaveUndersideAtWallFtEXAMPLE": 7.9,
+   "overhangFtEXAMPLE": 1,
+   "ridgeDistFromWallFtEXAMPLE": 14,
+   "note": "Heights above the HOUSE floor (= addition floor when flush). Measure: existing pitch, height to underside of eave at the wall, height to top of roof at the wall line, overhang, distance wall->ridge (half the home width for a centered ridge)."
+  },
+  "roof": {
+   "overhangIn": 12,
+   "rafterOcIn": 24,
+   "seatIn": 3.5
+  }
+ },
+ "variants": {
+  "shed_house_high": {
+   "S1_jakes_10_to_8_under_eave": {
+    "label": "Jake's command: high wall 10 ft at house, low wall 8 ft, slopes away",
+    "highPlateFt": 10,
+    "lowPlateFt": 8,
+    "pitch": 1.5,
+    "degrees": 7.13,
+    "percent": 12.5,
+    "heel": {
+     "hapIn": 10.9,
+     "notchPerpIn": 0.43,
+     "remainPerpIn": 10.82,
+     "plumbCutIn": 11.34,
+     "warnings": []
+    },
+    "roofTopAtHouseWallFt": 10.96,
+    "eaveUndersideNeededFt": 11.37,
+    "eaveUndersideExampleFt": 7.9,
+    "fitsUnderEave": false,
+    "shortByFt": 3.47,
+    "coveringOK": {
+     "asphalt_shingle": false,
+     "roll_roofing": true,
+     "metal_panel_lapped": false,
+     "metal_panel_lapped_sealant": true,
+     "metal_standing_seam": true,
+     "modified_bitumen": true,
+     "single_ply": true
+    },
+    "rafter": {
+     "size": "2x12",
+     "table": "TABLE R802.4.1(5)",
+     "spanFt": 17.5,
+     "raw": "17-6",
+     "tableSnow": 50
+    },
+    "rafterChecks": [
+     {
+      "pg": 30,
+      "2x12@16": {
+       "table": "TABLE R802.4.1(3)",
+       "spanFt": 21.42,
+       "raw": "21-5",
+       "tableSnow": 30
+      },
+      "2x12@24": {
+       "table": "TABLE R802.4.1(3)",
+       "spanFt": 17.5,
+       "raw": "17-6",
+       "tableSnow": 30
+      },
+      "2x10@16": {
+       "table": "TABLE R802.4.1(3)",
+       "spanFt": 18.42,
+       "raw": "18-5",
+       "tableSnow": 30
+      },
+      "need": 15.54
+     },
+     {
+      "pg": 50,
+      "2x12@16": {
+       "table": "TABLE R802.4.1(5)",
+       "spanFt": 17.5,
+       "raw": "17-6",
+       "tableSnow": 50
+      },
+      "2x12@24": {
+       "table": "TABLE R802.4.1(5)",
+       "spanFt": 14.25,
+       "raw": "14-3",
+       "tableSnow": 50
+      },
+      "2x10@16": {
+       "table": "TABLE R802.4.1(5)",
+       "spanFt": 15.08,
+       "raw": "15-1",
+       "tableSnow": 50
+      },
+      "need": 15.54
+     },
+     {
+      "pg": 70,
+      "2x12@16": {
+       "table": "TABLE R802.4.1(7)",
+       "spanFt": 15.17,
+       "raw": "15-2",
+       "tableSnow": 70
+      },
+      "2x12@24": {
+       "table": "TABLE R802.4.1(7)",
+       "spanFt": 12.33,
+       "raw": "12-4",
+       "tableSnow": 70
+      },
+      "2x10@16": {
+       "table": "TABLE R802.4.1(7)",
+       "spanFt": 13.08,
+       "raw": "13-1",
+       "tableSnow": 70
+      },
+      "need": 15.54
+     }
+    ]
+   },
+   "S2_max_under_eave": [
+    {
+     "floorDropFt": 0,
+     "lowPlateFt": 7,
+     "zHiMaxFt": 7.48,
+     "zLowFt": 7.99,
+     "pitch": -0.38,
+     "degrees": 0,
+     "feasible": false,
+     "heel": {
+      "hapIn": 11.25,
+      "notchPerpIn": 0,
+      "remainPerpIn": 11.25,
+      "plumbCutIn": 11.25,
+      "warnings": []
+     }
+    },
+    {
+     "floorDropFt": 1.29,
+     "lowPlateFt": 7,
+     "zHiMaxFt": 8.78,
+     "zLowFt": 7.97,
+     "pitch": 0.6,
+     "degrees": 2.87,
+     "feasible": true,
+     "heel": {
+      "hapIn": 11.09,
+      "notchPerpIn": 0.18,
+      "remainPerpIn": 11.07,
+      "plumbCutIn": 11.26,
+      "warnings": []
+     }
+    },
+    {
+     "floorDropFt": 2,
+     "lowPlateFt": 7,
+     "zHiMaxFt": 9.48,
+     "zLowFt": 7.96,
+     "pitch": 1.14,
+     "degrees": 5.43,
+     "feasible": true,
+     "heel": {
+      "hapIn": 10.97,
+      "notchPerpIn": 0.33,
+      "remainPerpIn": 10.92,
+      "plumbCutIn": 11.3,
+      "warnings": []
+     }
+    }
+   ],
+   "S2_floorDropNeededFor2to12Ft": 3.13,
+   "S3_10_to_8_carried_onto_existing_roof": {
+    "tieDistUpSlopeFt": 11.8,
+    "tieHeightFt": 12.43,
+    "zNewAtWallFt": 10.96,
+    "overlayPlanSf": 236,
+    "pastRidge": false
+   },
+   "extendExistingPlane": {
+    "zAtOuterWallFt": 3.17,
+    "verdict": "NOT FEASIBLE: outer wall would be under 7 ft"
+   },
+   "quantities_S3": {
+    "pitch": 1.5,
+    "roofSf": 638.53,
+    "squares": 6.39,
+    "rafters": 16,
+    "rafterLenFt": 17.63,
+    "sheathing": {
+     "thickness": "7/16",
+     "spanRating": "24/16",
+     "allowableLivePsf": 100,
+     "edgeSupport": "H-clips (one per span between supports) or blocking"
+    },
+    "iceBarrier": {
+     "reqSlopeIn": 36.28,
+     "courses": 2,
+     "sf": 132,
+     "note": "Membrane is fully adhered; separate ice barrier not added for mod-bit (R905.1.2 lists shingles/metal shingles/roll/slate/wood)."
+    },
+    "eaveLf": 22,
+    "rakeLf": 58.05,
+    "lines": [
+     {
+      "id": "roof.rafters",
+      "desc": "Shed rafters 2x12 @ 16 in, over the addition (16 x 17'-7.5\" cut -> 20 ft stock)",
+      "qty": 18,
+      "unit": "each",
+      "price_ref": "lumber_2x12_20",
+      "unitPriceEXAMPLE": 38.35,
+      "extEXAMPLE": 690.3,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.barge",
+      "desc": "Barge/fly rafters at rakes (2 x 17'-7.5\" cut -> 20 ft stock)",
+      "qty": 2,
+      "unit": "each",
+      "price_ref": "lumber_2x12_20",
+      "unitPriceEXAMPLE": 38.35,
+      "extEXAMPLE": 76.7,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.overlayRafters",
+      "desc": "Rafter extensions over existing roof (bear on sleepers - ENGINEER: loads the existing home) (16 x 12'-4.75\" cut -> 14 ft stock)",
+      "qty": 18,
+      "unit": "each",
+      "price_ref": "lumber_2x8_14",
+      "unitPriceEXAMPLE": 17.94,
+      "extEXAMPLE": 322.92,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.sheathing",
+      "desc": "7/16 OSB (24/16) - snow 50 psf at 16 in",
+      "qty": 22,
+      "unit": "sheet",
+      "price_ref": "osb_716_4x8",
+      "unitPriceEXAMPLE": 13.63,
+      "extEXAMPLE": 299.86,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.membraneCap",
+      "desc": "Modified bitumen self-adhered cap sheet (100 sf rolls, 12% lap allowance UNVERIFIED)",
+      "qty": 8,
+      "unit": "roll",
+      "price_ref": "modbit_sa_cap_100",
+      "unitPriceEXAMPLE": 139,
+      "extEXAMPLE": 1112,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.membraneBase",
+      "desc": "Self-adhered base/ply sheet",
+      "qty": 8,
+      "unit": "roll",
+      "price_ref": "modbit_sa_base_100",
+      "unitPriceEXAMPLE": null,
+      "extEXAMPLE": null,
+      "status": "PRICE NEEDED"
+     },
+     {
+      "id": "roof.dripEdge",
+      "desc": "Drip edge eave+rakes 80.05 lf",
+      "qty": 9,
+      "unit": "10 ft",
+      "price_ref": "drip_edge_10",
+      "unitPriceEXAMPLE": 6.48,
+      "extEXAMPLE": 58.32,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.tieInFlashing",
+      "desc": "Pitch-break / transition metal where new 1.5:12 meets existing 4:12 (20 ft + 10%)",
+      "qty": 3,
+      "unit": "10 ft",
+      "price_ref": "l_flash_4x4_10",
+      "unitPriceEXAMPLE": 14.78,
+      "extEXAMPLE": 44.34,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)",
+      "note": "Custom-bent transition flashing usually; L flashing as EXAMPLE"
+     },
+     {
+      "id": "roof.existingReroof",
+      "desc": "Re-shingle existing roof strip above the tie line (2 ft x 22 ft) incl. ice & water",
+      "qty": 2,
+      "unit": "bundle",
+      "price_ref": "shingles_bundle",
+      "unitPriceEXAMPLE": 42.97,
+      "extEXAMPLE": 85.94,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.gutter",
+      "desc": "5 in aluminum K gutter on the low eave (22 ft)",
+      "qty": 3,
+      "unit": "10 ft",
+      "price_ref": "gutter_k5_alum_10",
+      "unitPriceEXAMPLE": 17.98,
+      "extEXAMPLE": 53.94,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.gutterHangers",
+      "desc": "Hidden hangers @ 24 in (snow country; many installers use 16 in)",
+      "qty": 12,
+      "unit": "each",
+      "price_ref": "gutter_hanger_5",
+      "unitPriceEXAMPLE": 2.74,
+      "extEXAMPLE": 32.88,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.gutterEnds",
+      "desc": "End with outlet + end cap",
+      "qty": 1,
+      "unit": "each",
+      "price_ref": "gutter_end_outlet_5",
+      "unitPriceEXAMPLE": 11.98,
+      "extEXAMPLE": 11.98,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.gutterCap",
+      "desc": "End cap",
+      "qty": 1,
+      "unit": "each",
+      "price_ref": "gutter_end_cap_5",
+      "unitPriceEXAMPLE": 2.48,
+      "extEXAMPLE": 2.48,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.downspout",
+      "desc": "2x3 downspout (eave ~10.5 ft above grade, EXAMPLE)",
+      "qty": 2,
+      "unit": "10 ft",
+      "price_ref": "downspout_2x3_10",
+      "unitPriceEXAMPLE": 19.98,
+      "extEXAMPLE": 39.96,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.downspoutElbows",
+      "desc": "Elbows",
+      "qty": 3,
+      "unit": "each",
+      "price_ref": "downspout_elbow_flex",
+      "unitPriceEXAMPLE": 4.98,
+      "extEXAMPLE": 14.94,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.downspoutExt",
+      "desc": "Extension",
+      "qty": 1,
+      "unit": "each",
+      "price_ref": "downspout_ext_flex",
+      "unitPriceEXAMPLE": 8.98,
+      "extEXAMPLE": 8.98,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.hurricaneTies",
+      "desc": "H2.5A at both bearings",
+      "qty": 35,
+      "unit": "each",
+      "price_ref": "hurricane_h25a",
+      "unitPriceEXAMPLE": 0.93,
+      "extEXAMPLE": 32.55,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.tieNails",
+      "desc": "N8 nails, 10 per tie",
+      "qty": 3,
+      "unit": "box 150",
+      "price_ref": "nails_connector_n8_150",
+      "unitPriceEXAMPLE": 7.64,
+      "extEXAMPLE": 22.92,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     }
+    ],
+    "totals": {
+     "pricedSubtotalEXAMPLE": 2911.01,
+     "priceNeeded": [
+      "roof.membraneBase"
+     ]
+    }
+   }
+  },
+  "gable_tie_in": {
+   "pitch": 4,
+   "degrees": 18.43,
+   "heel": {
+    "hapIn": 8.58,
+    "notchPerpIn": 1.11,
+    "remainPerpIn": 8.14,
+    "plumbCutIn": 9.75,
+    "warnings": []
+   },
+   "zNewEaveLineFt": 8.76,
+   "geometry": {
+    "riseFt": 3.33,
+    "zRidgeFt": 12.1,
+    "tieDistUpSlopeFt": 10.79,
+    "valleyFoot": {
+     "u": -1,
+     "a": -0.21
+    },
+    "valleyPlanFt": 15.56,
+    "valleyTrueFt": 15.98,
+    "valleyPlanAngleDeg": 45,
+    "overlayTrianglePlanSf": 107.93,
+    "warnings": []
+   },
+   "rafter": {
+    "spanHorizFt": 9.77,
+    "pick": {
+     "size": "2x8",
+     "table": "TABLE R802.4.1(5)",
+     "spanFt": 10.08,
+     "raw": "10-1",
+     "tableSnow": 50
+    },
+    "checks": [
+     {
+      "pg": 30,
+      "2x8@24": {
+       "table": "TABLE R802.4.1(3)",
+       "spanFt": 12.33,
+       "raw": "12-4",
+       "tableSnow": 30
+      },
+      "2x10@24": {
+       "table": "TABLE R802.4.1(3)",
+       "spanFt": 15.08,
+       "raw": "15-1",
+       "tableSnow": 30
+      },
+      "2x10@24_DL20": {
+       "table": "TABLE R802.4.1(3)",
+       "spanFt": 13.5,
+       "raw": "13-6",
+       "tableSnow": 30
+      }
+     },
+     {
+      "pg": 50,
+      "2x8@24": {
+       "table": "TABLE R802.4.1(5)",
+       "spanFt": 10.08,
+       "raw": "10-1",
+       "tableSnow": 50
+      },
+      "2x10@24": {
+       "table": "TABLE R802.4.1(5)",
+       "spanFt": 12.33,
+       "raw": "12-4",
+       "tableSnow": 50
+      },
+      "2x10@24_DL20": {
+       "table": "TABLE R802.4.1(5)",
+       "spanFt": 11.42,
+       "raw": "11-5",
+       "tableSnow": 50
+      }
+     },
+     {
+      "pg": 70,
+      "2x8@24": {
+       "table": "TABLE R802.4.1(7)",
+       "spanFt": 8.75,
+       "raw": "8-9",
+       "tableSnow": 70
+      },
+      "2x10@24": {
+       "table": "TABLE R802.4.1(7)",
+       "spanFt": 10.67,
+       "raw": "10-8",
+       "tableSnow": 70
+      },
+      "2x10@24_DL20": {
+       "table": "TABLE R802.4.1(7)",
+       "spanFt": 10,
+       "raw": "10-0",
+       "tableSnow": 70
+      }
+     }
+    ]
+   },
+   "commonRafterLenFt": 11.79,
+   "jackStationsFt": [
+    2,
+    4,
+    6,
+    8,
+    10
+   ],
+   "jackLensFt": [
+    8.45,
+    6.34,
+    4.23,
+    2.12
+   ],
+   "heelNails": {
+    "table": "R802.5.2(1)",
+    "pitch": "4:12",
+    "ocIn": 24,
+    "spanColumnFt": 24,
+    "nails16d": 13
+   },
+   "hipValleyFactor": 1.45,
+   "slopeFactor": 1.05,
+   "quantities": {
+    "roofSf": 508,
+    "squares": 5.08,
+    "planMainSf": 374,
+    "planOverlaySf": 107.93,
+    "eaveLf": 32,
+    "rakeLf": 23.19,
+    "ridgeLf": 27.79,
+    "valleyLf": 31.96,
+    "iceBarrier": {
+     "reqSlopeIn": 37.95,
+     "courses": 2,
+     "sf": 192
+    },
+    "valleyIceSf": 95.88,
+    "sheathing": {
+     "thickness": "15/32",
+     "spanRating": "32/16",
+     "allowableLivePsf": 70,
+     "edgeSupport": "H-clips (one per span between supports) or blocking"
+    },
+    "ventilation": {
+     "atticFloorSf": 320,
+     "nfa150SqIn": 307.2,
+     "nfa300SqIn": 153.6,
+     "note": "1/300 only in CZ6 with Class I/II vapor retarder on warm side AND 40-50% upper vents (R806.2). Half low, half high."
+    },
+    "lines": [
+     {
+      "id": "roof.rafters",
+      "desc": "Common rafters 2x10 @ 24 in (9 pairs) (18 x 11'-9.5\" cut -> 12 ft stock)",
+      "qty": 20,
+      "unit": "each",
+      "price_ref": "lumber_2x10_12",
+      "unitPriceEXAMPLE": 19.12,
+      "extEXAMPLE": 382.4,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.barge",
+      "desc": "Barge/fly rafters at the far rake (2 x 11'-9.5\" cut -> 12 ft stock)",
+      "qty": 2,
+      "unit": "each",
+      "price_ref": "lumber_2x10_12",
+      "unitPriceEXAMPLE": 19.12,
+      "extEXAMPLE": 38.24,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.jacks.0",
+      "desc": "Valley jack pair cut from one 12 ft 2x10 (10.57 ft incl. trim) x2 sides",
+      "qty": 2,
+      "unit": "each",
+      "price_ref": "lumber_2x10_12",
+      "unitPriceEXAMPLE": 19.12,
+      "extEXAMPLE": 38.24,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.jacks.1",
+      "desc": "Valley jack pair cut from one 12 ft 2x10 (10.57 ft incl. trim) x2 sides",
+      "qty": 2,
+      "unit": "each",
+      "price_ref": "lumber_2x10_12",
+      "unitPriceEXAMPLE": 19.12,
+      "extEXAMPLE": 38.24,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.valleyBoards",
+      "desc": "California valley boards (2x10 laid flat on existing sheathing) (2 x 16'-5.75\" cut -> 20 ft stock)",
+      "qty": 2,
+      "unit": "each",
+      "price_ref": "lumber_2x10_20",
+      "unitPriceEXAMPLE": 30.92,
+      "extEXAMPLE": 61.84,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.ridge16",
+      "desc": "Ridge board 2x12 (one size up; 2x10 plumb cut 9.75 in > 9.25 in), 27.79 ft = 16 ft + 12 ft spliced over a rafter pair",
+      "qty": 1,
+      "unit": "each",
+      "price_ref": "lumber_2x12_16",
+      "unitPriceEXAMPLE": 30.68,
+      "extEXAMPLE": 30.68,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.ridge12",
+      "desc": "Ridge board 2x12 x 12 ft (second piece)",
+      "qty": 1,
+      "unit": "each",
+      "price_ref": "lumber_2x12_12",
+      "unitPriceEXAMPLE": 23.67,
+      "extEXAMPLE": 23.67,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.ceilingJoists",
+      "desc": "Ceiling joists / rafter ties 2x10 @ 24 across 20 ft (size per content-v3 EXAMPLE table, verify R802.5) (9 x 20'-0\" cut -> 20 ft stock)",
+      "qty": 10,
+      "unit": "each",
+      "price_ref": "lumber_2x10_20",
+      "unitPriceEXAMPLE": 30.92,
+      "extEXAMPLE": 309.2,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.collarTies",
+      "desc": "Collar ties 2x4 every 2nd pair, ~6.8 ft (5 x 6'-9.5\" cut -> 8 ft stock)",
+      "qty": 6,
+      "unit": "each",
+      "price_ref": "lumber_2x4_8",
+      "unitPriceEXAMPLE": 4.25,
+      "extEXAMPLE": 25.5,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.gableFraming",
+      "desc": "Far gable-end infill 33.3 sf, 2x4 @ 16 (content-v3 rule)",
+      "qty": 17,
+      "unit": "each (2x4x8)",
+      "price_ref": "lumber_2x4_8",
+      "unitPriceEXAMPLE": 4.25,
+      "extEXAMPLE": 72.25,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.lookouts",
+      "desc": "Rake lookouts @ 24, 2 ft (12 x 2'-0\" cut -> 8 ft stock)",
+      "qty": 13,
+      "unit": "each",
+      "price_ref": "lumber_2x4_8",
+      "unitPriceEXAMPLE": 4.25,
+      "extEXAMPLE": 55.25,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.sheathing",
+      "desc": "19/32 OSB (40/20) - code minimum here is 15/32 (32/16) for 50 psf @ 24 in; 19/32 OSB is cheaper than 15/32 plywood at HD",
+      "qty": 18,
+      "unit": "sheet",
+      "price_ref": "osb_1932_4x8",
+      "unitPriceEXAMPLE": 22.77,
+      "extEXAMPLE": 409.86,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.hClips",
+      "desc": "H-clips 19/32, one per rafter bay per sheet row",
+      "qty": 36,
+      "unit": "each",
+      "price_ref": "h_clip_1932",
+      "unitPriceEXAMPLE": null,
+      "extEXAMPLE": null,
+      "status": "PRICE NEEDED"
+     },
+     {
+      "id": "roof.underlayment",
+      "desc": "Synthetic underlayment (single layer OK at 4:12)",
+      "qty": 1,
+      "unit": "roll",
+      "price_ref": "underlayment_synth_1000",
+      "unitPriceEXAMPLE": 115.53,
+      "extEXAMPLE": 115.53,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.iceBarrier",
+      "desc": "Ice & water: eaves 2 courses (needs 37.95 in up-slope) + 36 in in valleys",
+      "qty": 3,
+      "unit": "roll 150 sf",
+      "price_ref": "ice_water_150",
+      "unitPriceEXAMPLE": 99,
+      "extEXAMPLE": 297,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.shingles",
+      "desc": "Architectural shingles 5.08 sq x 1.15 (valleys) + existing-side valley reroof 63.92 sf",
+      "qty": 21,
+      "unit": "bundle",
+      "price_ref": "shingles_bundle",
+      "unitPriceEXAMPLE": 42.97,
+      "extEXAMPLE": 902.37,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.starter",
+      "desc": "Starter eaves+rakes 55.19 lf",
+      "qty": 1,
+      "unit": "bundle",
+      "price_ref": "starter_bundle",
+      "unitPriceEXAMPLE": 54.97,
+      "extEXAMPLE": 54.97,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.ridgeCap",
+      "desc": "Ridge cap 27.79 lf",
+      "qty": 2,
+      "unit": "bundle",
+      "price_ref": "ridge_cap_bundle",
+      "unitPriceEXAMPLE": 62.97,
+      "extEXAMPLE": 125.94,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.ridgeVent",
+      "desc": "Ridge vent over the addition attic only (~14 ft usable)",
+      "qty": 4,
+      "unit": "4 ft piece",
+      "price_ref": "ridge_vent_cobra_snow_4ft",
+      "unitPriceEXAMPLE": 14.97,
+      "extEXAMPLE": 59.88,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.soffitVent",
+      "desc": "Continuous under-eave vent, both eaves",
+      "qty": 4,
+      "unit": "8 ft",
+      "price_ref": "undereave_vent_6x8",
+      "unitPriceEXAMPLE": 14.97,
+      "extEXAMPLE": 59.88,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.baffles",
+      "desc": "Rafter baffles, every bay at both eaves",
+      "qty": 16,
+      "unit": "each (pack of 70)",
+      "price_ref": null,
+      "unitPriceEXAMPLE": null,
+      "extEXAMPLE": null,
+      "status": "PRICE NEEDED",
+      "note": "buy 1 pack rafter_baffle_70 ($179 EXAMPLE) or cheaper 22.5 in baffles - PRICE NEEDED per piece"
+     },
+     {
+      "id": "roof.dripEdge",
+      "desc": "Drip edge 55.19 lf",
+      "qty": 7,
+      "unit": "10 ft",
+      "price_ref": "drip_edge_10",
+      "unitPriceEXAMPLE": 6.48,
+      "extEXAMPLE": 45.36,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.nails",
+      "desc": "Roofing nails 2.5 lb/sq",
+      "qty": 4,
+      "unit": "5 lb box",
+      "price_ref": "roofing_nails_5lb",
+      "unitPriceEXAMPLE": 15.98,
+      "extEXAMPLE": 63.92,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.capNails",
+      "desc": "Cap nails for underlayment",
+      "qty": 1,
+      "unit": "box 2000",
+      "price_ref": "cap_nails_2000",
+      "unitPriceEXAMPLE": 19.98,
+      "extEXAMPLE": 19.98,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.hurricaneTies",
+      "desc": "H2.5A, one per rafter at the plate",
+      "qty": 20,
+      "unit": "each",
+      "price_ref": "hurricane_h25a",
+      "unitPriceEXAMPLE": 0.93,
+      "extEXAMPLE": 18.6,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.tieNails",
+      "desc": "N8 nails",
+      "qty": 2,
+      "unit": "box 150",
+      "price_ref": "nails_connector_n8_150",
+      "unitPriceEXAMPLE": 7.64,
+      "extEXAMPLE": 15.28,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.gutters",
+      "desc": "5 in aluminum K gutter both eaves (2 x 16 ft)",
+      "qty": 2,
+      "unit": "16 ft",
+      "price_ref": "gutter_k5_alum_16",
+      "unitPriceEXAMPLE": 32.98,
+      "extEXAMPLE": 65.96,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.gutterParts",
+      "desc": "Outlets (2) ",
+      "qty": 2,
+      "unit": "each",
+      "price_ref": "gutter_end_outlet_5",
+      "unitPriceEXAMPLE": 11.98,
+      "extEXAMPLE": 23.96,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.gutterCaps",
+      "desc": "End caps (2)",
+      "qty": 2,
+      "unit": "each",
+      "price_ref": "gutter_end_cap_5",
+      "unitPriceEXAMPLE": 2.48,
+      "extEXAMPLE": 4.96,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.gutterHangers",
+      "desc": "Hangers @ 24 in",
+      "qty": 18,
+      "unit": "each",
+      "price_ref": "gutter_hanger_5",
+      "unitPriceEXAMPLE": 2.74,
+      "extEXAMPLE": 49.32,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.downspouts",
+      "desc": "2x3 downspouts",
+      "qty": 2,
+      "unit": "10 ft",
+      "price_ref": "downspout_2x3_10",
+      "unitPriceEXAMPLE": 19.98,
+      "extEXAMPLE": 39.96,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     },
+     {
+      "id": "roof.dsElbows",
+      "desc": "Elbows",
+      "qty": 6,
+      "unit": "each",
+      "price_ref": "downspout_elbow_flex",
+      "unitPriceEXAMPLE": 4.98,
+      "extEXAMPLE": 29.88,
+      "status": "EXAMPLE price (HD 2026-10-28, not localized)"
+     }
+    ],
+    "totals": {
+     "pricedSubtotalEXAMPLE": 3478.12,
+     "priceNeeded": [
+      "roof.hClips",
+      "roof.baffles"
+     ]
+    }
+   },
+   "pitchSweep": [
+    {
+     "pitch": 3,
+     "degrees": 14.04,
+     "riseFt": 2.5,
+     "ridgeTopAboveFloorFt": 11.27,
+     "tieDistUpExistingRoofFt": 8.31,
+     "valleyTrueFt": 14.02,
+     "valleyPlanAngleDeg": 36.87,
+     "warnings": []
+    },
+    {
+     "pitch": 4,
+     "degrees": 18.43,
+     "riseFt": 3.33,
+     "ridgeTopAboveFloorFt": 12.1,
+     "tieDistUpExistingRoofFt": 10.79,
+     "valleyTrueFt": 15.98,
+     "valleyPlanAngleDeg": 45,
+     "warnings": []
+    },
+    {
+     "pitch": 5,
+     "degrees": 22.62,
+     "riseFt": 4.17,
+     "ridgeTopAboveFloorFt": 12.93,
+     "tieDistUpExistingRoofFt": 13.29,
+     "valleyTrueFt": 18.2,
+     "valleyPlanAngleDeg": 51.34,
+     "warnings": [
+      "ROOF_TIE_PAST_EXIST_RIDGE: new ridge reaches within 1 ft of (or over) the existing ridge - lower pitch, narrower addition, or hip the back"
+     ]
+    },
+    {
+     "pitch": 6,
+     "degrees": 26.57,
+     "riseFt": 5,
+     "ridgeTopAboveFloorFt": 13.77,
+     "tieDistUpExistingRoofFt": 15.8,
+     "valleyTrueFt": 20.58,
+     "valleyPlanAngleDeg": 56.31,
+     "warnings": [
+      "ROOF_TIE_PAST_EXIST_RIDGE: new ridge reaches within 1 ft of (or over) the existing ridge - lower pitch, narrower addition, or hip the back"
+     ]
+    },
+    {
+     "pitch": 8,
+     "degrees": 33.69,
+     "riseFt": 6.67,
+     "ridgeTopAboveFloorFt": 15.45,
+     "tieDistUpExistingRoofFt": 20.84,
+     "valleyTrueFt": 25.48,
+     "valleyPlanAngleDeg": 63.43,
+     "warnings": [
+      "ROOF_TIE_PAST_EXIST_RIDGE: new ridge reaches within 1 ft of (or over) the existing ridge - lower pitch, narrower addition, or hip the back"
+     ]
+    }
+   ],
+   "ridgeParallelVariant": {
+    "note": "Gable with ridge PARALLEL to the house: back slope drains toward the house wall -> needs a cricket/saddle the full 20 ft or the back slope must tie into the existing roof (two valleys + a flat/back-pitched cricket).",
+    "ridgeTopFt": 11.26,
+    "backEaveAtHouseTopFt": 8.59,
+    "existingEaveUndersideFt": 7.9
+   }
+  }
+ }
+}

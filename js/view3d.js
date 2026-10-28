@@ -7,6 +7,7 @@ import { VIEW3D, LUMBER, LUMBER_T_IN } from './config.js';
 import { stackOrder, layerDisplay, getLayer } from './model.js';
 import { bbox, dist, lerp } from './geom.js';
 import { lumberAlong, studLayout } from './homeplan-derived.js';
+import { houseOf, tieInInfo } from './roof-calc.js';
 import { snapPier, dropPier, isManual, pierDims, originOf } from './piers.js';
 import { findObject } from './model.js';
 import { fmtFtIn, inwardNormal, distToSeg, intersectLines } from './geom.js';
@@ -547,12 +548,48 @@ export function createView3D(container, app) {
         const pts = o.geometry.pts.concat([o.geometry.pts[0]]).map((p) => new THREE.Vector3(p[0], 0.05, p[1]));
         const lm = o.props.role === 'lot' ? new THREE.LineBasicMaterial({ color: '#3d5f2f' }) : new THREE.LineDashedMaterial({ color: '#3d5f2f', dashSize: 2, gapSize: 1.2 });
         const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), lm); ln.computeLineDistances(); g.add(ln);
+      } else if (o.type === 'area' && o.props.role === 'existing' && o.props.existingRoof) {
+        buildHouse({ o, g, m, alpha });
       } else if (o.type === 'area') {
         g.add(tag(slab(o.geometry.pts, 0, o.props.heightFt || 10, mat('#9a9a9a', alpha)), o));
       } else if (o.type === 'line') {
         g.add(tag(lumberAlong(THREE, o.geometry.a, o.geometry.b, 0.25, 0.02, 0.12, mat(o.props.color || '#1f6fb2', alpha)), o));
       }
     });
+  }
+
+  /** v4: the house next to the addition: walls to the eave, a semi-transparent gable roof at existingRoof.pitch
+   *  (ASSUMED values until measured), eave toward the addition; red clearance band when RF-TIE-01 fires. */
+  function buildHouse({ o, g, m, alpha }) {
+    const H = houseOf(m); if (!H) return; const R = H.roof;
+    const fl = (m.levels && m.levels[0] && m.levels[0].floorZ) || 0; const drop = ((getLayer(m, 'roof').params.tieIn || {}).floorDropFt) || 0;
+    const floorH = fl + drop; const eaveZ = floorH + (Number(R.eaveUndersideFt) || 7.9);
+    const b = bbox(o.geometry.pts); const ghost = Math.min(alpha, 0.55);
+    g.add(tag(slab(o.geometry.pts, 0, eaveZ, mat('#b9b4a8', ghost)), o, { k: 'houseWalls' }));
+    // which house face touches the addition → eaves on that face and its opposite; ridge parallel to it
+    const fb = bbox(m.footprint); const ridgeAlongX = !(b.maxX <= fb.minX + 0.01 || b.minX >= fb.maxX - 0.01);
+    const oh = (Number(R.overhangIn) || 12) * IN; const p = (Number(R.pitch) || 4) / 12; const depth = ridgeAlongX ? b.h : b.w;
+    const half = Math.min(depth / 2, Number(R.ridgeDistFt) || depth / 2);
+    const zE = eaveZ - oh * p, zR = eaveZ + half * p;
+    const roofM = mat('#6d6a66', Math.min(alpha, 0.5), { side: THREE.DoubleSide });
+    const quad = (q) => { const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(q.flat(), 3)); geo.setIndex([0, 1, 2, 0, 2, 3]); geo.computeVertexNormals(); return new THREE.Mesh(geo, roofM); };
+    if (ridgeAlongX) {
+      const cy = b.minY + half; const y0 = b.minY - oh, y1 = b.maxY + oh, x0 = b.minX - oh, x1 = b.maxX + oh;
+      g.add(tag(quad([[x0, zE, y0], [x1, zE, y0], [x1, zR, cy], [x0, zR, cy]]), o, { k: 'houseRoof' }));
+      g.add(tag(quad([[x0, zE, y1], [x1, zE, y1], [x1, zR, cy], [x0, zR, cy]]), o, { k: 'houseRoof' }));
+    } else {
+      const cx = b.minX + half; const x0 = b.minX - oh, x1 = b.maxX + oh, y0 = b.minY - oh, y1 = b.maxY + oh;
+      g.add(tag(quad([[x0, zE, y0], [x0, zE, y1], [cx, zR, y1], [cx, zR, y0]]), o, { k: 'houseRoof' }));
+      g.add(tag(quad([[x1, zE, y0], [x1, zE, y1], [cx, zR, y1], [cx, zR, y0]]), o, { k: 'houseRoof' }));
+    }
+    // eave-underside line + red clearance band on the house wall that faces the addition
+    const ti = tieInInfo(m);
+    if (ti.type === 'shed_under_eave') {
+      const clr = (ti.flashingClearIn || 5) * IN; const bad = ti.fits === false;
+      const face = ridgeAlongX ? (b.maxY <= fb.minY + 0.01 ? [[b.minX, b.maxY], [b.maxX, b.maxY]] : [[b.minX, b.minY], [b.maxX, b.minY]]) : (b.maxX <= fb.minX + 0.01 ? [[b.maxX, b.minY], [b.maxX, b.maxY]] : [[b.minX, b.minY], [b.minX, b.maxY]]);
+      g.add(tag(lumberAlong(THREE, face[0], face[1], 0.12, eaveZ - 0.04, eaveZ + 0.04, mat('#1d1d1d', 1)), o, { k: 'eaveLine' }));
+      if (bad) g.add(tag(lumberAlong(THREE, face[0], face[1], 0.14, eaveZ - clr, eaveZ, mat('#d0453a', 0.85)), o, { k: 'tieClearBand' }));
+    }
   }
 
   function buildFoundation({ l, alpha, g }) {
@@ -599,7 +636,7 @@ export function createView3D(container, app) {
     const wood = mat('#e3bb7f', alpha), wallMat = mat('#efe9dc', alpha), hdr = mat('#c98f3c', alpha), glass = mat('#9cc7e6', Math.min(alpha, 0.45));
     const walls = l.objects.filter((o) => o.type === 'wall');
     const ops = l.objects.filter((o) => o.type === 'opening');
-    const z0 = l.zBase, H = l.params.plateHeightFt;
+    const z0 = l.zBase, HL = l.params.plateHeightFt;
     const pl = LUMBER_T_IN * IN;
     walls.forEach((w) => {
       const { a, b } = w.geometry; const len = dist(a, b);
@@ -608,6 +645,10 @@ export function createView3D(container, app) {
       const A = lerp(a, b, -ext / len), B = lerp(a, b, 1 + ext / len), L2 = len + 2 * ext;
       const myOps = ops.filter((o) => o.geometry.wallId === w.id).map((o) => ({ o, center: o.geometry.t + ext, widthFt: o.props.widthIn * IN, sill: o.props.sillIn * IN, head: (o.props.sillIn + o.props.heightIn) * IN })).sort((p, q) => p.center - q.center);
       const P = (d) => lerp(A, B, d / L2);
+      // v4: shed exterior walls carry their own plate heights at the outside faces (rake walls slope)
+      const hA = w.props.plateHeightFt != null ? w.props.plateHeightFt : HL, hB = w.props.plateHeightEndFt != null ? w.props.plateHeightEndFt : hA;
+      if (Math.abs(hA - hB) > 1e-4) { rakeWall({ w, g, A, B, L2, t, z0, hA, hB, myOps, P, solid, wood, wallMat, hdr, glass, l }); return; }
+      const H = hA;
       if (solid) {
         let cur = 0;
         myOps.forEach((op) => {
@@ -645,6 +686,56 @@ export function createView3D(container, app) {
     });
   }
 
+  /** Box-like prism between plan points p0→p1, width t, bottom/top z at each end (sloped tops for rake walls). */
+  function prism(p0, p1, t, zb0, zt0, zb1, zt1, material) {
+    const dx = p1[0] - p0[0], dy = p1[1] - p0[1]; const L = Math.hypot(dx, dy) || 1; const nx = -dy / L * t / 2, ny = dx / L * t / 2;
+    const v = [
+      [p0[0] - nx, zb0, p0[1] - ny], [p1[0] - nx, zb1, p1[1] - ny], [p1[0] + nx, zb1, p1[1] + ny], [p0[0] + nx, zb0, p0[1] + ny],
+      [p0[0] - nx, zt0, p0[1] - ny], [p1[0] - nx, zt1, p1[1] - ny], [p1[0] + nx, zt1, p1[1] + ny], [p0[0] + nx, zt0, p0[1] + ny]];
+    const idx = [0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 1, 5, 0, 5, 4, 1, 2, 6, 1, 6, 5, 2, 3, 7, 2, 7, 6, 3, 0, 4, 3, 4, 7];
+    const pos = []; idx.forEach((i) => pos.push(...v[i]));
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.computeVertexNormals();
+    const mesh = new THREE.Mesh(geo, material); mesh.castShadow = true; mesh.receiveShadow = true; return mesh;
+  }
+  /** v4 rake wall (shed side walls): sloped top plates, studs cut to the slope, solid infill to the slope. */
+  function rakeWall({ w, g, A, B, L2, t, z0, hA, hB, myOps, P, solid, wood, wallMat, hdr, glass, l }) {
+    const pl = LUMBER_T_IN * IN; const Hd = (d) => hA + (hB - hA) * (d / L2);
+    if (solid) {
+      let cur = 0;
+      myOps.forEach((op) => {
+        const s0 = op.center - op.widthFt / 2, s1 = op.center + op.widthFt / 2;
+        if (s0 > cur) g.add(tag(prism(P(cur), P(s0), t, z0, z0 + Hd(cur), z0, z0 + Hd(s0), wallMat), w, { k: 'wallSolid', rake: true }));
+        if (op.sill > 0) g.add(tag(lumberAlong(THREE, P(s0), P(s1), t, z0, z0 + op.sill, wallMat), w));
+        g.add(tag(prism(P(s0), P(s1), t, z0 + op.head, z0 + Hd(s0), z0 + op.head, z0 + Hd(s1), wallMat), w));
+        cur = s1;
+      });
+      if (cur < L2) g.add(tag(prism(P(cur), P(L2), t, z0, z0 + Hd(cur), z0, z0 + Hd(L2), wallMat), w, { k: 'wallSolid', rake: true }));
+    } else {
+      const nb = l.params.bottomPlates || 1, nt = l.params.topPlates || 2;
+      for (let i = 0; i < nb; i++) g.add(tag(lumberAlong(THREE, A, B, t, z0 + i * pl, z0 + (i + 1) * pl, wood), w, { k: 'bottomPlate', lenFt: L2, wallId: w.id }));
+      const slopeLen = Math.hypot(L2, hB - hA);
+      for (let i = 0; i < nt; i++) g.add(tag(prism(A, B, t, z0 + hA - (i + 1) * pl, z0 + hA - i * pl, z0 + hB - (i + 1) * pl, z0 + hB - i * pl, wood), w, { k: 'topPlate', lenFt: slopeLen, wallId: w.id, ply: i, rake: true }));
+      const sBot = z0 + nb * pl; const sTop = (d) => z0 + Hd(d) - nt * pl;
+      const lay = studLayout(L2, (w.props.studOcIn || 16) * IN, myOps);
+      const stud = (d, zb, zt, k = 'stud', mm = wood) => { g.add(tag(prism(P(d - pl / 2), P(d + pl / 2), t, zb, zt === null ? sTop(d - pl / 2) : zt, zb, zt === null ? sTop(d + pl / 2) : zt, mm), w, { k, lenFt: (zt === null ? sTop(d) : zt) - zb, wallId: w.id, at: d })); };
+      lay.studs.forEach((d) => stud(d, sBot, null));
+      lay.kings.forEach((d) => stud(d, sBot, null, 'king'));
+      myOps.forEach((op) => {
+        const s0 = op.center - op.widthFt / 2, s1 = op.center + op.widthFt / 2;
+        const hd = LUMBER[(op.o.props.header || '2-2x8').replace(/^\d-/, '').split(' ')[0]] * IN || 7.25 * IN;
+        const hz = z0 + op.head;
+        stud(s0 - pl / 2, sBot, hz, 'jack'); stud(s1 + pl / 2, sBot, hz, 'jack');
+        g.add(tag(lumberAlong(THREE, P(s0 - pl), P(s1 + pl), t, hz, Math.min(Math.min(sTop(s0), sTop(s1)), hz + hd), hdr), op.o, { k: 'header', lenFt: s1 - s0 + 2 * pl, wallId: w.id }));
+        if (op.sill > 0) g.add(tag(lumberAlong(THREE, P(s0), P(s1), t, z0 + op.sill - pl, z0 + op.sill, wood), op.o, { k: 'roughSill', lenFt: s1 - s0, wallId: w.id }));
+      });
+    }
+    myOps.forEach((op) => {
+      if (op.o.props.kind !== 'window') return;
+      const s0 = op.center - op.widthFt / 2, s1 = op.center + op.widthFt / 2;
+      g.add(tag(lumberAlong(THREE, P(s0), P(s1), 0.06, z0 + op.sill, z0 + op.head, glass), op.o, { k: 'window' }));
+    });
+  }
+
   function buildRoof({ l, alpha, g }) {
     const wood = mat('#c98c4d', alpha), ridgeM = mat('#a8692e', alpha), sheath = mat('#7c5a43', Math.min(alpha, 0.85), { side: THREE.DoubleSide });
     const rafters = l.objects.filter((o) => o.type === 'rafter');
@@ -667,7 +758,11 @@ export function createView3D(container, app) {
       const d = LUMBER[l.params.rafterSize] * IN + 0.06;
       const zE = rafters[0].props.zA + d, zR = rafters[0].props.zB + d;
       const quad = (q) => { const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(q.flat(), 3)); geo.setIndex([0, 1, 2, 0, 2, 3]); geo.computeVertexNormals(); return new THREE.Mesh(geo, sheath); };
-      if (c.ridgeAlongX) {
+      if (c.shed) {
+        // one plane: low eave edge → high eave edge (first/last rafter = barge rafters)
+        const r0 = rafters[0], r1 = rafters[rafters.length - 1]; const zL = r0.props.zA + d, zH = r0.props.zB + d;
+        g.add(tag(quad([[r0.geometry.a[0], zL, r0.geometry.a[1]], [r1.geometry.a[0], zL, r1.geometry.a[1]], [r1.geometry.b[0], zH, r1.geometry.b[1]], [r0.geometry.b[0], zH, r0.geometry.b[1]]]), outline, { k: 'roofSide', side: 0, shed: true }));
+      } else if (c.ridgeAlongX) {
         g.add(tag(quad([[b.minX, zE, b.minY], [b.maxX, zE, b.minY], [b.maxX, zR, b.cy], [b.minX, zR, b.cy]]), outline, { k: 'roofSide', side: 0 }));
         g.add(tag(quad([[b.minX, zE, b.maxY], [b.maxX, zE, b.maxY], [b.maxX, zR, b.cy], [b.minX, zR, b.cy]]), outline, { k: 'roofSide', side: 1 }));
       } else {

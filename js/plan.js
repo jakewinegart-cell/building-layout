@@ -247,6 +247,21 @@ export function createPlan(canvas, app) {
         if (o.type === 'area' && o.props.role === 'outline') poly(o.geometry.pts, { stroke: s ? SEL : c, w: s ? 2.5 : 1.5, dash: [9, 6] });
         else if (o.type === 'beam' && o.props.role === 'ridge') line(o.geometry.a, o.geometry.b, s ? 3 : 1.8, s ? SEL : c, [14, 4, 3, 4]);
         else if (o.type === 'rafter' && s) line(o.geometry.a, o.geometry.b, 2.5, SEL, [5, 4]);
+        else if (o.type === 'line' && o.props.role === 'eave') line(o.geometry.a, o.geometry.b, s ? 3 : 2.2, s ? SEL : c, [2, 0]);
+        else if (o.type === 'label' && o.props.down) {
+          // v4 shed: arrow points downslope (toward the low wall); high/low plate heights at the two edges
+          const p = o.geometry.c; const v = { N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0] }[o.props.down];
+          arrow([p[0] - v[0] * 2.5, p[1] - v[1] * 2.5], [p[0] + v[0] * 2.5, p[1] + v[1] * 2.5], c, 1.5);
+          text(o.props.text, [p[0] + (v[1] ? 2.2 : 0), p[1] + (v[1] ? 0 : 1.6)], { color: c, size: 12, weight: 700 });
+          const sh = l.params.shed; const cc = l.params.computed || {};
+          const out = l.objects.find((x) => x.props && x.props.role === 'outline');
+          if (sh && out && cc.shed) {
+            const bx = bboxPts(out.geometry.pts);
+            const at = (side, inset) => ({ N: [p[0], bx.minY + inset], S: [p[0], bx.maxY - inset], W: [bx.minX + inset, p[1]], E: [bx.maxX - inset, p[1]] })[side];
+            text(`HIGH ${fmtFtIn(sh.highPlateFt)}`, at(cc.highSide, 1.4), { color: c, size: 11, weight: 700 });
+            text(`LOW ${fmtFtIn(sh.lowPlateFt)}`, at(cc.lowSide, 1.4), { color: c, size: 11, weight: 700 });
+          }
+        }
         else if (o.type === 'label') {
           const p = o.geometry.c;
           const a2 = o.props.arrow === 'y' ? [p[0], p[1] + 2.5] : [p[0] + 2.5, p[1]];
@@ -254,6 +269,7 @@ export function createPlan(canvas, app) {
           text(o.props.text, [p[0] + (o.props.arrow === 'y' ? 2.2 : 0), p[1] + (o.props.arrow === 'y' ? 0 : 1.6)], { color: c, size: 12, weight: 700 });
         }
       });
+      function bboxPts(P) { const xs = P.map((q) => q[0]), ys = P.map((q) => q[1]); return { minX: Math.min(...xs), maxX: Math.max(...xs), minY: Math.min(...ys), maxY: Math.max(...ys) }; }
       // light rafter ticks so direction reads
       l.objects.filter((o) => o.type === 'rafter').forEach((o, i) => { if (i % 2 === 0) line(o.geometry.a, lerp(o.geometry.a, o.geometry.b, 0.12), 1, c, [3, 3]); });
       return;

@@ -87,6 +87,25 @@ export const DEFAULTS = {
     shape: 'gable', pitch: 4, overhangIn: 12, rafterOcIn: 24, rafterSize: '2x8',
     ridge: 'long', showSheathing: false,
     ceilingJoistSize: 'auto',          // v3: rafter ties / ceiling joists ('auto' = EXAMPLE table by span)
+    // ---- v4 roofing (Remodel Guide roofing-v1/roofing-options.json; additive, migrate() fills them) ----
+    shed: null,                        // { highWallId, highPlateFt, lowPlateFt, slopeAwayFromHouse } when shape = 'shed'
+    rakeOverhangIn: 12,
+    roofing: { covering: 'asphalt_shingle', underlayment: 'auto', shingleVariant: 'architectural', metalGauge: 29, singlePlyType: 'tpo' },
+    tieIn: { type: 'auto', flashingClearIn: 5, framing: 'california_overlay', bearingAtHouse: 'freestanding_wall', manufacturerApproval: 'unknown', floorDropFt: 0, cricket: false },
+    valleys: { type: 'closed_cut', liningWidthIn: 36, metalWidthIn: 24 },
+    framing: 'rafters',                // rafters | trusses
+    lumber: { species: 'Spruce-pine-fir', grade: '#2' },
+    ceiling: 'flat_attic',             // flat_attic | cathedral | scissor_truss
+    ridgeType: 'auto',                 // auto = board (flat_attic) / beam (cathedral)
+    collarTies: 'every_2nd_pair',
+    seatIn: 3.5, raisedHeelIn: 0, upliftConnector: 'H2.5A',
+    sheathing: { thickness: 'auto', edgeSupport: 'h_clips' },
+    snow: { groundSnowPsf: null, source: 'zip_lookup', strengthLevel: false, minRoofSnowPsf: 30 },
+    vent: { strategy: 'vented_ridge_soffit', ratio: '1/150', ridgeVent: 'shingle_over_rigid', baffles: true },
+    eave: { soffit: 'vented_aluminum', fascia: 'aluminum_wrap', dripEdge: 'standard', gutters: '5in_aluminum_k' },
+    snowGuards: { enabled: 'auto', rows: 1, spacingIn: 24 },
+    penetrations: { ventPipes: 1, bathFans: 0, skylights: 0 },
+    takeoffV4: false,                  // true = Price check uses the full roofing-v1 roof takeoff (always on for a shed)
   },
   openings: {
     door: { widthIn: 36, heightIn: 80, sillIn: 0 },
@@ -134,3 +153,8 @@ export function frostKnown(f) { return f.frostDepthIn != null && f.frostDepthIn 
 export function pierDepthIn(f) {
   return frostKnown(f) ? Math.max(Number(f.frostDepthIn) + (Number(f.frostMarginIn) || 0), MIN_PIER_DEPTH_IN) : (Number(f.placeholderFrostIn) || 48);
 }
+
+/** v4: the house roof until Jake measures it (roofing-v1 worked example; every value labelled ASSUMED in the UI). */
+export const EXISTING_ROOF_ASSUMED = { homeType: 'unknown', pitch: 4, eaveUndersideFt: 7.9, roofTopAtWallFt: 8.5, overhangIn: 12, ridgeDistFt: 14, covering: 'asphalt_shingle', framing: 'unknown', wallSide: 'eave_side' };
+/** Roof slope control (Jake: "Make variable slope"): any x:12 in 0.25 steps. */
+export const SLOPE = { min: 0.5, max: 12, step: 0.25, inputMin: 0.25 };

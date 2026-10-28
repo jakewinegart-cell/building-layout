@@ -1,0 +1,2 @@
+# roofing-v1
+Robust roofing options for the Building Layout app (Jake [pt26u]). Start with `roofing-spec.md`. Machine files: `roofing-options.json` (fields aligned with wizard-v1, with a mapping), `roofing-takeoff-rules.json`, `roofing-price-items.json`, `rafter-span-tables.json`. Example: `worked-example-20x16.md`. Recompute: `node reference/run-worked-example.mjs`. Rebuild options: `python3 tools/build-options.py`. No app code changed.

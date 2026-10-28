@@ -72,6 +72,13 @@ export function gableGeometry(spanFt, pitch, overhangIn, plateZ) {
   return { rise, ridgeZ: plateZ + rise, eaveTipZ: plateZ - oh * p, oh, p };
 }
 
+/** v4 shed (wizard-spec §3): one plane from the low eave tip up to the high eave tip, no ridge.
+ *  runFt = outside face to outside face; lowTopZ/highTopZ = plate tops at those faces. */
+export function shedGeometry(runFt, lowTopZ, highTopZ, overhangIn) {
+  const oh = overhangIn / 12; const p = (highTopZ - lowTopZ) / runFt;
+  return { p, oh, rise: highTopZ - lowTopZ, eaveLowZ: lowTopZ - oh * p, eaveHighZ: highTopZ + oh * p, highZ: highTopZ, lowZ: lowTopZ };
+}
+
 /** Box member along plan segment a→b (plan y → world z). */
 export function lumberAlong(THREE, a, b, widthFt, zBot, zTop, material, ud, extendFt = 0) {
   const dx = b[0] - a[0], dz = b[1] - a[1];

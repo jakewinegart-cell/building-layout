@@ -1,0 +1,1815 @@
+{
+ "version": "roofing-v1 / 2026-10-28",
+ "about": "Roof layer option schema for the Building Layout app. Field names follow js/config.js DEFAULTS.roof and wizard-v1/wizard-commands.json (roof.params.shape, pitch, overhangIn, rafterOcIn, rafterSize, ridge, shed{highWallId,highPlateFt,lowPlateFt}, roofing{covering,underlayment}, m.attachToExistingWallId). New fields are additive; migrate() fills defaults. Guidance only - not engineering. All $ EXAMPLE.",
+ "name_mapping_vs_wizard": {
+  "roof.params.shape": "same; enum extended (hip/half_hip/dutch_gable/saltbox/flat still blocked until generated - wizard V-ROOF-08)",
+  "roof.params.shed": "same object; added optional slopeAwayFromHouse",
+  "roof.params.roofing.covering": "same enum (wizard enums.roofCovering); added UI labels/variants",
+  "roof.params.roofing.underlayment": "same enum",
+  "roof.params.ridge": "same long|short; UI alias roof.ui.ridgeRelativeToHouse",
+  "m.attachToExistingWallId": "same",
+  "plate height convention": "same: top of top plate above the subfloor; shed run = outside faces"
+ },
+ "ui_step_order": [
+  "1 Shape",
+  "2 Tie-in to house",
+  "3 Pitch & heights",
+  "4 Overhangs, eaves & gutters",
+  "5 Structure",
+  "6 Snow & sheathing (auto)",
+  "7 Ventilation & insulation",
+  "8 Covering & underlayment",
+  "9 Valleys & flashing",
+  "10 Skylights, penetrations, snow guards",
+  "11 Review warnings"
+ ],
+ "options": {
+  "shapes": [
+   {
+    "id": "gable",
+    "label": "Gable",
+    "copy": "Two slopes meeting at a ridge, triangle walls at the ends. Simple, sheds snow both ways, easy to vent.",
+    "generated_in_app": true,
+    "needs": [
+     "ridge"
+    ],
+    "default": true
+   },
+   {
+    "id": "shed",
+    "label": "Shed (single slope)",
+    "copy": "One slope from a tall wall to a short wall. Cheapest framing. Against a house it normally slopes AWAY from the house.",
+    "generated_in_app": false,
+    "needs": [
+     "shed.highWallId",
+     "shed.highPlateFt",
+     "shed.lowPlateFt"
+    ],
+    "wizard_field": "roof.params.shed"
+   },
+   {
+    "id": "hip",
+    "label": "Hip",
+    "copy": "Slopes on all four sides, no gable walls. Stronger in wind, more cuts, hip rafters, less attic.",
+    "generated_in_app": false,
+    "needs": [
+     "hip.faces"
+    ]
+   },
+   {
+    "id": "half_hip",
+    "label": "Half-hip / jerkinhead",
+    "copy": "Gable with the top corner of each gable end clipped by a small hip.",
+    "generated_in_app": false,
+    "needs": [
+     "halfHip.clipHeightFt"
+    ]
+   },
+   {
+    "id": "dutch_gable",
+    "label": "Dutch gable (gable-on-hip)",
+    "copy": "Hip roof with a small gable on top. Looks custom, adds a valley-free little gable and more cuts.",
+    "generated_in_app": false,
+    "needs": [
+     "dutch.gableStartFt"
+    ]
+   },
+   {
+    "id": "saltbox",
+    "label": "Saltbox",
+    "copy": "Gable with one long low slope and one short steep slope (ridge off-center).",
+    "generated_in_app": false,
+    "needs": [
+     "saltbox.ridgeOffsetFt",
+     "saltbox.pitchBack"
+    ]
+   },
+   {
+    "id": "flat",
+    "label": "Flat / low-slope",
+    "copy": "Nearly flat (min 1/4 in per foot). Needs membrane (EPDM/TPO/mod-bit). Snow sits on it; needs drains or a low edge with gutter.",
+    "generated_in_app": false,
+    "needs": [
+     "flat.slopeDirection"
+    ]
+   }
+  ],
+  "tieIns": [
+   {
+    "id": "none",
+    "label": "Freestanding (not touching the house roof)",
+    "copy": "New roof is complete on its own; only flashing/trim where it meets the house wall.",
+    "valid_shapes": [
+     "gable",
+     "shed",
+     "hip",
+     "half_hip",
+     "dutch_gable",
+     "saltbox",
+     "flat"
+    ]
+   },
+   {
+    "id": "shed_under_eave",
+    "label": "Shed under the existing eave",
+    "copy": "New shed's high edge stops just below the house's eave; flashed up the wall. No work on the existing roof.",
+    "valid_shapes": [
+     "shed",
+     "flat"
+    ],
+    "key_check": "highest new roof surface at the house wall <= existing eave underside - flashingClearIn"
+   },
+   {
+    "id": "shed_into_roof_plane",
+    "label": "Shed tied into the existing roof slope",
+    "copy": "Existing eave is cut back over the addition and the new (flatter) shed roof runs up onto the existing roof until the two surfaces meet. Gives height but works on the existing roof.",
+    "valid_shapes": [
+     "shed"
+    ],
+    "key_check": "tie line distance up the existing roof < distance to existing ridge - 1 ft"
+   },
+   {
+    "id": "extend_plane",
+    "label": "Extend the existing roof slope",
+    "copy": "Continue the house roof at the same pitch down over the addition. Only works for shallow additions or low existing eaves far above the floor.",
+    "valid_shapes": [
+     "shed"
+    ],
+    "key_check": "existing surface at outer wall >= lowPlateFt + heel"
+   },
+   {
+    "id": "gable_into_roof",
+    "label": "Gable tied into the existing roof (valleys)",
+    "copy": "New gable runs out from the house with its ridge perpendicular to the house; where it meets the house roof two valleys form.",
+    "valid_shapes": [
+     "gable",
+     "half_hip"
+    ],
+    "default_for": "gable with attachToExistingWallId set"
+   },
+   {
+    "id": "gable_parallel_cricket",
+    "label": "Gable parallel to the house + cricket",
+    "copy": "Ridge runs along the house; the back slope drains toward the house so a cricket/saddle or a tie-in with two valleys is required.",
+    "valid_shapes": [
+     "gable",
+     "saltbox"
+    ],
+    "warn": "ROOF_DRAINS_TO_HOUSE"
+   },
+   {
+    "id": "hip_into_roof",
+    "label": "Hip tied into the existing roof",
+    "copy": "Hip addition with the back corners forming valleys into the house roof.",
+    "valid_shapes": [
+     "hip"
+    ]
+   }
+  ],
+  "coverings": [
+   {
+    "id": "asphalt_shingle",
+    "label": "Asphalt shingles (architectural / 3-tab)",
+    "minPitch": 2,
+    "doubleUnderlaymentBelow": 4,
+    "iceBarrier": true,
+    "weightPsf": "~2.5-4.5 (3-tab lighter, architectural heavier) UNVERIFIED",
+    "snow": "Holds snow; ice dams at eaves -> ice barrier required (MT).",
+    "hd_categories": [
+     "Roofing > Roof Shingles",
+     "Roofing > Roof Underlayment",
+     "Roofing > Roof Flashing"
+    ],
+    "price_refs": [
+     "shingles_bundle",
+     "starter_bundle",
+     "ridge_cap_bundle"
+    ],
+    "variants": [
+     {
+      "id": "architectural",
+      "bundlesPerSquare": 3,
+      "price_ref": "shingles_bundle"
+     },
+     {
+      "id": "three_tab",
+      "bundlesPerSquare": 3,
+      "price_ref": "shingles_3tab_bundle (PRICE NEEDED)"
+     }
+    ],
+    "cite": [
+     "R905.2.2",
+     "R905.1.1",
+     "R905.1.2"
+    ]
+   },
+   {
+    "id": "metal_panel_lapped",
+    "label": "Metal panels, exposed fastener (5V / ribbed / corrugated)",
+    "minPitch": 3,
+    "iceBarrier": false,
+    "weightPsf": "~1-1.5 UNVERIFIED",
+    "snow": "Sheds snow suddenly - snow guards over doors/walkways and over lower roofs; drip edge/eave trim.",
+    "hd_categories": [
+     "Roofing > Metal Roofing"
+    ],
+    "price_refs": [
+     "metal_5v_26x8",
+     "metal_smrib_3x8",
+     "metal_smrib_3x12",
+     "metal_smrib_3x16",
+     "metal_screw_120"
+    ],
+    "cite": [
+     "R905.10.2"
+    ],
+    "warn": "V-ROOF-03 product may need more slope"
+   },
+   {
+    "id": "metal_panel_lapped_sealant",
+    "label": "Metal panels with sealed laps",
+    "minPitch": 0.5,
+    "iceBarrier": false,
+    "cite": [
+     "R905.10.2"
+    ]
+   },
+   {
+    "id": "metal_standing_seam",
+    "label": "Standing seam metal (concealed fastener)",
+    "minPitch": 0.25,
+    "iceBarrier": false,
+    "snow": "Best snow shedding; needs snow guards in snow country. Usually NOT stocked at HD - local metal supplier.",
+    "price_refs": [
+     "standing_seam_panel (PRICE NEEDED)"
+    ],
+    "cite": [
+     "R905.10.2"
+    ]
+   },
+   {
+    "id": "metal_shingle",
+    "label": "Metal shingles",
+    "minPitch": 3,
+    "iceBarrier": true,
+    "cite": [
+     "R905.4.2",
+     "R905.4.6"
+    ]
+   },
+   {
+    "id": "roll_roofing",
+    "label": "Rolled roofing (mineral surfaced)",
+    "minPitch": 1,
+    "iceBarrier": true,
+    "weightPsf": "~0.9 UNVERIFIED",
+    "snow": "Cheap, short life (~5-10 yr UNVERIFIED); OK for sheds/low slopes.",
+    "price_refs": [
+     "roll_roofing_mineral"
+    ],
+    "cite": [
+     "R905.5.2"
+    ]
+   },
+   {
+    "id": "modified_bitumen",
+    "label": "Modified bitumen (self-adhered SBS)",
+    "minPitch": 0.25,
+    "iceBarrier": false,
+    "price_refs": [
+     "modbit_sa_cap_100",
+     "modbit_sa_base_100"
+    ],
+    "cite": [
+     "R905.9.1"
+    ],
+    "note": "Base + cap two-ply system."
+   },
+   {
+    "id": "single_ply",
+    "label": "EPDM rubber / TPO",
+    "minPitch": 0.25,
+    "iceBarrier": false,
+    "price_refs": [
+     "epdm_10x25 (special order, PRICE NEEDED)",
+     "tpo_6x50"
+    ],
+    "cite": [
+     "R905.9.1"
+    ],
+    "subtypes": [
+     "epdm",
+     "tpo"
+    ]
+   },
+   {
+    "id": "built_up",
+    "label": "Built-up (tar & gravel)",
+    "minPitch": 0.25,
+    "hidden_by_default": true
+   },
+   {
+    "id": "liquid_applied",
+    "label": "Liquid-applied coating",
+    "minPitch": 0.25,
+    "hidden_by_default": true
+   },
+   {
+    "id": "clay_concrete_tile",
+    "label": "Clay/concrete tile",
+    "minPitch": 2.5,
+    "hidden_by_default": true,
+    "warn": "Heavy (~9-12 psf UNVERIFIED): DL20 span tables"
+   },
+   {
+    "id": "slate",
+    "label": "Slate",
+    "minPitch": 4,
+    "hidden_by_default": true
+   },
+   {
+    "id": "wood_shingle",
+    "label": "Wood shingles",
+    "minPitch": 3,
+    "hidden_by_default": true
+   },
+   {
+    "id": "wood_shake",
+    "label": "Wood shakes",
+    "minPitch": 3,
+    "hidden_by_default": true
+   }
+  ],
+  "valleys": [
+   {
+    "id": "closed_cut",
+    "label": "Closed-cut valley (default)",
+    "copy": "Shingles from the lower-pitch (or existing) side run through the valley; the other side is cut 2 in back from the centerline. Over a 36 in self-adhered ice & water lining. Best for snow country with HD materials.",
+    "lining": "36 in ASTM D1970 self-adhered (R905.2.8.2)",
+    "default": true,
+    "coverings": [
+     "asphalt_shingle"
+    ]
+   },
+   {
+    "id": "woven",
+    "label": "Woven valley",
+    "copy": "Shingles from both sides lap across. Not for most laminated/architectural shingles (manufacturer).",
+    "lining": "36 in self-adhered",
+    "coverings": [
+     "asphalt_shingle"
+    ],
+    "warn": "Check shingle maker; many architectural shingles prohibit weaving. UNVERIFIED per product."
+   },
+   {
+    "id": "open_metal",
+    "label": "Open W-valley (metal)",
+    "copy": "Exposed metal channel; shingles cut back each side. Fast drainage, looks crisp.",
+    "lining": "metal >=24 in wide (R905.2.8.2) over 36 in ice & water",
+    "coverings": [
+     "asphalt_shingle",
+     "metal_shingle",
+     "metal_panel_lapped",
+     "metal_standing_seam"
+    ],
+    "warn": "HD in-stock W-valley is 18 in; 24 in is special order -> PRICE NEEDED."
+   }
+  ],
+  "tieInFraming": [
+   {
+    "id": "california_overlay",
+    "label": "Overlay (California) framing",
+    "copy": "Leave the existing roof in place; lay valley boards (2x flat) on the old sheathing along the valley lines; jack rafters run from the valley boards to the new ridge.",
+    "pros": "Fast, roof stays weathertight longer.",
+    "cons": "Puts new weight + valley snow on the existing roof framing -> manufacturer/engineer for modular/HUD homes."
+   },
+   {
+    "id": "cut_in",
+    "label": "Cut-in valley rafters",
+    "copy": "Open the existing roof in the tie-in area; frame real valley rafters (one size deeper than the jacks per R802.4.3) to a header/beam; existing rafters/trusses there are cut and supported.",
+    "cons": "Cutting trusses is prohibited without a truss engineer's repair design (R802.7.2)."
+   }
+  ],
+  "bearingAtHouse": [
+   {
+    "id": "freestanding_wall",
+    "label": "New bearing wall next to the house (default)",
+    "copy": "Build a new wall (or beam on posts) right next to the house wall to carry the new roof. Nothing hangs on the house. Required approach for HUD-code homes unless the manufacturer approves.",
+    "default": true,
+    "cite": [
+     "HUD_3282.8j",
+     "HUD_3285.903"
+    ]
+   },
+   {
+    "id": "ledger",
+    "label": "Ledger bolted to the house",
+    "copy": "A board bolted to the house wall framing carries the rafters. Only with written OK from the home's manufacturer or an engineer.",
+    "requires": "m.attachToExistingWallId + confirmation",
+    "warn": "ROOF_LEDGER_ON_MODULAR"
+   },
+   {
+    "id": "beam_on_posts",
+    "label": "Beam on posts at the house side",
+    "copy": "Beam along the house side on posts that land on their own piers (Jake's rule: piers under walls/corners only -> posts at the ends/corners of the house-side line).",
+    "engineer": "beam size"
+   }
+  ],
+  "flashing": [
+   {
+    "id": "step",
+    "where": "roof slope meets a sidewall",
+    "rule": "one 4x4x8 (or 5x8) piece per shingle course (5 in exposure -> 2.4 per lf of slope)",
+    "cite": "R905.2.8.3"
+   },
+   {
+    "id": "kickout",
+    "where": "bottom of every roof-to-wall line at an eave",
+    "rule": "1 per location",
+    "cite": "R903.2.1"
+   },
+   {
+    "id": "headwall_apron",
+    "where": "top of a shed against the house wall",
+    "rule": "continuous L flashing, 4 in up wall under siding/counterflashing",
+    "cite": "R905.2.8.4"
+   },
+   {
+    "id": "counter",
+    "where": "over step/apron at masonry or where siding can't lap",
+    "rule": "continuous"
+   },
+   {
+    "id": "pitch_break",
+    "where": "shed_into_roof_plane transition",
+    "rule": "continuous transition metal + ice & water both sides"
+   },
+   {
+    "id": "drip_edge",
+    "where": "all eaves and rakes",
+    "cite": "R905.2.8.5"
+   },
+   {
+    "id": "pipe_boot",
+    "where": "each vent pipe"
+   }
+  ]
+ },
+ "fields": [
+  {
+   "path": "roof.params.shape",
+   "type": "enum",
+   "enum": [
+    "gable",
+    "shed",
+    "hip",
+    "half_hip",
+    "dutch_gable",
+    "saltbox",
+    "flat"
+   ],
+   "default": "gable",
+   "ui": "Shape cards with a 3D thumbnail",
+   "wizard": "roof.set_shape (wizard currently refuses hip)",
+   "existing": true
+  },
+  {
+   "path": "roof.params.ridge",
+   "type": "enum",
+   "enum": [
+    "long",
+    "short"
+   ],
+   "default": "long",
+   "existing": true,
+   "copy": "Which way the ridge runs. 'long' = along the longer footprint side.",
+   "ui_alias": "roof.ui.ridgeRelativeToHouse ('parallel'|'perpendicular'), converted to long/short using m.attachToExistingWallId"
+  },
+  {
+   "path": "roof.ui.ridgeRelativeToHouse",
+   "type": "enum",
+   "enum": [
+    "parallel",
+    "perpendicular"
+   ],
+   "derived_to": "roof.params.ridge",
+   "default": "perpendicular when a house wall is attached",
+   "note": "UI-only alias; for Jake's 20 ft house wall, perpendicular == 'short'."
+  },
+  {
+   "path": "roof.params.shed",
+   "type": "object",
+   "wizard": "roof.make_shed",
+   "fields": {
+    "highWallId": {
+     "type": "wallId",
+     "default": "m.attachToExistingWallId || first long wall"
+    },
+    "highPlateFt": {
+     "type": "number",
+     "min": 7,
+     "max": 16,
+     "default": "plateHeightFt + run*2/12"
+    },
+    "lowPlateFt": {
+     "type": "number",
+     "min": 6.5,
+     "max": 14,
+     "default": "walls.params.plateHeightFt"
+    }
+   },
+   "derives": "roof.params.pitch = 12*(highPlateFt-lowPlateFt)/run (run = outside faces, wizard convention)"
+  },
+  {
+   "path": "roof.params.shed.slopeAwayFromHouse",
+   "type": "bool",
+   "default": true,
+   "warn_if_false": "ROOF_DRAINS_TO_HOUSE"
+  },
+  {
+   "path": "roof.params.pitch",
+   "type": "number",
+   "unit": "in rise per 12 in run",
+   "default": 4,
+   "min": 0.25,
+   "max": 18,
+   "step": 0.25,
+   "existing": true,
+   "inputs": [
+    "x:12",
+    "degrees",
+    "heights (high/low plate)",
+    "percent"
+   ],
+   "conversions": {
+    "degrees": "atan(p/12)",
+    "fromDegrees": "12*tan(deg)",
+    "percent": "100*p/12",
+    "fromHeights": "12*(hi-lo)/runFt"
+   }
+  },
+  {
+   "path": "roof.params.faces",
+   "type": "object",
+   "shapes": [
+    "hip",
+    "half_hip",
+    "dutch_gable",
+    "saltbox"
+   ],
+   "fields": {
+    "front": {
+     "pitch": "number"
+    },
+    "back": {
+     "pitch": "number"
+    },
+    "left": {
+     "pitch": "number"
+    },
+    "right": {
+     "pitch": "number"
+    }
+   },
+   "default": "all = roof.params.pitch",
+   "copy": "Per-face pitch. Unequal pitches make hips/valleys run off 45 degrees and the ridge shift.",
+   "warn": "ROOF_UNEQUAL_HIP"
+  },
+  {
+   "path": "roof.params.saltbox",
+   "type": "object",
+   "fields": {
+    "ridgeOffsetFt": {
+     "min": 1,
+     "default": "span/6"
+    },
+    "pitchBack": {
+     "default": "roof.params.pitch/2"
+    }
+   }
+  },
+  {
+   "path": "roof.params.halfHip",
+   "type": "object",
+   "fields": {
+    "clipHeightFt": {
+     "min": 1,
+     "default": "rise/3"
+    }
+   }
+  },
+  {
+   "path": "roof.params.dutch",
+   "type": "object",
+   "fields": {
+    "gableStartFt": {
+     "default": "rise/2",
+     "copy": "Height above the plate where the little gable starts."
+    }
+   }
+  },
+  {
+   "path": "roof.params.flat",
+   "type": "object",
+   "fields": {
+    "slopeDirection": {
+     "enum": [
+      "away_from_house",
+      "left",
+      "right",
+      "to_drain"
+     ],
+     "default": "away_from_house"
+    },
+    "slopeInPerFt": {
+     "min": 0.25,
+     "default": 0.25
+    }
+   }
+  },
+  {
+   "path": "roof.params.overhangIn",
+   "type": "number",
+   "default": 12,
+   "min": 0,
+   "max": 24,
+   "existing": true,
+   "copy": "Eave overhang, measured level from the wall face.",
+   "warn": "> 24 in on notched tails: R802.7.1.1"
+  },
+  {
+   "path": "roof.params.rakeOverhangIn",
+   "type": "number",
+   "default": 12,
+   "min": 0,
+   "max": 24,
+   "copy": "Overhang at gable ends.",
+   "warn": "> 9 in needs lookouts/ladder framing (R803.2.3) -> roof.lookouts"
+  },
+  {
+   "path": "roof.params.eave",
+   "type": "object",
+   "fields": {
+    "soffit": {
+     "enum": [
+      "vented_aluminum",
+      "vented_vinyl",
+      "plywood_with_vents",
+      "open_rafter_tails",
+      "none"
+     ],
+     "default": "vented_aluminum"
+    },
+    "fascia": {
+     "enum": [
+      "2x6",
+      "2x8",
+      "1x6_trim",
+      "aluminum_wrap"
+     ],
+     "default": "2x6 (sub-fascia) + aluminum wrap"
+    },
+    "dripEdge": {
+     "enum": [
+      "standard",
+      "galvanized_heavy"
+     ],
+     "default": "standard"
+    },
+    "gutters": {
+     "enum": [
+      "none",
+      "5in_aluminum_k",
+      "6in_aluminum_k",
+      "5in_vinyl_k"
+     ],
+     "default": "5in_aluminum_k"
+    },
+    "downspoutEvery": {
+     "default": "each end of each eave run >20 ft, else 1 per eave"
+    }
+   }
+  },
+  {
+   "path": "m.attachToExistingWallId",
+   "type": "wallId|null",
+   "existing_proposed": "content-v3 missing_fields / wizard proposed_fields",
+   "copy": "The addition wall that touches the house."
+  },
+  {
+   "path": "roof.params.tieIn",
+   "type": "object",
+   "fields": {
+    "type": {
+     "enum": [
+      "none",
+      "shed_under_eave",
+      "shed_into_roof_plane",
+      "extend_plane",
+      "gable_into_roof",
+      "gable_parallel_cricket",
+      "hip_into_roof"
+     ],
+     "default": "auto: none if no house wall; shed->shed_under_eave; gable->gable_into_roof"
+    },
+    "existingId": {
+     "type": "site object id (role existing)"
+    },
+    "flashingClearIn": {
+     "default": 5,
+     "min": 4,
+     "copy": "Room between new roof surface and the eave underside for the 4 in flashing leg + 1 in."
+    },
+    "framing": {
+     "enum": [
+      "california_overlay",
+      "cut_in"
+     ],
+     "default": "california_overlay"
+    },
+    "bearingAtHouse": {
+     "enum": [
+      "freestanding_wall",
+      "ledger",
+      "beam_on_posts"
+     ],
+     "default": "freestanding_wall"
+    },
+    "manufacturerApproval": {
+     "enum": [
+      "unknown",
+      "yes",
+      "no"
+     ],
+     "default": "unknown"
+    },
+    "cutBackExistingEave": {
+     "type": "bool",
+     "default": "true for gable_into_roof and shed_into_roof_plane"
+    },
+    "floorDropFt": {
+     "type": "number",
+     "default": 0,
+     "min": 0,
+     "max": 2.5,
+     "copy": "Step the addition floor down (e.g. 2 risers = 15.5 in) to gain roof height."
+    },
+    "cricket": {
+     "type": "bool",
+     "default": false
+    }
+   }
+  },
+  {
+   "path": "site.objects[role=existing].props.existingRoof",
+   "type": "object",
+   "copy": "Measurements of the house roof where the addition meets it. Measure from the HOUSE floor (or from the ground and enter ground-to-floor).",
+   "fields": {
+    "homeType": {
+     "enum": [
+      "hud_manufactured",
+      "state_modular",
+      "site_built",
+      "unknown"
+     ],
+     "default": "unknown",
+     "copy": "HUD label/data plate = manufactured; state insignia = modular."
+    },
+    "pitch": {
+     "type": "number",
+     "default": null,
+     "min": 1,
+     "max": 12,
+     "copy": "Existing roof pitch. Measure: level 12 in out from the roof, measure straight down to the roof.",
+     "required_for": [
+      "shed_into_roof_plane",
+      "extend_plane",
+      "gable_into_roof"
+     ]
+    },
+    "plateHeightFt": {
+     "default": null,
+     "copy": "Top of house wall (inside: floor to ceiling + ~1 ft)"
+    },
+    "eaveUndersideFt": {
+     "default": null,
+     "copy": "Floor-level to the underside of the eave/soffit right at the wall.",
+     "required_for": [
+      "shed_under_eave"
+     ]
+    },
+    "roofTopAtWallFt": {
+     "default": null,
+     "copy": "Height of the roof surface straight above the wall face (eave underside + roof thickness, ~6-10 in)."
+    },
+    "fasciaBottomFt": {
+     "default": null,
+     "copy": "Height of the bottom of the fascia/gutter at the eave edge."
+    },
+    "overhangIn": {
+     "default": null
+    },
+    "ridgeDistFt": {
+     "default": null,
+     "copy": "Distance from this wall to the house ridge (half the home width for a centered ridge)."
+    },
+    "covering": {
+     "enum": [
+      "asphalt_shingle",
+      "metal_panel_lapped",
+      "metal_panel_lapped_sealant",
+      "metal_standing_seam",
+      "metal_shingle",
+      "roll_roofing",
+      "modified_bitumen",
+      "single_ply",
+      "built_up",
+      "liquid_applied",
+      "clay_concrete_tile",
+      "slate",
+      "wood_shingle",
+      "wood_shake"
+     ],
+     "default": "asphalt_shingle"
+    },
+    "framing": {
+     "enum": [
+      "trusses",
+      "rafters",
+      "unknown"
+     ],
+     "default": "trusses (typical modular)"
+    },
+    "wallSide": {
+     "enum": [
+      "eave_side",
+      "gable_end"
+     ],
+     "default": "eave_side"
+    }
+   }
+  },
+  {
+   "path": "roof.params.valleys",
+   "type": "object",
+   "fields": {
+    "type": {
+     "enum": [
+      "closed_cut",
+      "woven",
+      "open_metal"
+     ],
+     "default": "closed_cut"
+    },
+    "liningWidthIn": {
+     "default": 36,
+     "min": 36
+    },
+    "metalWidthIn": {
+     "default": 24,
+     "min": 24,
+     "when": "open_metal"
+    }
+   },
+   "placement": "Computed, not drawn by hand: valleys form wherever two roof planes meet in an inside corner (new gable into house roof, L/T footprints, dormers). User can move the tie point by changing pitch, ridge height or ridge direction."
+  },
+  {
+   "path": "roof.params.framing",
+   "type": "enum",
+   "enum": [
+    "rafters",
+    "trusses"
+   ],
+   "default": "rafters",
+   "copy": "Trusses are engineered and ordered; the app gives the order spec, not sizes."
+  },
+  {
+   "path": "roof.params.rafterSize",
+   "type": "enum",
+   "enum": [
+    "2x6",
+    "2x8",
+    "2x10",
+    "2x12",
+    "auto"
+   ],
+   "default": "2x8 (existing) - recommend 'auto' from snow table",
+   "existing": true
+  },
+  {
+   "path": "roof.params.rafterOcIn",
+   "type": "enum",
+   "enum": [
+    12,
+    16,
+    19.2,
+    24
+   ],
+   "default": 24,
+   "existing": true
+  },
+  {
+   "path": "roof.params.lumber",
+   "type": "object",
+   "fields": {
+    "species": {
+     "enum": [
+      "Spruce-pine-fir",
+      "Douglas fir-larch",
+      "Hem-fir",
+      "Southern pine"
+     ],
+     "default": "Spruce-pine-fir"
+    },
+    "grade": {
+     "enum": [
+      "#2"
+     ],
+     "default": "#2"
+    }
+   },
+   "note": "content-v3 prices are SYP; tables here carry SPF/DF-L/HF #2 rows only. Use SPF #2 (most conservative of those carried)."
+  },
+  {
+   "path": "roof.params.ceiling",
+   "type": "enum",
+   "enum": [
+    "flat_attic",
+    "cathedral",
+    "scissor_truss"
+   ],
+   "default": "flat_attic",
+   "copy": "Flat ceiling with an attic, or a vaulted ceiling following the roof."
+  },
+  {
+   "path": "roof.params.ridgeType",
+   "type": "enum",
+   "enum": [
+    "board",
+    "beam"
+   ],
+   "default": "board (flat_attic) / beam (cathedral)",
+   "cite": [
+    "R802.3"
+   ]
+  },
+  {
+   "path": "roof.params.ridgeSize",
+   "type": "string",
+   "default": "auto = one size deeper than rafter (content-v3); beam = engineer",
+   "price_refs": [
+    "lumber_2x12_*",
+    "lvl_175x1178_*"
+   ]
+  },
+  {
+   "path": "roof.params.ceilingJoistSize",
+   "type": "enum",
+   "enum": [
+    "auto",
+    "2x6",
+    "2x8",
+    "2x10",
+    "2x12"
+   ],
+   "default": "auto",
+   "existing": true
+  },
+  {
+   "path": "roof.params.ceilingJoistOcIn",
+   "type": "number",
+   "default": "= rafterOcIn"
+  },
+  {
+   "path": "roof.params.collarTies",
+   "type": "enum",
+   "enum": [
+    "every_2nd_pair",
+    "every_pair",
+    "ridge_strap",
+    "none"
+   ],
+   "default": "every_2nd_pair (<=4 ft o.c. at 24 in)",
+   "cite": [
+    "R802.4.6"
+   ]
+  },
+  {
+   "path": "roof.params.seatIn",
+   "type": "number",
+   "default": 3.5,
+   "min": 1.5,
+   "max": 5.5,
+   "copy": "Bird's-mouth seat length on the wall plate."
+  },
+  {
+   "path": "roof.params.raisedHeelIn",
+   "type": "number",
+   "default": 0,
+   "min": 0,
+   "max": 24,
+   "copy": "Energy heel (trusses) or raised rafter tie height.",
+   "warn": "raised tie HC/HR > 1/3 -> engineer (R802.5.2)"
+  },
+  {
+   "path": "roof.params.upliftConnector",
+   "type": "enum",
+   "enum": [
+    "H2.5A",
+    "H3",
+    "none"
+   ],
+   "default": "H2.5A",
+   "cite": [
+    "R802.11"
+   ]
+  },
+  {
+   "path": "roof.params.sheathing",
+   "type": "object",
+   "fields": {
+    "thickness": {
+     "enum": [
+      "auto",
+      "7/16",
+      "15/32",
+      "19/32",
+      "5/8_zip"
+     ],
+     "default": "auto (Table R503.2.1.1(1) by snow and spacing)"
+    },
+    "edgeSupport": {
+     "enum": [
+      "h_clips",
+      "blocking",
+      "tongue_groove"
+     ],
+     "default": "h_clips"
+    }
+   },
+   "existing_partial": "roof.params.showSheathing (display only)"
+  },
+  {
+   "path": "roof.params.snow",
+   "type": "object",
+   "fields": {
+    "groundSnowPsf": {
+     "default": "content-v4 jurisdictions[].ground_snow_load_psf.value (null for 59833 -> ask)",
+     "copy": "Ground snow load for your exact site (ASD)."
+    },
+    "source": {
+     "enum": [
+      "zip_lookup",
+      "user",
+      "assumed"
+     ],
+     "default": "zip_lookup"
+    },
+    "strengthLevel": {
+     "type": "bool",
+     "default": false,
+     "copy": "True if read from the ASCE 7 Hazard Tool (strength level) -> app multiplies by 0.7."
+    },
+    "minRoofSnowPsf": {
+     "default": 30,
+     "source": "content-v4 / MT R301.6"
+    }
+   }
+  },
+  {
+   "path": "roof.params.vent",
+   "type": "object",
+   "fields": {
+    "strategy": {
+     "enum": [
+      "vented_ridge_soffit",
+      "vented_gable_louvers",
+      "unvented_spray_foam",
+      "unvented_rigid_above"
+     ],
+     "default": "vented_ridge_soffit"
+    },
+    "ratio": {
+     "enum": [
+      "1/150",
+      "1/300"
+     ],
+     "default": "1/150"
+    },
+    "ridgeVent": {
+     "enum": [
+      "shingle_over_rigid",
+      "roll"
+     ],
+     "default": "shingle_over_rigid (snow-country filtered)"
+    },
+    "baffles": {
+     "type": "bool",
+     "default": true
+    }
+   },
+   "cite": [
+    "R806.1",
+    "R806.2",
+    "R806.3",
+    "R806.5"
+   ]
+  },
+  {
+   "path": "roof.params.roofing",
+   "type": "object",
+   "wizard": "roof.set_covering",
+   "fields": {
+    "covering": {
+     "enum": [
+      "asphalt_shingle",
+      "metal_panel_lapped",
+      "metal_panel_lapped_sealant",
+      "metal_standing_seam",
+      "metal_shingle",
+      "roll_roofing",
+      "modified_bitumen",
+      "single_ply",
+      "built_up",
+      "liquid_applied",
+      "clay_concrete_tile",
+      "slate",
+      "wood_shingle",
+      "wood_shake"
+     ],
+     "default": "asphalt_shingle"
+    },
+    "underlayment": {
+     "enum": [
+      "synthetic",
+      "double_synthetic",
+      "self_adhered_full"
+     ],
+     "default": "auto: double_synthetic when 2<=pitch<4 for shingles"
+    },
+    "iceBarrierCourses": {
+     "default": "auto from overhang and pitch"
+    },
+    "shingleVariant": {
+     "enum": [
+      "architectural",
+      "three_tab"
+     ],
+     "default": "architectural"
+    },
+    "metalGauge": {
+     "enum": [
+      26,
+      29
+     ],
+     "default": 29
+    },
+    "singlePlyType": {
+     "enum": [
+      "epdm",
+      "tpo"
+     ],
+     "default": "tpo (HD stock)"
+    }
+   }
+  },
+  {
+   "path": "roof.objects[type=skylight]",
+   "type": "object",
+   "fields": {
+    "widthIn": {},
+    "lengthIn": {},
+    "mount": {
+     "enum": [
+      "curb",
+      "deck"
+     ]
+    },
+    "face": {
+     "type": "face id"
+    },
+    "distFromRidgeFt": {}
+   },
+   "rules": [
+    "curb >=4 in if pitch < 3:12 (R308.6.8)",
+    "not within 18 in of a valley or hip (guidance UNVERIFIED)",
+    "header rafters doubled each side if opening cuts >1 rafter (guidance)"
+   ]
+  },
+  {
+   "path": "roof.objects[type=penetration]",
+   "type": "object",
+   "fields": {
+    "kind": {
+     "enum": [
+      "plumbing_vent",
+      "bath_fan",
+      "stove_pipe",
+      "chimney"
+     ]
+    },
+    "diameterIn": {},
+    "widthIn": {}
+   },
+   "rules": [
+    "cricket if width >30 in (R903.2.2)",
+    "place uphill side clear of valleys"
+   ]
+  },
+  {
+   "path": "roof.params.snowGuards",
+   "type": "object",
+   "fields": {
+    "enabled": {
+     "default": "auto: true for metal coverings over entries/walkways/lower roofs"
+    },
+    "rows": {
+     "default": 1
+    },
+    "spacingIn": {
+     "default": "per manufacturer"
+    }
+   },
+   "price_refs": [
+    "snow_guard_clear_25",
+    "snow_guard_shingle (PRICE NEEDED)"
+   ]
+  }
+ ],
+ "validations": [
+  {
+   "id": "V-ROOF-01",
+   "severity": "block",
+   "wizard": "V-ROOF-01",
+   "when": "pitch < covering.minPitch",
+   "msg": "{covering} needs at least {min}:12 (IRC {section}). This roof is {pitch}:12."
+  },
+  {
+   "id": "V-ROOF-02",
+   "severity": "warn",
+   "wizard": "V-ROOF-02",
+   "when": "covering==asphalt_shingle && 2<=pitch<4",
+   "msg": "Needs two layers of underlayment (R905.2.2)."
+  },
+  {
+   "id": "V-ROOF-03",
+   "severity": "warn",
+   "wizard": "V-ROOF-03",
+   "when": "covering startsWith metal_panel",
+   "msg": "Panel instructions may need more slope than code."
+  },
+  {
+   "id": "V-ROOF-04",
+   "severity": "info",
+   "wizard": "V-ROOF-04",
+   "when": "pitch < 2",
+   "msg": "Low-slope roof: drainage edge/gutter, snow drift, membrane or sealed metal."
+  },
+  {
+   "id": "V-ROOF-05",
+   "severity": "warn",
+   "wizard": "V-ROOF-05",
+   "when": "span > table span (rafter-span-tables.json) for groundSnowPsf",
+   "msg": "{size} @ {oc} in spans {max} for {pg} psf snow; this roof needs {span}. Try {suggest}."
+  },
+  {
+   "id": "V-ROOF-06",
+   "severity": "warn",
+   "wizard": "V-ROOF-06",
+   "when": "rafter cut length > 20 ft",
+   "msg": "Longer than stock in the price list."
+  },
+  {
+   "id": "RF-SNOW-01",
+   "severity": "block",
+   "when": "groundSnowPsf == null",
+   "msg": "We need your site's ground snow load before sizing rafters. Florence: look it up at snowload.montana.edu or ask the Building Codes Bureau (406) 841-2056. Using 30/50/70 options meanwhile.",
+   "chips": [
+    "30 psf",
+    "50 psf",
+    "70 psf",
+    "Look it up"
+   ]
+  },
+  {
+   "id": "RF-SNOW-02",
+   "severity": "block",
+   "when": "groundSnowPsf > 70",
+   "msg": "Over 70 psf ground snow: roof needs engineering (R301.2.3).",
+   "cite": "R301.2.3"
+  },
+  {
+   "id": "RF-SNOW-03",
+   "severity": "warn",
+   "when": "tieIn.type in [shed_under_eave, shed_into_roof_plane] || roof is lower than an adjacent roof",
+   "msg": "Your new roof sits below the house roof: snow slides and drifts onto it. The IRC tables don't include that extra load - have an engineer or truss maker size it.",
+   "cite": "ASCE7_drift"
+  },
+  {
+   "id": "RF-SNOW-04",
+   "severity": "info",
+   "when": "strengthLevel",
+   "msg": "Converted hazard-tool value x0.7 to ASD for the IRC tables."
+  },
+  {
+   "id": "RF-TIE-01",
+   "severity": "block",
+   "when": "shed_under_eave && highest new roof surface > eaveUndersideFt + floorDropFt - flashingClearIn/12",
+   "msg": "The high side would hit the house eave by {shortBy}. Options: lower the high wall to {maxHi} (pitch {p}), step the floor down, tie into the roof slope, or switch to a gable tie-in.",
+   "chips": [
+    "Lower high wall",
+    "Step floor down",
+    "Tie into roof slope",
+    "Gable tie-in"
+   ]
+  },
+  {
+   "id": "RF-TIE-02",
+   "severity": "block",
+   "when": "tie distance up existing roof >= existing ridgeDistFt - 1",
+   "msg": "The new roof would reach the house ridge. Lower the pitch, hip the back, or make the addition narrower."
+  },
+  {
+   "id": "RF-TIE-03",
+   "severity": "block",
+   "when": "extend_plane && existing surface at outer wall < lowPlateFt_min + heel",
+   "msg": "Extending the house slope would leave the outer wall {h} tall. Not usable; break the pitch (shed tie-in) or use a gable."
+  },
+  {
+   "id": "RF-TIE-04",
+   "severity": "warn",
+   "when": "existingRoof.pitch == null && tieIn.type != none",
+   "msg": "Measure your house roof pitch first; tie-in heights and valleys depend on it."
+  },
+  {
+   "id": "RF-TIE-05",
+   "severity": "warn",
+   "when": "tieIn.framing == california_overlay || tieIn.type == shed_into_roof_plane",
+   "msg": "This puts new framing and valley snow on your house roof. With a modular/manufactured home, get the manufacturer's or an engineer's OK.",
+   "cite": [
+    "HUD_3282.8j",
+    "HUD_3285.903",
+    "HUD_3280.305"
+   ]
+  },
+  {
+   "id": "RF-TIE-06",
+   "severity": "block",
+   "when": "tieIn.framing == cut_in && existingRoof.framing == trusses",
+   "msg": "Cutting trusses needs a truss engineer's repair letter.",
+   "cite": "R802.7.2"
+  },
+  {
+   "id": "RF-LEDGER-01",
+   "severity": "warn",
+   "when": "bearingAtHouse == ledger && homeType in [hud_manufactured, state_modular, unknown] && manufacturerApproval != yes",
+   "msg": "Modular/manufactured walls often can't carry a ledger. Confirm with the manufacturer or an engineer, or use a new bearing wall (default).",
+   "cite": [
+    "HUD_3282.8j"
+   ]
+  },
+  {
+   "id": "RF-DRAIN-01",
+   "severity": "warn",
+   "when": "shed slopes toward house || gable_parallel_cricket without cricket",
+   "msg": "Water would run toward the house wall. Slope away or add a cricket."
+  },
+  {
+   "id": "RF-HEAD-01",
+   "severity": "block",
+   "when": "habitable && ceiling height < 7 ft over > 50% of required area, or any required area < 5 ft",
+   "msg": "Ceiling too low for a habitable room (R305.1).",
+   "cite": "R305.1"
+  },
+  {
+   "id": "RF-ICE-01",
+   "severity": "info",
+   "when": "covering.iceBarrier",
+   "msg": "Montana requires ice barrier from the eave to 24 in inside the wall: {courses} course(s) of 36 in membrane with your {oh} in overhang.",
+   "cite": "R905.1.2"
+  },
+  {
+   "id": "RF-VALLEY-01",
+   "severity": "warn",
+   "when": "valleys.type == open_metal && metalWidthIn < 24",
+   "msg": "Open metal valleys need 24 in wide metal (R905.2.8.2); HD stock W-valley is 18 in."
+  },
+  {
+   "id": "RF-VALLEY-02",
+   "severity": "info",
+   "when": "valleys exist",
+   "msg": "Valleys collect snow and ice: lined with 36 in self-adhered membrane, keep skylights/vents out of them."
+  },
+  {
+   "id": "RF-LOWPITCH-01",
+   "severity": "block",
+   "when": "pitch < 3 && (ridge or hip or valley present)",
+   "msg": "Under 3:12 the ridge, hips and valleys must be designed beams (R802.4.4).",
+   "cite": "R802.4.4"
+  },
+  {
+   "id": "RF-RIDGE-01",
+   "severity": "warn",
+   "when": "ceiling == cathedral && ridgeType == board",
+   "msg": "Vaulted ceiling without ties needs a structural ridge beam supported at both ends (R802.3) - engineer/LVL.",
+   "cite": "R802.3"
+  },
+  {
+   "id": "RF-RIDGE-02",
+   "severity": "auto",
+   "when": "ridgeType==board",
+   "msg": "Ridge board must be at least as deep as the rafter's plumb cut (R802.3) -> one size up."
+  },
+  {
+   "id": "RF-SHEATH-01",
+   "severity": "warn",
+   "when": "snow > allowable live load for chosen thickness at rafterOcIn",
+   "msg": "{t} sheathing is rated {cap} psf at {oc} in; use {t2}.",
+   "cite": "R503.2.1.1(1)"
+  },
+  {
+   "id": "RF-TAIL-01",
+   "severity": "warn",
+   "when": "overhangIn > 24 || remaining tail depth < 3.5 in",
+   "cite": "R802.7.1.1"
+  },
+  {
+   "id": "RF-RAKE-01",
+   "severity": "info",
+   "when": "rakeOverhangIn > 9",
+   "msg": "Rake overhang over 9 in needs lookouts or a ladder (R803.2.3).",
+   "cite": "R803.2.3"
+  },
+  {
+   "id": "RF-HIP-01",
+   "severity": "block",
+   "when": "shape in [hip, half_hip, dutch_gable, saltbox, flat] && app generator not built",
+   "wizard": "V-ROOF-08",
+   "msg": "{shape} roofs aren't drawn yet - numbers only."
+  },
+  {
+   "id": "RF-KICK-01",
+   "severity": "auto",
+   "when": "roof eave meets a sidewall",
+   "msg": "Kick-out flashing added (R903.2.1)."
+  },
+  {
+   "id": "RF-VENT-01",
+   "severity": "warn",
+   "when": "vented && NFA provided < required",
+   "msg": "Need {req} sq in of vent; you have {have}.",
+   "cite": "R806.2"
+  },
+  {
+   "id": "RF-ATTIC-01",
+   "severity": "info",
+   "when": "attic height >= 30 in over >= 30 sf",
+   "msg": "Add a 22x30 attic access (R807.1)."
+  },
+  {
+   "id": "RF-ENG-01",
+   "severity": "warn",
+   "when": "m.attachToExistingWallId set",
+   "wizard": "V-ATTACH-01",
+   "msg": "Tying into the house is a permit/engineer trigger."
+  }
+ ],
+ "code_citations": {
+  "R905.1.1": {
+   "section": "R905.1.1 / Table R905.1.1(2)",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/9/roof-assemblies",
+   "summary": "Asphalt shingles 2:12 to <4:12: two layers underlayment (19 in starter strip then 36 in sheets lapped 19 in). >=4:12 one layer lapped 2 in.",
+   "verified": true
+  },
+  "R905.1.2": {
+   "section": "R905.1.2 (Montana amendment)",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/9/roof-assemblies",
+   "summary": "Ice barrier required in Montana under asphalt shingles, metal shingles, roll roofing, slate, wood shingles/shakes: two cemented layers or self-adhered membrane from the eave edge to >=24 in inside the exterior wall line; at >=8:12 also >=36 in along the slope. Exception: detached accessory structures w/o conditioned floor area.",
+   "verified": true
+  },
+  "R905.2.2": {
+   "section": "R905.2.2",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/9/roof-assemblies",
+   "summary": "Asphalt shingles only on slopes >=2:12; 2:12 to 4:12 needs double underlayment.",
+   "verified": true
+  },
+  "R905.2.6": {
+   "section": "R905.2.6",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/9/roof-assemblies",
+   "summary": "Minimum 4 fasteners per strip shingle (more per manufacturer/high wind).",
+   "verified": true
+  },
+  "R905.2.8.2": {
+   "section": "R905.2.8.2",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/9/roof-assemblies",
+   "summary": "Valleys: open valley metal lining >=24 in wide (e.g. 26 ga 0.0179 G90 galvanized, aluminum 0.024); open valley with two plies roll roofing (18 in + 36 in); closed valley lined with one ply smooth roll roofing >=36 in wide or ASTM D1970 self-adhered membrane.",
+   "verified": true
+  },
+  "R905.2.8.3": {
+   "section": "R905.2.8.3",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/9/roof-assemblies",
+   "summary": "Sidewall flashing: step or continuous base flashing, >=4 in high and 4 in wide, vertical leg under siding.",
+   "verified": true
+  },
+  "R905.2.8.4": {
+   "section": "R905.2.8.4",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/9/roof-assemblies",
+   "summary": "Front-wall (headwall/apron), vent stack and chimney flashing per manufacturer.",
+   "verified": true
+  },
+  "R905.2.8.5": {
+   "section": "R905.2.8.5",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/9/roof-assemblies",
+   "summary": "Drip edge required at eaves and rakes of shingle roofs; laps >=2 in; extends >=1/4 in below sheathing and >=2 in onto deck; fastened <=12 in o.c.; underlayment over drip edge at eaves, under it at rakes.",
+   "verified": true
+  },
+  "R903.2.1": {
+   "section": "R903.2.1",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/9/roof-assemblies",
+   "summary": "Flashing at wall/roof intersections and changes of slope or direction; a diverter (kick-out) where the lower end of a roof-wall intersection meets an eave; metal >=0.019 in (26 ga) corrosion resistant.",
+   "verified": true
+  },
+  "R903.2.2": {
+   "section": "R903.2.2",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/9/roof-assemblies",
+   "summary": "Cricket/saddle on the ridge side of any chimney or penetration more than 30 in wide (parallel to the ridge). Unit skylights excepted.",
+   "verified": true
+  },
+  "R903.4": {
+   "section": "R903.4",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/9/roof-assemblies",
+   "summary": "Roof drains at each low point unless the roof slopes to drain over its edges.",
+   "verified": true
+  },
+  "R905.4.2": {
+   "section": "R905.4.2",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/9/roof-assemblies",
+   "summary": "Metal shingles min 3:12.",
+   "verified": true
+  },
+  "R905.4.6": {
+   "section": "R905.4.6",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/9/roof-assemblies",
+   "summary": "Metal-shingle valley flashing >=8 in each side with 3/4 in splash rib; where Jan avg temp <=25F the valley underlayment must be cemented (<7:12) or self-adhered.",
+   "verified": true
+  },
+  "R905.5.2": {
+   "section": "R905.5.2",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/9/roof-assemblies",
+   "summary": "Mineral-surfaced roll roofing min 1:12.",
+   "verified": true
+  },
+  "R905.3.2": {
+   "section": "R905.3.2",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/9/roof-assemblies",
+   "summary": "Clay/concrete tile min 2-1/2:12 (2-1/2 to 4:12 double underlayment).",
+   "verified": true
+  },
+  "R905.6.2": {
+   "section": "R905.6.2",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/9/roof-assemblies",
+   "summary": "Slate min 4:12.",
+   "verified": true
+  },
+  "R905.7.2": {
+   "section": "R905.7.2 / R905.8.2",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/9/roof-assemblies",
+   "summary": "Wood shingles and shakes min 3:12.",
+   "verified": true
+  },
+  "R905.10.2": {
+   "section": "R905.10.2",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/9/roof-assemblies",
+   "summary": "Metal roof panels: lapped non-soldered seams w/o sealant >=3:12; with applied lap sealant >=1/2:12; standing seam >=1/4:12.",
+   "verified": true
+  },
+  "R905.9.1": {
+   "section": "R905.9.1 / R905.11.1 / R905.12.1 / R905.13.1 / R905.15.1",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/9/roof-assemblies",
+   "summary": "Built-up, modified bitumen, thermoset (EPDM), thermoplastic (TPO/PVC) and liquid-applied roofs: min 1/4:12 (coal-tar built-up 1/8:12).",
+   "verified": true
+  },
+  "R802.2": {
+   "section": "R802.2",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/8/roof-ceiling-construction",
+   "summary": "Rafters/ceiling joists form continuous ties across the structure, or the ridge is a designed beam.",
+   "verified": true
+  },
+  "R802.3": {
+   "section": "R802.3",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/8/roof-ceiling-construction",
+   "summary": "Ridge board >=1 in nominal and not less in depth than the cut end of the rafter. Where ceiling joists/rafter ties do not provide continuous ties, the ridge must be a ridge beam designed by accepted engineering practice and supported at each end.",
+   "verified": true
+  },
+  "R802.4.1": {
+   "section": "R802.4.1 / Tables R802.4.1(1)-(8)",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/8/roof-ceiling-construction",
+   "summary": "Rafter spans by species/grade/spacing/ground snow; span measured on the horizontal projection. Values in rafter-span-tables.json.",
+   "verified": true
+  },
+  "R802.4.1(9)": {
+   "section": "Table R802.4.1(9)",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/8/roof-ceiling-construction",
+   "summary": "Raised rafter tie span adjustment: HC/HR 1/3 0.67, 1/4 0.76, 1/5 0.83, 1/6 0.90, <=1/7.5 1.00.",
+   "verified": true
+  },
+  "R802.4.2": {
+   "section": "R802.4.2",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/8/roof-ceiling-construction",
+   "summary": "Rafters framed opposite each other (offset <=1-1/2 in) with collar tie or ridge strap.",
+   "verified": true
+  },
+  "R802.4.3": {
+   "section": "R802.4.3",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/8/roof-ceiling-construction",
+   "summary": "Hip and valley rafters >=2 in nominal thickness and not less in depth than the cut end of the rafter; supported at the ridge by a brace to a bearing partition or designed to carry the load.",
+   "verified": true
+  },
+  "R802.4.4": {
+   "section": "R802.4.4",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/8/roof-ceiling-construction",
+   "summary": "Where roof pitch is less than 3:12, ridge, hip and valley members are designed as beams.",
+   "verified": true
+  },
+  "R802.4.6": {
+   "section": "R802.4.6",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/8/roof-ceiling-construction",
+   "summary": "Collar ties in the upper third of the attic, >=1x4, <=4 ft o.c.; a ridge strap (1-1/4 in x 20 ga, 3-10d each end) may substitute.",
+   "verified": true
+  },
+  "R802.5.2": {
+   "section": "R802.5.2 / Table R802.5.2(1)",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/8/roof-ceiling-construction",
+   "summary": "Rafter ties >=2x4 at <=24 in o.c. at the top plate; heel-joint 16d nail counts by pitch/spacing/span/snow; raised ties with HC/HR > 1/3 need engineering. No heel nails needed where the ridge is supported by a beam/wall.",
+   "verified": true
+  },
+  "R802.6": {
+   "section": "R802.6",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/8/roof-ceiling-construction",
+   "summary": "Rafter/joist ends bear >=1-1/2 in on wood.",
+   "verified": true
+  },
+  "R802.7.1.1": {
+   "section": "R802.7.1.1",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/8/roof-ceiling-construction",
+   "summary": "Notched rafter tails: >=3-1/2 in remaining depth and cantilever <=24 in.",
+   "verified": true
+  },
+  "R802.7.2": {
+   "section": "R802.7.2",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/8/roof-ceiling-construction",
+   "summary": "No cutting/notching/boring of trusses, SCL, glulam or I-joists unless the manufacturer allows or a design professional considers it.",
+   "verified": true
+  },
+  "R802.11": {
+   "section": "R802.11",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/8/roof-ceiling-construction",
+   "summary": "Roof uplift connections (rafter/truss to wall) per tables; hurricane ties typical.",
+   "verified": true
+  },
+  "R802.10": {
+   "section": "R802.10",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/8/roof-ceiling-construction",
+   "summary": "Wood trusses designed per ANSI/TPI 1 with truss design drawings on site.",
+   "verified": false,
+   "note": "Section number from memory, confirm."
+  },
+  "R803.2.3": {
+   "section": "R803.2.3",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/8/roof-ceiling-construction",
+   "summary": "Panel sheathing may cantilever <=9 in beyond the gable endwall unless supported by overhang framing (lookouts/ladder).",
+   "verified": true
+  },
+  "R503.2.1.1(1)": {
+   "section": "Table R503.2.1.1(1)",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/5/floors",
+   "summary": "Roof sheathing allowable live load: 7/16 (24/16) 100 psf @16 / 40 @24; 15/32 (32/16) 180 / 70; 19/32 (40/20) 305 / 130. Edge support (clips/blocking) required for these spans.",
+   "verified": true
+  },
+  "R806.1": {
+   "section": "R806.1",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/8/roof-ceiling-construction",
+   "summary": "Enclosed attics/rafter spaces: cross ventilation, openings 1/16 to 1/4 in.",
+   "verified": true
+  },
+  "R806.2": {
+   "section": "R806.2",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/8/roof-ceiling-construction",
+   "summary": "Net free vent area 1/150 of the vented area; may be 1/300 when in CZ 6-8 a Class I/II vapor retarder is on the warm side AND 40-50% of vent area is upper vents (<=3 ft below ridge) with the rest in the bottom third.",
+   "verified": true
+  },
+  "R806.3": {
+   "section": "R806.3",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/8/roof-ceiling-construction",
+   "summary": "Min 1 in airspace between insulation and sheathing at the vent location (baffles).",
+   "verified": true
+  },
+  "R806.5": {
+   "section": "R806.5 / Table R806.5",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/8/roof-ceiling-construction",
+   "summary": "Unvented attic/rafter assemblies; in CZ 5-8 air-impermeable insulation must be a Class II vapor retarder or have one; rigid board above deck minimums CZ5 R-20, CZ6 R-25, CZ7 R-30, CZ8 R-35.",
+   "verified": true
+  },
+  "R807.1": {
+   "section": "R807.1",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/8/roof-ceiling-construction",
+   "summary": "Attic access 22x30 in where attic height >=30 in over >=30 sf.",
+   "verified": true
+  },
+  "R301.2.3": {
+   "section": "R301.2.3",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/3/building-planning",
+   "summary": "Ground snow > 70 psf: roof designed by engineering (outside IRC prescriptive).",
+   "verified": true
+  },
+  "R301.6": {
+   "section": "R301.6 (Montana)",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/3/building-planning",
+   "summary": "Outside certified jurisdictions use ASCE 7-22 ground snow (ASCE 7 Hazard Tool); minimum design roof snow 30 psf after reductions.",
+   "verified": true,
+   "note": "Also https://bsd.dli.mt.gov/building-codes-permits/snow-load-information"
+  },
+  "R305.1": {
+   "section": "R305.1",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/3/building-planning",
+   "summary": "Habitable rooms ceiling >=7 ft; sloped ceilings: >=50% of required area >=7 ft and none of the required area <5 ft. Bathrooms 6 ft 8 in.",
+   "verified": true
+  },
+  "R308.6.8": {
+   "section": "R308.6.8",
+   "url": "https://up.codes/viewer/montana/irc-2021/chapter/3/building-planning",
+   "summary": "Skylights on roofs < 3:12 mounted on a curb >=4 in above the roof unless manufacturer allows otherwise.",
+   "verified": true
+  },
+  "HUD_3282.8j": {
+   "section": "24 CFR 3282.8(j)(1)",
+   "url": "https://ecfr.io/Title-24/Section-3282.8",
+   "summary": "Add-ons to HUD-code manufactured homes must be structurally independent; any attachment for weatherproofing/cosmetics only unless the home is designed for the load (data plate + manufacturer instructions).",
+   "verified": true
+  },
+  "HUD_3285.903": {
+   "section": "24 CFR 3285.903(c)",
+   "url": "https://www.ecfr.gov/current/title-24/subtitle-B/chapter-XX/part-3285/subpart-J/section-3285.903",
+   "summary": "Add-on structures support their own live and dead loads unless designed by a registered PE or architect.",
+   "verified": true
+  },
+  "HUD_3280.305": {
+   "section": "24 CFR 3280.305(c)(3)",
+   "url": "https://www.ecfr.gov/current/title-24/subtitle-B/chapter-XX/part-3280/subpart-D/section-3280.305",
+   "summary": "HUD roof load zones: Montana is in the Middle zone, 30 psf roof live/snow. An older HUD home's roof was built for 30 psf, so drifted or sliding snow from an addition can overload it.",
+   "verified": true
+  },
+  "IRC2024": {
+   "section": "Edition note",
+   "url": "https://up.codes/viewer/general-services-administration/irc-2024/chapter/9/roof-assemblies",
+   "summary": "Montana adopted the 2024 IRC effective 2026-09-26 (content-v4/jurisdictions.json; https://bsd.dli.mt.gov/building-codes-permits/current-codes). Section numbers above are from the 2021 Montana text; R905 minimum-slope sections were spot-checked in 2024 (wizard-v1 \u00a78.2). Re-verify other numbers against 2024.",
+   "verified": false
+  },
+  "ASCE7_drift": {
+   "section": "ASCE 7-22 ch.7 (drifts on lower roofs, sliding snow, rain-on-snow, valleys)",
+   "url": "https://asce7hazardtool.online/",
+   "summary": "Additions BELOW an existing roof and roofs with valleys collect drifted and sliding snow. The IRC span tables are uniform-load only. Section numbers not checked here.",
+   "verified": false
+  }
+ },
+ "pitch_presets": [
+  {
+   "p": 0.25,
+   "label": "1/4:12 flat (membrane)"
+  },
+  {
+   "p": 1,
+   "label": "1:12"
+  },
+  {
+   "p": 2,
+   "label": "2:12 shingle minimum"
+  },
+  {
+   "p": 3,
+   "label": "3:12"
+  },
+  {
+   "p": 4,
+   "label": "4:12 typical modular"
+  },
+  {
+   "p": 5,
+   "label": "5:12"
+  },
+  {
+   "p": 6,
+   "label": "6:12"
+  },
+  {
+   "p": 8,
+   "label": "8:12 steep"
+  },
+  {
+   "p": 12,
+   "label": "12:12"
+  }
+ ],
+ "rafter_span_tables": "rafter-span-tables.json",
+ "price_items": "roofing-price-items.json (+ content-v3/homedepot-prices.json)"
+}

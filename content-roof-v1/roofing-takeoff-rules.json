@@ -1,0 +1,324 @@
+{
+ "version": "roofing-v1 / 2026-10-28",
+ "about": "Roof takeoff rules extending content-v3/takeoff-rules.json (roof.*). Same buy rules: counted items n+round(n*waste); area items ceil(q*(1+w)/unit); lumber stock 8/10/12/14/16/20 ft, split >20 ft. Reference implementation: reference/roof-reference.mjs + run-worked-example.mjs. All $ EXAMPLE.",
+ "symbols": {
+  "p": "pitch (rise per 12)",
+  "k": "slopeK = sqrt(1+(p/12)^2)",
+  "kh": "equal-pitch hip/valley factor = sqrt(2+(p/12)^2) per ft of common run",
+  "W": "footprint width across the ridge (span)",
+  "L": "footprint length along the ridge",
+  "oh": "eave overhang ft",
+  "ohr": "rake overhang ft",
+  "d": "rafter actual depth in",
+  "s": "seat length in"
+ },
+ "geometry": {
+  "pitch_conversions": {
+   "deg": "atan(p/12)",
+   "p_from_deg": "12*tan(deg)",
+   "p_from_heights": "12*(hiPlate-loPlate)/runOutsideFaces",
+   "percent": "100*p/12"
+  },
+  "heel_HAP_in": "d/cos(theta) - s*tan(theta)   (top of rafter above plate at the wall's outside face)",
+  "roof_surface_height": "plate + (HAP + sheathingIn [+ foamAboveIn])/12",
+  "plan_area": {
+   "gable": "(W+2oh)*(L+2ohr)",
+   "shed": "(run+oh_low+oh_high)*(L+2ohr)",
+   "hip": "(W+2oh)*(L+2oh)",
+   "flat": "(W+2oh)*(L+2oh)",
+   "gable_into_roof": "main (W+2oh)*(L_out+ohr) + overlay triangle 0.5*W*aTip",
+   "shed_into_roof_plane": "(W+2ohr)*(run+oh_low) + (W+2ohr)*aTie"
+  },
+  "sloped_area": "plan_area * k  (per-face k for unequal pitches: sum faces)",
+  "ridge_length": {
+   "gable": "L+2ohr",
+   "hip": "L-W (equal pitch)",
+   "gable_into_roof": "L_out+ohr+aTip",
+   "dutch_gable": "gable segment length"
+  },
+  "hip_length_each": "(W/2+oh)*kh   (equal pitch; unequal: hypot(plan hip, rise))",
+  "valley": {
+   "equal_pitch_equal_heights": "true = run*kh where run = half-span (+ eave overhang to the eave junction), plan at 45 deg",
+   "general": "valley line where zNew + u*pn/12 = zExist + a*pe/12; foot = max(new eave edge, existing eave edge); tip at ridge u=W/2, aTip=(zRidge-zExistAtWall)*12/pe; plan=hypot(du,da), true=hypot(plan, du*pn/12)",
+   "count": "2 for a gable tie-in; 2 per inside corner otherwise"
+  },
+  "tie_in_height": {
+   "shed_under_eave": "maxHighRoofTop = eaveUnderside + floorDrop - flashingClearIn/12 ; maxHighPlate = maxHighRoofTop - (HAP+sheath)/12",
+   "shed_into_roof_plane": "a=(zNewAtWall - zExistAtWall)/((pe-pn)/12); tieHeight=zExistAtWall + a*pe/12",
+   "gable_into_roof": "tieHeight = zRidge = zEaveLine + (W/2)*pn/12; aTip = (zRidge - zExistAtWall)*12/pe",
+   "extend_plane": "zAtOuterWall = zExistAtWall - run*pe/12"
+  },
+  "eave_lf": {
+   "gable": "2*(L+2ohr)",
+   "gable_into_roof": "2*(L_out+ohr - existOh)",
+   "shed": "L+2ohr (low edge)",
+   "hip": "perimeter of (W+2oh)x(L+2oh)"
+  },
+  "rake_lf": {
+   "gable": "2*2*(W/2+oh)*k (two gable ends)",
+   "gable_into_roof": "2*(W/2+oh)*k (far end only)",
+   "shed": "2*(run+oh_low+oh_high)*k"
+  }
+ },
+ "items": [
+  {
+   "id": "roof.rafters",
+   "qty": "stations = floor(L*12/oc)+1 per slope; gable pairs x2; shed x1",
+   "cut_len": "(run - ridgeThk/2/12 + oh)*k + d*(p/12)/12 (plumb overrun)",
+   "stock": "stock rule; >20 ft -> V-ROOF-06",
+   "waste": "framing"
+  },
+  {
+   "id": "roof.barge",
+   "qty": "2 per rake (fly rafters)",
+   "price_ref": "lumber_{size}_{len}"
+  },
+  {
+   "id": "roof.hips",
+   "qty": "4 (hip), 2 (half-hip clipped portion)",
+   "size": "one size deeper than commons (R802.4.3 'not less than cut end')",
+   "len": "hip_length_each + 1 ft"
+  },
+  {
+   "id": "roof.jacks",
+   "qty": "per side: stations from valley/hip foot to tip at oc",
+   "len": "(halfSpan - distAlongFromFoot*pe/pn)*k + 0.3 trim",
+   "stock": "pair long+short into one stock length"
+  },
+  {
+   "id": "roof.valleyRafters",
+   "when": "tieIn.framing == cut_in",
+   "qty": "1 per valley",
+   "size": "one size deeper than jacks",
+   "len": "valley true + 1 ft"
+  },
+  {
+   "id": "roof.valleyBoards",
+   "when": "tieIn.framing == california_overlay",
+   "qty": "1 per valley, 2x10 flat",
+   "len": "valley true (overlay portion) + 0.5"
+  },
+  {
+   "id": "roof.ridge",
+   "qty": "ridge_length split into stock (splice over a rafter pair)",
+   "size": "board: one size deeper than rafter (content-v3); beam: LVL per engineer (price lvl_175x1178_*)"
+  },
+  {
+   "id": "roof.ceilingJoists",
+   "when": "ceiling == flat_attic",
+   "qty": "one per rafter pair",
+   "size": "content-v3 ceilingJoistTableEXAMPLE (verify R802.5)"
+  },
+  {
+   "id": "roof.collarTies",
+   "qty": "ceil(pairs/2) (every_2nd_pair) or pairs",
+   "len": "W*0.34"
+  },
+  {
+   "id": "roof.ridgeStrap",
+   "when": "collarTies == ridge_strap",
+   "qty": "pairs",
+   "price_ref": "ridge_strap (PRICE NEEDED)"
+  },
+  {
+   "id": "roof.hurricaneTies",
+   "qty": "1 per rafter per bearing wall (gable: 1; shed: 2)",
+   "price_ref": "hurricane_h25a",
+   "nails": "10 N8 each -> nails_connector_n8_150"
+  },
+  {
+   "id": "roof.heelNails",
+   "info": "16d per heel from Table R802.5.2(1) by pitch/oc/span/snow (e.g. 4:12 @24, 24 ft col, 50 psf -> 13)",
+   "price_ref": "nails_framing_16d_1000"
+  },
+  {
+   "id": "roof.gableFraming",
+   "qty": "content-v3 rule over each gable triangle 0.5*W*rise (2 for gable, 1 for gable_into_roof)"
+  },
+  {
+   "id": "roof.lookouts",
+   "when": "rakeOverhangIn > 9 (R803.2.3)",
+   "qty": "ceil(rakeLf/(oc/12)) of 2x4 @ lookoutLenFt"
+  },
+  {
+   "id": "roof.bearingAtHouse",
+   "when": "tieIn.bearingAtHouse == freestanding_wall",
+   "qty": "cross-layer: walls layer adds a non-exterior bearing wall along attachToExistingWallId at the needed plate height"
+  },
+  {
+   "id": "roof.ledger",
+   "when": "bearingAtHouse == ledger (approved)",
+   "qty": "1 board = L, LedgerLOK 5 in 2 per 16 in (guidance)",
+   "price_ref": "ledgerlok_5_50"
+  },
+  {
+   "id": "roof.sheathing",
+   "qty": "ceil(slopedArea*1.10/32)",
+   "thickness": "pickSheathing(oc, snow): <=allowable live load Table R503.2.1.1(1); EXAMPLE: 19/32 OSB at 24 in for 50 psf (cheaper than 15/32 ply)",
+   "price_ref": "osb_716_4x8 | osb_1932_4x8 | ply_1532_4x8 | zip_roof_58_4x8"
+  },
+  {
+   "id": "roof.hClips",
+   "qty": "sheets*2 (one per bay per sheet at 24 in oc, guidance)",
+   "price_ref": "h_clip_716_50 / h_clip_1932 (PRICE NEEDED)"
+  },
+  {
+   "id": "roof.underlayment",
+   "qty": "ceil(slopedArea*(1.10)*(double?2:1)/1000)",
+   "double_when": "asphalt_shingle 2<=p<4 (R905.2.2)",
+   "price_ref": "underlayment_synth_1000"
+  },
+  {
+   "id": "roof.iceBarrier",
+   "qty": "ceil((eaveLf*courses*3 + valleyLf*3 + sidewallLf*3)*1.10/150)",
+   "courses": "reqSlopeIn=(ohIn+24)*k (>=36 in if p>=8); courses=1 if <=36 else 1+ceil((req-36)/33)",
+   "note": "content-v3 iceBarrierWidthFt=3 under-counts with a 12 in overhang (needs 37.9 in at 4:12) - fix",
+   "price_ref": "ice_water_150"
+  },
+  {
+   "id": "roof.shingles",
+   "qty": "ceil(squares*(1+waste)*3)",
+   "waste_by_style": {
+    "gable": 0.1,
+    "shed": 0.1,
+    "gable_into_roof": 0.15,
+    "hip": 0.15,
+    "half_hip": 0.15,
+    "dutch_gable": 0.17,
+    "saltbox": 0.12
+   },
+   "plus": "existing-side valley reroof strip valleyLf*2 ft",
+   "price_ref": "shingles_bundle"
+  },
+  {
+   "id": "roof.starter",
+   "qty": "ceil((eaveLf+rakeLf)*1.10/120)",
+   "price_ref": "starter_bundle | starter_peel_33"
+  },
+  {
+   "id": "roof.ridgeCap",
+   "qty": "ceil((ridgeLf+hipLf)*1.10/25)",
+   "price_ref": "ridge_cap_bundle"
+  },
+  {
+   "id": "roof.dripEdge",
+   "qty": "ceil((eaveLf+rakeLf)*1.10/10)",
+   "price_ref": "drip_edge_10"
+  },
+  {
+   "id": "roof.valleyMetal",
+   "when": "valleys.type==open_metal",
+   "qty": "ceil(valleyLf*1.10/9.5) (10 ft with 6 in laps), 24 in wide",
+   "price_ref": "w_valley_24_10 (PRICE NEEDED)"
+  },
+  {
+   "id": "roof.stepFlashing",
+   "qty": "ceil(sidewallSlopeLf*12/5)+2 per sidewall (5 in exposure)",
+   "price_ref": "step_flash_4x4x8"
+  },
+  {
+   "id": "roof.kickout",
+   "qty": "1 per roof-to-wall line ending at an eave",
+   "price_ref": "kickout_flash"
+  },
+  {
+   "id": "roof.headwallFlashing",
+   "qty": "ceil(headwallLf*1.10/10)",
+   "price_ref": "l_flash_4x4_10"
+  },
+  {
+   "id": "roof.pitchBreakFlashing",
+   "when": "shed_into_roof_plane",
+   "qty": "ceil(W*1.10/10)",
+   "price_ref": "l_flash_4x4_10 (custom bend preferred)"
+  },
+  {
+   "id": "roof.membrane",
+   "when": "covering in [modified_bitumen, single_ply, roll_roofing]",
+   "qty": "ceil(slopedArea*1.12*(1.05)/rollSf) per ply",
+   "price_ref": "modbit_sa_cap_100 + modbit_sa_base_100 | tpo_6x50 | roll_roofing_mineral"
+  },
+  {
+   "id": "roof.metalPanels",
+   "when": "covering startsWith metal_panel",
+   "qty": "per slope: ceil((L+2ohr)/coverageFt) panels of length >= rafter slope length (+2 in overhang), coverage UNVERIFIED (5V ~2 ft, SM-Rib ~3 ft)",
+   "price_ref": "metal_5v_26x8 | metal_smrib_3x{8,10,12,16}",
+   "screws": "~80 per square (UNVERIFIED) -> metal_screw_120"
+  },
+  {
+   "id": "roof.ridgeVent",
+   "qty": "ceil(ventedRidgeLf/4) (stop 12 in short of ends and of any tie-in)",
+   "price_ref": "ridge_vent_cobra_snow_4ft"
+  },
+  {
+   "id": "roof.soffitVent",
+   "qty": "ceil(eaveLf/8)",
+   "nfa_check": "req = atticFloorSf*144/150 (or /300); half low, half high",
+   "price_ref": "undereave_vent_6x8 | soffit_alum_vented_12x12"
+  },
+  {
+   "id": "roof.baffles",
+   "qty": "2 per rafter bay at vented eaves",
+   "price_ref": "rafter_baffle_70 (pack)"
+  },
+  {
+   "id": "roof.pipeBoots",
+   "qty": "1 per vent pipe",
+   "price_ref": "pipe_boot_lead_2"
+  },
+  {
+   "id": "roof.snowGuards",
+   "qty": "rows*ceil(eaveLf*12/spacingIn)",
+   "price_ref": "snow_guard_clear_25 (metal) | snow_guard_shingle (PRICE NEEDED)"
+  },
+  {
+   "id": "roof.gutters",
+   "qty": "per eave run, prefer 16 ft pieces then 10 ft",
+   "hangers": "ceil(run/2)+1 at 24 in (snow: 16 in)",
+   "outlets": "1 per downspout",
+   "price_ref": "gutter_k5_alum_10/16, gutter_hanger_5, gutter_end_outlet_5, gutter_end_cap_5"
+  },
+  {
+   "id": "roof.downspouts",
+   "qty": "1 per eave run <=35 ft (guidance UNVERIFIED); length eave-to-grade; 3 elbows each",
+   "price_ref": "downspout_2x3_10, downspout_elbow_flex, downspout_ext_flex"
+  },
+  {
+   "id": "roof.nails",
+   "qty": "ceil(squares*1.15*2.5/5)",
+   "price_ref": "roofing_nails_5lb"
+  },
+  {
+   "id": "roof.capNails",
+   "qty": "ceil(squares*150/2000)",
+   "price_ref": "cap_nails_2000"
+  },
+  {
+   "id": "roof.skylight",
+   "qty": "per object + curb lumber + step flashing kit",
+   "price_ref": "skylight_curb_mount (PRICE NEEDED)"
+  },
+  {
+   "id": "roof.trusses",
+   "when": "framing == trusses",
+   "qty": "floor(L*12/oc)+1 commons + 2 gable-end trusses; girder/valley set for tie-ins",
+   "order_spec": [
+    "span (outside of walls)",
+    "pitch",
+    "heel height",
+    "overhang",
+    "snow ground pg + site",
+    "ceiling (flat/scissor)",
+    "spacing"
+   ],
+   "price_ref": "roof_truss_custom (PRICE NEEDED, quote)"
+  }
+ ],
+ "new_price_items": "roofing-price-items.json (70 refs, 15 PRICE NEEDED)",
+ "content_v3_corrections": [
+  "iceBarrierWidthFt=3 is too narrow for 12 in overhangs (Montana R905.1.2 needs eave->24 in inside wall = 37.9 in along slope at 4:12) -> use courses rule",
+  "Roof sheathing 7/16 (24/16) is only rated 40 psf live at 24 in o.c.; in Montana snow use 15/32+ or 16 in spacing",
+  "Ridge one-size-up rule OK for boards; cathedral needs beam",
+  "Underlayment double when 2<=p<4 for shingles"
+ ]
+}

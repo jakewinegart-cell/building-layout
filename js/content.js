@@ -79,7 +79,15 @@ export async function loadContent() {
       // v4 fasteners: Remodel Guide's per-piece schedule (IRC 2024 MT Table R602.3(1)) → engine pieces[] + code-count fastener lines
       const fastenerSchedule = RG === 'content-v4/' ? await getJSON(RG + 'fastener-schedule.json') : null;
       if (fastenerSchedule) status.files.fasteners = RG + 'fastener-schedule.json';
-      const out = { mode: 'hd', contentDir: RG, jdoc, fastenerSchedule, rules: rg.rules, prices: rg.prices, instructionsMd: rg.instructionsMd, engine: rg.engine, snapshotDate: rg.prices.meta.snapshot_date, status };
+      // v4 roofing (Remodel Guide roofing-v1, copied into content-roof-v1/): 70 price refs merged in (none overlap content-v4;
+      // 15 have price null = "needs a price"), IRC R802.4.1 span tables, roofing options.
+      const [roofPrices, spans, roofOptions] = await Promise.all([getJSON('content-roof-v1/roofing-price-items.json'), getJSON('content-roof-v1/rafter-span-tables.json'), getJSON('content-roof-v1/roofing-options.json')]);
+      if (roofPrices && roofPrices.prices) {
+        Object.entries(roofPrices.prices).forEach(([k, v]) => { if (!rg.prices.prices[k]) rg.prices.prices[k] = Object.assign({ price_ref: k }, v); });
+        status.files.roofPrices = 'content-roof-v1/roofing-price-items.json';
+      }
+      if (spans) status.files.spans = 'content-roof-v1/rafter-span-tables.json';
+      const out = { mode: 'hd', contentDir: RG, jdoc, fastenerSchedule, rules: rg.rules, prices: rg.prices, instructionsMd: rg.instructionsMd, engine: rg.engine, snapshotDate: rg.prices.meta.snapshot_date, status, spans, roofOptions, roofPrices };
       if (!rg.instructionsMd) out.steps = await getJSON('content/build-steps.json');
       return out;
     }
@@ -88,7 +96,8 @@ export async function loadContent() {
   const [rules, prices, steps] = await Promise.all([getJSON('content/takeoff-rules.json'), getJSON('content/prices-placeholder.json'), getJSON('content/build-steps.json')]);
   if (!rules || !prices || !steps) throw new Error('content/ files missing');
   status.files = { rules: 'content/takeoff-rules.json', prices: 'content/prices-placeholder.json (PLACEHOLDER)', steps: 'content/build-steps.json' };
-  return { mode: 'placeholder', rules, prices, steps, status };
+  const spans = await getJSON('content-roof-v1/rafter-span-tables.json');
+  return { mode: 'placeholder', rules, prices, steps, status, spans };
 }
 
 // One shared load for Price check and $ inspect (same rules, prices and engine).

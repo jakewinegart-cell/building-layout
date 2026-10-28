@@ -109,7 +109,11 @@ export function migrate(m) {
     if (!Array.isArray(p.deletedAutoSlots)) p.deletedAutoSlots = [];
   }
   const r = m.layers.find((l) => l.id === 'roof');
-  if (r) Object.keys(DEFAULTS.roof).forEach((k) => { if (!(k in r.params)) r.params[k] = clone(DEFAULTS.roof[k]); });
+  if (r) Object.keys(DEFAULTS.roof).forEach((k) => {
+    if (!(k in r.params)) r.params[k] = clone(DEFAULTS.roof[k]);
+    else if (DEFAULTS.roof[k] && typeof DEFAULTS.roof[k] === 'object' && !Array.isArray(DEFAULTS.roof[k]) && r.params[k] && typeof r.params[k] === 'object') Object.keys(DEFAULTS.roof[k]).forEach((kk) => { if (!(kk in r.params[k])) r.params[k][kk] = clone(DEFAULTS.roof[k][kk]); });
+  });
+  if (!('attachToExistingWallId' in m)) m.attachToExistingWallId = null;
   m.estimate = Object.assign(clone(ESTIMATE_DEFAULTS), m.estimate || {});
   return m;
 }

@@ -312,9 +312,10 @@ export function sheetRoof(m) {
   }
   if (outline) { const pts = outline.geometry.pts; s += dim(pts[0], pts[1], [0, -1], 2.2, null, { size: 0.9 }); s += dim(pts[1], pts[2], [1, 0], 2.2, null, { size: 0.9 }); }
   const lab = roof.objects.find((o) => o.type === 'label');
-  if (lab) s += text(lab.geometry.c, `${rp.pitch}:12 ↓`, { size: 1.0, weight: 700, fill: '#33475b', rot: comp.ridgeAlongX ? 0 : 90 });
+  if (lab) s += text(lab.geometry.c, `${Math.round(rp.pitch * 100) / 100}:12 ↓`, { size: 1.0, weight: 700, fill: '#33475b', rot: comp.ridgeAlongX ? 0 : 90 });
   s += northArrow(ob, mg);
   const plan = wrap(ob, s, { mg, title: 'S4 Roof framing plan' });
+  if (comp.shed && rp.shed) return sheetShed(m, plan, raf);
   // ---- section across the ridge
   const span = comp.ridgeAlongX ? b.h : b.w; const oh = (rp.overhangIn || 0) * IN; const rise = comp.rise || (span / 2) * (rp.pitch / 12);
   const wH = getLayer(m, 'walls').params.plateHeightFt; const k = rp.pitch / 12;
@@ -341,4 +342,28 @@ export function sheetRoof(m) {
 
 export function allSheets(m) {
   return { A1: sheetPlan(m), S1: sheetFoundation(m), S2: sheetFloor(m), S3: sheetWalls(m), S4: sheetRoof(m) };
+}
+
+/** v4 shed: section along the slope (low wall → high wall) + notes. */
+function sheetShed(m, plan, raf) {
+  const rp = getLayer(m, 'roof').params; const comp = rp.computed; const sh = rp.shed;
+  const run = comp.runFt; const rise = sh.highPlateFt - sh.lowPlateFt; const k = rise / run; const oh = (rp.overhangIn || 0) * IN; const wl = sh.lowPlateFt * 0.5;
+  const side = { N: 'north', S: 'south', E: 'east', W: 'west' };
+  let q = '';
+  q += `<rect x="0" y="0" width="0.5" height="${r3(wl)}" fill="#efd3a3" stroke="#7a5426" stroke-width="0.04"/>`;
+  q += `<rect x="${r3(run - 0.5)}" y="${r3(-rise)}" width="0.5" height="${r3(wl + rise)}" fill="#efd3a3" stroke="#7a5426" stroke-width="0.04"/>`;
+  q += line([-oh, oh * k], [run + oh, -rise - oh * k], 'stroke="#a8643a" stroke-width="0.35"');
+  q += dim([0, wl], [run, wl], [0, 1], 1.0, `run ${fmtFtIn(run)} (outside faces)`, { size: 0.7 });
+  q += dim([run, 0], [run, -rise], [1, 0], 2.2, `rise ${fmtFtIn(rise)}`, { size: 0.65, ext: false });
+  q += text([run * 0.45, -rise * 0.45 - 0.9], `${Math.round(rp.pitch * 100) / 100}:12`, { size: 0.8, weight: 700, rot: -Math.atan(k) * 180 / Math.PI });
+  q += text([0.25, wl + 2.6], `LOW ${fmtFtIn(sh.lowPlateFt)} (${side[comp.lowSide]})`, { size: 0.6, weight: 700 });
+  q += text([run - 0.25, wl + 2.6], `HIGH ${fmtFtIn(sh.highPlateFt)} (${side[comp.highSide]})`, { size: 0.6, weight: 700 });
+  const section = `<svg class="sheet-svg sect" viewBox="${r3(-oh - 2)} ${r3(-rise - oh * k - 2)} ${r3(run + 2 * oh + 5)} ${r3(rise + oh * k + wl + 5.5)}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Shed roof section" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif">${q}</svg>`;
+  const notes = [
+    `Shed roof, ${Math.round(rp.pitch * 100) / 100}:12: ${side[comp.highSide]} wall ${fmtFtIn(sh.highPlateFt)} down to the ${side[comp.lowSide]} wall ${fmtFtIn(sh.lowPlateFt)} over ${fmtFtIn(run)}; ${rp.overhangIn} in eave overhang, ${rp.rakeOverhangIn} in rake.`,
+    `${raf.length} ${rp.rafterSize} rafters @ ${rp.rafterOcIn} in o.c. bearing on both walls (no ridge); the two end rafters are barge rafters. Hurricane tie at each end of every rafter.`,
+    'The two side walls are rake walls: studs cut to the slope, top plates follow the roof.',
+    'Rafter size is checked against IRC R802.4.1 only when a ground snow load is entered (Roof steps → Snow). EXAMPLE, verify.',
+  ];
+  return { id: 'S4', title: 'Roof framing plan', svg: plan, section, notes };
 }
