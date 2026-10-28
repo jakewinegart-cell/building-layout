@@ -7,6 +7,7 @@ import { VIEW3D, LUMBER, LUMBER_T_IN } from './config.js';
 import { stackOrder, layerDisplay, getLayer } from './model.js';
 import { bbox, dist, lerp } from './geom.js';
 import { lumberAlong, studLayout } from './homeplan-derived.js';
+import { snapPier, dropPier, isManual } from './piers.js';
 
 const IN = 1 / 12;
 
@@ -16,6 +17,7 @@ export function createView3D(container, app) {
   const ptr = new THREE.Vector2();
   let downAt = null;
   let opts = { sheathing: false };
+  let dropMode = false;   // '◎ Drop pier': a tap on the ground drops a Sonotube
 
   function init() {
     if (ready) return true;
@@ -68,7 +70,24 @@ export function createView3D(container, app) {
     ptr.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ptr, camera);
     const hits = ray.intersectObjects(root.children, true).filter((h) => h.object.userData && h.object.userData.objectId && h.object.visible);
-    if (hits.length) app.select({ layerId: hits[0].object.userData.layerId, objectId: hits[0].object.userData.objectId });
+    if (dropMode) {
+      const m = app.getModel();
+      const ph = hits.find((h) => h.object.userData.layerId === 'foundation' && h.object.userData.objectType === 'pier');
+      if (ph) { app.select({ layerId: 'foundation', objectId: ph.object.userData.objectId }, true); return; }
+      const f = m.layers.find((l) => l.id === 'foundation');
+      if (f.locked) { app.toast('Foundation is locked'); return; }
+      const fg = root.children.find((g) => g.userData.layerId === 'foundation');
+      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(fg ? fg.position.y : 0));
+      const at = new THREE.Vector3();
+      if (!ray.ray.intersectPlane(plane, at)) return;
+      const sn = snapPier(m, [at.x, at.z], 1.0);
+      const o = dropPier(m, sn.c);
+      app.select({ layerId: 'foundation', objectId: o.id }, true);
+      app.commit('foundation');
+      app.toast(`Sonotube dropped${sn.snap === 'grid' ? '' : ' on the wall line'} — edit it below`);
+      return;
+    }
+    if (hits.length) app.select({ layerId: hits[0].object.userData.layerId, objectId: hits[0].object.userData.objectId }, hits[0].object.userData.objectType === 'pier');
     else app.select(null);
   }
 
@@ -144,17 +163,20 @@ export function createView3D(container, app) {
 
   function buildFoundation({ l, alpha, g }) {
     const concrete = mat('#a4a6a8', alpha), dark = mat('#8c8f93', alpha);
+    const manualM = mat('#4f86c6', alpha), flagM = mat('#d0453a', alpha);
     l.objects.forEach((o) => {
       if (o.type === 'footing') {
         const w = o.props.widthIn * IN;
         g.add(tag(lumberAlong(THREE, o.geometry.a, o.geometry.b, w, o.z, o.z + o.height, o.props.role === 'stem' ? concrete : dark, null, w / 2), o));
       } else if (o.type === 'pier') {
         const r = (o.props.diaIn * IN) / 2;
-        const cyl = new THREE.Mesh(new THREE.CylinderGeometry(r, r, o.height, 18), concrete);
+        const cyl = new THREE.Mesh(new THREE.CylinderGeometry(r, r, o.height, 18), o.props.flags && o.props.flags.length ? flagM : isManual(o) ? manualM : concrete);
+        cyl.userData.objectType = 'pier';
         cyl.position.set(o.geometry.c[0], o.z + o.height / 2, o.geometry.c[1]);
         g.add(tag(cyl, o));
         const pad = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.8, r * 1.8, 0.67, 18), dark);
         pad.position.set(o.geometry.c[0], o.z + 0.33, o.geometry.c[1]);
+        pad.userData.objectType = 'pier';
         g.add(tag(pad, o));
       } else if (o.type === 'beam') {
         const w = o.props.widthIn * IN;
@@ -312,6 +334,8 @@ export function createView3D(container, app) {
   return {
     show() { const ok = init(); if (ok) { resize(); build(); } return ok; },
     build, resize, preset,
+    setDropMode(on) { dropMode = !!on; if (renderer) renderer.domElement.style.cursor = on ? 'crosshair' : ''; },
+    getDropMode: () => dropMode,
     isReady: () => ready,
     /** page coords of the first mesh tagged with objectId (for tests) */
     screenOf(objectId) {
@@ -319,6 +343,12 @@ export function createView3D(container, app) {
       root.traverse((o) => { if (!hit && o.isMesh && o.userData.objectId === objectId) hit = o; });
       if (!hit) return null;
       const v = new THREE.Vector3(); hit.getWorldPosition(v); v.project(camera);
+      const r = renderer.domElement.getBoundingClientRect();
+      return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height];
+    },
+    /** page coords of a world point (plan x, elevation, plan y) — for tests */
+    worldToScreen(x, y, z) {
+      const v = new THREE.Vector3(x, y, z).project(camera);
       const r = renderer.domElement.getBoundingClientRect();
       return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height];
     },

@@ -346,11 +346,17 @@ function renderPierPanel() {
     <div class="muted pp-note">X/Y = center from the W / N outside face. Blank top/depth follow the layer${d.frostEntered ? '' : ' (depth = placeholder until you enter frost depth)'}.${man ? '' : ' Editing an auto pier makes it manual so regeneration keeps it.'}</div>`;
   const guard = () => { if (l.locked) { toast('Foundation is locked'); return false; } return true; };
   pp.querySelectorAll('[data-dia]').forEach((b) => b.addEventListener('click', () => { if (!guard()) return; ensureManual(model, o); o.props.diaIn = Number(b.dataset.dia); app.commit('foundation'); }));
-  pp.querySelectorAll('[data-xy]').forEach((inp) => inp.addEventListener('change', () => {
+  // X/Y: apply when focus leaves the X/Y row (or on Enter), so hopping ft → in doesn't re-render mid-entry
+  const xyRow = pp.querySelector('.pp-row.xy');
+  const applyXY = () => {
     if (!guard()) return;
     const v = (ax) => { const f = Number(pp.querySelector(`[data-xy="${ax}"][data-part="ft"]`).value) || 0, i = Number(pp.querySelector(`[data-xy="${ax}"][data-part="in"]`).value) || 0; return f + i / 12; };
-    movePier(model, o, [org[0] + v('x'), org[1] + v('y')]); app.commit('foundation');
-  }));
+    const c = [org[0] + v('x'), org[1] + v('y')];
+    if (Math.hypot(c[0] - o.geometry.c[0], c[1] - o.geometry.c[1]) < 1e-6) return;
+    movePier(model, o, c); app.commit('foundation');
+  };
+  xyRow.addEventListener('focusout', (e) => { if (!xyRow.contains(e.relatedTarget)) applyXY(); });
+  xyRow.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); applyXY(); } });
   pp.querySelectorAll('[data-pk]').forEach((inp) => inp.addEventListener('change', () => { if (!guard()) return; ensureManual(model, o); o.props[inp.dataset.pk] = inp.value === '' ? null : Number(inp.value); app.commit('foundation'); }));
   pp.querySelectorAll('[data-pp]').forEach((b) => b.addEventListener('click', () => {
     const a = b.dataset.pp;

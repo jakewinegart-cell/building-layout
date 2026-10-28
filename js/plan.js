@@ -283,10 +283,12 @@ export function createPlan(canvas, app) {
     d.neighbors.forEach((n) => {
       const [x1, y1] = toScreen(c), [x2, y2] = toScreen(n.p);
       ctx.save(); ctx.setLineDash([5, 4]); ctx.strokeStyle = NB; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.restore();
-      if (Math.hypot(x2 - x1, y2 - y1) > 30) text(`${fmtFtIn(n.d)} o.c.`, lerp(c, n.p, 0.5), { color: '#fff', bg: NB, size: 12, weight: 700 });
+      // label sits beside the dashed line (opposite side to the wall-end dims) so it never covers the tube
+      const Ls = Math.hypot(x2 - x1, y2 - y1);
+      if (Ls > 30) { let ux = (x2 - x1) / Ls, uy = (y2 - y1) / Ls; if (ux < -1e-6 || (Math.abs(ux) <= 1e-6 && uy < 0)) { ux = -ux; uy = -uy; } const off = -20, nx = -uy * off, ny = ux * off; const dd = Math.max(Ls / 2, 44); text(`${fmtFtIn(n.d)} o.c.`, Object.assign([x1 + (x2 - x1) / Ls * dd + nx, y1 + (y2 - y1) / Ls * dd + ny], { screen: true }), { color: '#fff', bg: NB, size: 12, weight: 700 }); }
     });
     const o = originOf(m);
-    text(`X ${fmtFtIn(c[0] - o[0])} · Y ${fmtFtIn(c[1] - o[1])}  (from W / N face)`, Object.assign([cssW / 2, 112], { screen: true }), { color: '#fff', bg: 'rgba(29,79,122,.92)', size: 13, weight: 700 });
+    text(`X ${fmtFtIn(c[0] - o[0])} · Y ${fmtFtIn(c[1] - o[1])}  (from W / N face)`, Object.assign([cssW / 2, cssH - 30], { screen: true }), { color: '#fff', bg: 'rgba(29,79,122,.92)', size: 13, weight: 700 });
     return d;
   }
   function snapBadge(c, kind) {
@@ -476,6 +478,7 @@ export function createPlan(canvas, app) {
       // second finger: cancel any single-finger op and start pinch/pan
       if (drag && drag.kind !== 'pan' && drag.commit === false) { /* noop */ }
       if (drag && drag.kind === 'pier') { app.onPierDrag && app.onPierDrag(false); if (drag.moved) app.commit('foundation'); }
+      if (draft && draft.kind === 'pier') app.onPierDrag && app.onPierDrag(false);
       drag = null; if (draft && draft.kind !== 'poly') draft = null;
       const [p1, p2] = Array.from(pointers.values());
       pinch = { d0: Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) || 1, s0: view.scale, mid: [(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2], ox: view.ox, oy: view.oy };
@@ -498,6 +501,7 @@ export function createPlan(canvas, app) {
       }
       const sn = snapPier(m, w, (touch ? PIERS.snapPxTouch : PIERS.snapPx) / view.scale);
       draft = { kind: 'pier', c: sn.c, snap: sn.snap, diaIn: fl.params.placeDiaIn || 12, touch };
+      app.onPierDrag && app.onPierDrag(true);
       render(); return;
     }
     if (tool === 'select') {
@@ -639,7 +643,7 @@ export function createPlan(canvas, app) {
     }
     if (!draft) return;
     if (draft.kind === 'pier') {
-      const d = draft; draft = null;
+      const d = draft; draft = null; app.onPierDrag && app.onPierDrag(false);
       const o = dropPier(m, d.c, { diaIn: d.diaIn });
       app.select({ layerId: 'foundation', objectId: o.id }, true);
       app.commit('foundation');
@@ -710,7 +714,7 @@ export function createPlan(canvas, app) {
   canvas.addEventListener('pointerdown', onDown);
   canvas.addEventListener('pointermove', onMove);
   canvas.addEventListener('pointerup', onUp);
-  canvas.addEventListener('pointercancel', (e) => { pointers.delete(e.pointerId); pinch = null; if (drag && drag.kind === 'pier') { app.onPierDrag && app.onPierDrag(false); if (drag.moved) app.commit('foundation'); } drag = null; if (draft && draft.kind === 'pier') draft = null; });
+  canvas.addEventListener('pointercancel', (e) => { pointers.delete(e.pointerId); pinch = null; if (drag && drag.kind === 'pier') { app.onPierDrag && app.onPierDrag(false); if (drag.moved) app.commit('foundation'); } drag = null; if (draft && draft.kind === 'pier') { draft = null; app.onPierDrag && app.onPierDrag(false); } });
   canvas.addEventListener('wheel', onWheel, { passive: false });
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   canvas.addEventListener('dblclick', () => { if (tool === 'poly') finishPoly(); });
