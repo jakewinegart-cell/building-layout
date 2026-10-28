@@ -54,11 +54,16 @@ def precheck(pg, loc=None, tax=None, frost=None, beam=None, skip=()):
     if beam: pg.check(f'input[name=pcBeam][value={beam}]')
 
 def run_check(pg):
-    pg.click('#pcRun'); pg.wait_for_selector('#rp-total', timeout=30000); pg.wait_for_timeout(200)
+    mark_all_complete(pg); pg.click('#pcRun'); pg.wait_for_selector('#rp-total', timeout=30000); pg.wait_for_timeout(200)
     return money(pg.inner_text('#rpTotal'))
 
 def close_report(pg):
     pg.click('#rpClose'); pg.wait_for_timeout(300)
+
+def mark_all_complete(pg):
+    """Feature C: Price check prices only layers marked Complete; older suites price the whole plan."""
+    for i in [e.get_attribute('data-complete') for e in pg.locator('#pcLayers input[data-complete]:not(:checked)').all()]:
+        pg.check(f'#pcLayers input[data-complete="{i}"]'); pg.wait_for_timeout(60)
 
 with sync_playwright() as p:
     b = p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'])
@@ -210,16 +215,22 @@ with sync_playwright() as p:
     load_example(pg, 'example-20x16.model.json'); set_zip(pg, '59833')
     precheck(pg, skip=('beam',))
     base = run_check(pg)
-    check('REFERENCE v4 base 20x16 piers, ZIP 59833 = $9,017.45', abs(base - 9017.45) < 0.005, base)
-    br = {r.get_attribute('data-group'): money(r.locator('td.n').inner_text()) for r in pg.locator('#rpBreak tr[data-group]').all()}
+    # Remodel Guide reference (fastener-schedule.json) = $9,066.74; the app adds Remodel Guide's roofing fixes
+    # (2 ice-barrier courses, 19/32 roof OSB at 24 in o.c., H-clips PRICE NEEDED) = +$232.83 → $9,299.57
+    check('REFERENCE base 20x16 piers, ZIP 59833 = $9,299.57 ($9,066.74 reference + roofing fixes)', abs(base - 9299.57) < 0.005, base)
     exp = pg.evaluate("async () => (await (await fetch('content-v4/reference/example-20x16.takeoff.json')).json())")
+    nf = pg.evaluate("""async () => { const [{getContent}, {runEstimate}] = await Promise.all([import('./js/report.js'), import('./js/estimate.js')]);
+        const e = runEstimate(window.__layout.getModel(), await getContent(), { noRoofingFixes: true }); return { groups: Object.fromEntries(e.groups.map(g => [g.id, g.total])), total: e.totals.total }; }""")
+    check('without the roofing fixes the app engine = reference $9,066.74', abs(nf['total'] - exp['base']['totals']['total']) < 0.005, nf['total'])
     eg = exp['base']['groups']
-    check('per-layer groups match the reference', all(abs(br.get('fasteners' if k == 'all' else k, -1) - v) < 0.005 for k, v in eg.items()), (br, eg))
+    check('per-layer groups match the reference (no roofing fixes)', all(abs(nf['groups'].get('fasteners' if k == 'all' else k, -1) - v) < 0.005 for k, v in eg.items()), (nf['groups'], eg))
+    br = {r.get_attribute('data-group'): money(r.locator('td.n').inner_text()) for r in pg.locator('#rpBreak tr[data-group]').all()}
+    check('report roof group = reference roof + fixes ($2,160.23)', abs(br.get('roof', 0) - 2160.23) < 0.005, br.get('roof'))
     rows = pg.inner_text('#rpBreak')
-    check('materials $8,197.68 · tax $0.00 (0%, ZIP lookup) · contingency $819.77', all(x in rows for x in ['$8,197.68', '$0.00', '$819.77']) and 'zip 59833 lookup' in rows, rows[-400:])
+    check('materials $8,454.15 · tax $0.00 (0%, ZIP lookup) · contingency $845.42', all(x in rows for x in ['$8,454.15', '$0.00', '$845.42']) and 'zip 59833 lookup' in rows, rows[-400:])
     # quantities line by line through the app pipeline
     q = pg.evaluate("""async () => { const [{getContent}, {runEstimate}] = await Promise.all([import('./js/report.js'), import('./js/estimate.js')]);
-        const C = await getContent(); const e = runEstimate(window.__layout.getModel(), C);
+        const C = await getContent(); const e = runEstimate(window.__layout.getModel(), C, { noRoofingFixes: true });
         return { lines: e.lines.map(l => [l.id, l.qty, l.total]), report: e.report, mode: C.mode, status: C.status.remodelGuide }; }""")
     check('Remodel Guide content wired (mode hd)', q['mode'] == 'hd' and q['status'] == 'wired', (q['mode'], q['status']))
     el = [[l['id'], l['buy'], l['ext']] for l in exp['base']['lines']]   # ids repeat (e.g. two site.layout lines) → compare in order
@@ -228,7 +239,7 @@ with sync_playwright() as p:
     rep = q['report']
     check('takeoff quantities for 20x16 @ 59833: 14 piers 36 in deep, 4.87 yd, 16 bolts, 11/22/15 sheets', (rep['pierCount'], rep['pierBottomBelowGradeIn'], rep['requiredPierDepthIn'], rep['concreteYd'], rep['anchorBolts'], rep['floorSheets'], rep['wallSheets'], rep['roofSheets']) == (14, 36, 36, 4.87, 16, 11, 22, 15), rep)
     pg.select_option('#rpConc', 'bags80'); pg.wait_for_timeout(300)
-    check('REFERENCE v4 bags80 = $9,620.69', abs(money(pg.inner_text('#rpTotal')) - exp['deltas']['bagged80lbInsteadOfReadyMix']['total']) < 0.005, pg.inner_text('#rpTotal'))
+    check('REFERENCE bags80 = $9,902.81 ($9,669.98 reference + roofing fixes)', abs(money(pg.inner_text('#rpTotal')) - 9902.81) < 0.005 and abs(exp['deltas']['bagged80lbInsteadOfReadyMix']['total'] - 9669.98) < 0.005, pg.inner_text('#rpTotal'))
     pg.select_option('#rpConc', 'auto'); pg.wait_for_timeout(200)
     close_report(pg)
     check('frost from ZIP → no placeholder flag, 36 in (zip 59833 lookup)', pg.locator('#rpFrost[data-skipped]').count() == 0 and '36 in' in pg.inner_text('#rpFrost') and 'zip 59833' in pg.inner_text('#rpFrost'))
@@ -247,7 +258,7 @@ with sync_playwright() as p:
     load_example(pg, 'example-20x16.model.json'); set_zip(pg, '59833')
     precheck(pg, beam='clearspan')
     tc = run_check(pg)
-    check('REFERENCE v4 2x12 clear-span choice = $8,839.14', abs(tc - exp['deltas']['clearSpan2x12NoBeam']['total']) < 0.005, tc)
+    check('REFERENCE 2x12 clear-span choice = $9,170.35 ($8,937.52 reference + roofing fixes)', abs(tc - 9170.35) < 0.005 and abs(exp['deltas']['clearSpan2x12NoBeam']['total'] - 8937.52) < 0.005, tc)
     fl = pg.evaluate(f"(() => {{ const f = {M}.layers.find(l=>l.id==='floor'); return [f.params.joistSize, f.objects.filter(o=>o.props&&o.props.role==='girder').length]; }})()")
     check('clear-span choice: 2x12 joists, no mid beam', fl == ['2x12', 0], fl)
     check('beam question skipped when the model has no mid beam', (close_report(pg), pg.click('#doneBtn'), pg.wait_for_selector('#pcRun'), pg.locator('#pcBeam').count() == 0)[-1])
@@ -255,11 +266,11 @@ with sync_playwright() as p:
     # the clear-span example model itself, loaded from Remodel Guide's file
     load_example(pg, 'example-20x16-2x12-clearspan-frost36.model.json'); set_zip(pg, '59833')
     precheck(pg)
-    check('REFERENCE v4 clear-span example model = $8,839.14', abs(run_check(pg) - 8839.14) < 0.005)
+    check('REFERENCE clear-span example model = $9,170.35', abs(run_check(pg) - 9170.35) < 0.005)
     close_report(pg)
     load_example(pg, 'example-20x16-frost36.model.json'); set_zip(pg, '59833')
     precheck(pg, skip=('beam',))
-    check('REFERENCE v4 frost36 example model = $9,017.45', abs(run_check(pg) - 9017.45) < 0.005)
+    check('REFERENCE frost36 example model = $9,299.57', abs(run_check(pg) - 9299.57) < 0.005)
     check('no console errors (cross-check section)', not errs, errs[:3])
     ctx.close()
     b.close()

@@ -33,7 +33,11 @@ export function validateHdPrices(doc) {
     if (!(typeof p.price === 'number' && isFinite(p.price) && p.price >= 0)) why.push('price not a number');
     if (!DATE.test(p.date_checked || '')) why.push('no date_checked');
     if (p.verified) { if (!p.url && !p.source_url) why.push('verified but no url/source_url'); }
-    else if (!p.estimate_source) why.push('estimate without estimate_source');
+    else if (!p.estimate_source) {
+      // An unverified price read from a cited HD page (source_url, e.g. "UNCONFIRMED PAGE") is kept as an est. price, labelled as such.
+      if (p.source_url) p.estimate_source = `Unconfirmed Home Depot page (not verified): ${p.notes || p.source_url}`;
+      else why.push('estimate without estimate_source');
+    }
     if (why.length) { issues.push(`${ref}: ${why.join(', ')} — treated as "needs a price"`); p.price = null; p.bulk_price = null; rejected++; return; }
     if (p.verified) verified++; else est++;
   });
@@ -72,7 +76,10 @@ export async function loadContent() {
       status.files = { rules: RG + 'takeoff-rules.json', prices: RG + 'homedepot-prices.json', steps: rg.instructionsMd ? RG + 'instructions.md' : 'content/build-steps.json', engine: RG + 'reference/takeoff-reference.mjs' };
       const jdoc = RG === 'content-v4/' ? await getJSON(RG + 'jurisdictions.json') : null;
       if (jdoc) status.files.jurisdictions = RG + 'jurisdictions.json';
-      const out = { mode: 'hd', contentDir: RG, jdoc, rules: rg.rules, prices: rg.prices, instructionsMd: rg.instructionsMd, engine: rg.engine, snapshotDate: rg.prices.meta.snapshot_date, status };
+      // v4 fasteners: Remodel Guide's per-piece schedule (IRC 2024 MT Table R602.3(1)) → engine pieces[] + code-count fastener lines
+      const fastenerSchedule = RG === 'content-v4/' ? await getJSON(RG + 'fastener-schedule.json') : null;
+      if (fastenerSchedule) status.files.fasteners = RG + 'fastener-schedule.json';
+      const out = { mode: 'hd', contentDir: RG, jdoc, fastenerSchedule, rules: rg.rules, prices: rg.prices, instructionsMd: rg.instructionsMd, engine: rg.engine, snapshotDate: rg.prices.meta.snapshot_date, status };
       if (!rg.instructionsMd) out.steps = await getJSON('content/build-steps.json');
       return out;
     }

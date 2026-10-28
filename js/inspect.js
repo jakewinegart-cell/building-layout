@@ -101,7 +101,7 @@ function studInfo(X, w, kind) {
   const pu = framingNails(X);
   rows.push(fastenerRow(X, nails, pu, nailLabel(pu), TYPICAL));
   const title = `${fmtLen(pieceFt)} ${size} ${kind === 'king' ? 'king stud' : kind === 'jack' ? 'jack stud' : 'stud'}`;
-  return { title, rows, typical: true };
+  return { title, rows, typical: true, pieceFt };
 }
 function nearestStud(X, w, world) {
   const L = plen(w), a = w.geometry.a, b = w.geometry.b;
@@ -147,12 +147,12 @@ export function inspectInfo(X, hit) {
       return out(`${fmtLen(L)} ${o.props.size} ${k === 'bottomPlate' ? 'bottom plate' : 'top plate'}`, [
         lumberRow(X, pt ? 'pt' : 'lumber', o.props.size, L, `${o.props.size} plate, ${fmtLen(L)}`),
         fastenerRow(X, L * X.NP.plateLf, pu, nailLabel(pu), `${X.NP.plateLf} per ft · ${TYPICAL}`),
-      ], { typical: true, sub: `wall ${fmtLen(L)} · plates priced at the wall's centerline length, like Price check` });
+      ], { typical: true, piece: [{ types: k === 'bottomPlate' ? ['bottom_plate'] : ['top_plate_lower', 'top_plate_upper'], size: o.props.size, lengthFt: L }], sub: `wall ${fmtLen(L)} · plates priced at the wall's centerline length, like Price check` });
     }
     let kind = k === 'king' || k === 'jack' ? k : 'stud';
     if (hit.view === 'plan' && hit.world) { const ns = nearestStud(X, o, hit.world); kind = ns.kind; mark = ns.mark; }
     const s = studInfo(X, o, kind);
-    return out(s.title, s.rows, { typical: true, sub: `${o.props.exterior ? 'Exterior' : 'Interior'} wall, ${fmtLen(plen(o))}${k === 'wallSolid' ? ' · solid view: switch to Studs to point at single pieces' : ''}`, wallTotal: wallSummary(X, o) });
+    return out(s.title, s.rows, { typical: true, piece: [{ types: [{ king: 'king_stud', jack: 'jack_stud' }[kind] || 'stud'], size: o.props.size, lengthFt: s.pieceFt }], sub: `${o.props.exterior ? 'Exterior' : 'Interior'} wall, ${fmtLen(plen(o))}${k === 'wallSolid' ? ' · solid view: switch to Studs to point at single pieces' : ''}`, wallTotal: wallSummary(X, o) });
   }
   if (o.type === 'opening') {
     const w = l.objects.find((x) => x.id === o.geometry.wallId); const size = w ? w.props.size : '2x4';
@@ -165,7 +165,7 @@ export function inspectInfo(X, hit) {
       // headers come from 8 ft stock in the engine
       const up8 = X.unit(`lumber_${hs}_8`); if (up8 != null) { row.amount = r2(plies * up8 * hLen / 8); row.detail = `cut from 8 ft ${hs} at ${usd(up8)} — ${plies} plies' share`; row.est = !X.verified(`lumber_${hs}_8`); }
       const pu = framingNails(X);
-      return out(`${fmtLen(hLen)} header ${pr.header || '2-2x6'} (EXAMPLE size, verify)`, [row, fastenerRow(X, plies * X.NP.headerPly, pu, nailLabel(pu), TYPICAL)], { typical: true, sub: `over the ${pr.widthIn} in ${pr.kind}` });
+      return out(`${fmtLen(hLen)} header ${pr.header || '2-2x6'} (EXAMPLE size, verify)`, [row, fastenerRow(X, plies * X.NP.headerPly, pu, nailLabel(pu), TYPICAL)], { typical: true, piece: [{ types: ['header_ply_first'], size: hs, lengthFt: hLen }, { types: ['header_ply_added'], size: hs, lengthFt: hLen, n: plies - 1 }], sub: `over the ${pr.widthIn} in ${pr.kind}` });
     }
     if (k === 'roughSill') {
       const L = pr.widthIn / 12; const up8 = X.unit(`lumber_${size}_8`);
@@ -173,7 +173,7 @@ export function inspectInfo(X, hit) {
       return out(`${fmtLen(L)} ${size} rough sill`, [
         { label: `${size} rough sill, ${fmtLen(L)}`, detail: `cut from 8 ft ${size} at ${usd(up8)} — this piece's share`, amount: up8 == null ? null : r2(up8 * L / 8), est: !X.verified(`lumber_${size}_8`) },
         fastenerRow(X, X.NP.cripple, pu, nailLabel(pu), TYPICAL),
-      ], { typical: true });
+      ], { typical: true, piece: [{ types: ['rough_sill'], size, lengthFt: L }] });
     }
     const ref = `${pr.kind === 'door' ? 'door_ext' : 'window'}_${pr.widthIn}x${pr.heightIn}`;
     const ftLf = (pr.kind === 'door' ? (2 * pr.heightIn + pr.widthIn) : 2 * (pr.widthIn + pr.heightIn)) / 12 * D.envelope.flashingTapeFactor;
@@ -195,18 +195,18 @@ export function inspectInfo(X, hit) {
       return out(`${fmtLen(L)} PT ${fp.sillSize} sill plate`, [
         lumberRow(X, 'pt', fp.sillSize, L, `PT ${fp.sillSize} sill, ${fmtLen(L)}`),
         fastenerRow(X, bolts, connector(X, 'anchor_bolt_50pk'), FASTENER_LABEL.anchor_bolt_50pk, `≤ ${AB.maxOcFt} ft o.c., ≤ ${AB.maxFromEndIn} in from ends (rules)`),
-        { label: `${fmtLen(L)} sill gasket`, detail: `${usd(gas)} per ${gq ? '100 ft' : 'pack'} — this run's share`, amount: gas == null ? null : r2(gas * L / 100), est: !X.verified('sill_gasket_2pk') },
-      ]);
+        { label: `${fmtLen(L)} sill gasket`, detail: `${usd(gas)} per ${gq ? '100 ft' : 'pack'} — this run's share`, amount: gas == null ? null : r2(gas * L / 100), est: !X.verified('sill_gasket_2pk'), keep: true },
+      ], { piece: [{ types: ['sill_plate'], size: fp.sillSize, lengthFt: L }] });
     }
     if (role === 'rim') {
       const L = plen(o); const pu = framingNails(X);
-      return out(`${fmtLen(L)} ${js} rim joist`, [lumberRow(X, 'lumber', js, L, `${js} rim, ${fmtLen(L)}`), fastenerRow(X, L * X.NP.rim_lf, pu, nailLabel(pu), `${X.NP.rim_lf} per ft · ${TYPICAL}`)], { typical: true });
+      return out(`${fmtLen(L)} ${js} rim joist`, [lumberRow(X, 'lumber', js, L, `${js} rim, ${fmtLen(L)}`), fastenerRow(X, L * X.NP.rim_lf, pu, nailLabel(pu), `${X.NP.rim_lf} per ft · ${TYPICAL}`)], { typical: true, piece: [{ types: ['rim_joist'], size: js, lengthFt: L }] });
     }
     if (role === 'girder') {
       const L = plen(o); const plies = Math.round(o.props.widthIn / 1.5); const row = lumberRow(X, 'lumber', js, L, `${plies} × ${fmtLen(L)} ${js}`);
       if (row.amount != null) row.amount = r2(row.amount * plies);
       const scr = Math.ceil(L * 12 / 16) * 2;
-      return out(`${fmtLen(L)} ${plies}-ply ${js} mid beam — FLAGGED, size by engineer`, [row, fastenerRow(X, scr, connector(X, 'screws_structural_12pk'), FASTENER_LABEL.screws_structural_12pk, '2 every 16 in (rules)')], { sub: 'Supports/posts not priced' });
+      return out(`${fmtLen(L)} ${plies}-ply ${js} mid beam — FLAGGED, size by engineer`, [row, fastenerRow(X, scr, connector(X, 'screws_structural_12pk'), FASTENER_LABEL.screws_structural_12pk, '2 every 16 in (rules)')], { piece: [{ types: ['beam_ply_first'], size: js, lengthFt: L }, { types: ['beam_ply_added'], size: js, lengthFt: L, n: plies - 1 }], sub: 'Supports/posts not priced' });
     }
     if (o.type === 'joist') {
       const L = plen(o); const girders = l.objects.filter((x) => x.props && x.props.role === 'girder');
@@ -222,14 +222,14 @@ export function inspectInfo(X, hit) {
       }
       const tube = X.unit('subfloor_adhesive_28oz');
       rows.push({ label: `${fmtLen(L)} adhesive bead`, detail: `${usd(tube)} tube covers ~${X.D.floor.adhesiveLfPerTube} ft — share`, amount: tube == null ? null : r2(tube * L / X.D.floor.adhesiveLfPerTube), est: !X.verified('subfloor_adhesive_28oz') });
-      return out(`${fmtLen(L)} ${js} floor joist${flush ? ' (cut at the mid beam)' : ''}`, rows, { typical: true });
+      return out(`${fmtLen(L)} ${js} floor joist${flush ? ' (cut at the mid beam)' : ''}`, rows, { typical: true, piece: [{ types: ['floor_joist'], size: js, lengthFt: pieces[0], n: pieces.length }] });
     }
     if (o.props.role === 'subfloor') {
       const area = polyArea(o.geometry.pts); const sheets = Math.ceil(area * (1 + (X.D.waste.sheathing || 0)) / X.D.floor.subfloorSheetSqFt);
       const pu = sheathingNails(X);
       const rows = [wholeRow(X, 'subfloor_2332_tg', '4×8 sheet 23/32 T&G subfloor'), fastenerRow(X, X.D.floor.sheathingNailsPerSheet, pu, nailLabel(pu), 'per sheet (rules)')];
       const per = rows.reduce((s, r) => s + (r.amount || 0), 0);
-      return out('4×8 subfloor panel', rows, { sub: `whole floor: ${sheets} sheets ≈ ${usd(r2(per * sheets))}` });
+      return out('4×8 subfloor panel', rows, { piece: [{ types: ['subfloor_sheet'] }], sheets, sub: `whole floor: ${sheets} sheets ≈ ${usd(r2(per * sheets))}` });
     }
   }
 
@@ -253,19 +253,19 @@ export function inspectInfo(X, hit) {
         { label: `${need.toFixed(0)} in of ${dia} in Sonotube`, detail: tup == null ? `no price for a ${dia} in tube` : `${D.formTube.stockLengthIn} in tube at ${usd(tup)} — ${need > D.formTube.stockLengthIn ? 'needs an extension' : 'this pier\'s share'}`, amount: tup == null ? null : r2(tup * need / D.formTube.stockLengthIn), est: tref ? !X.verified(tref) : true },
         concreteRow(vol, `Ø${dia} in × ${fmtLen(h)}`),
         rebarRow(blf, `${bars} verticals × ${((h * 12 - D.rebar.coverIn + D.rebar.pierDowelIntoBeamIn) / 12).toFixed(2)} ft`),
-        { label: '2 rebar ties', detail: `tie-wire roll ${usd(tie)} / ~${D.rebar.tiesPerRollEstimate} ties`, amount: tie == null ? null : r2(tie * 2 / D.rebar.tiesPerRollEstimate), est: !X.verified('tie_wire_roll') },
+        { tie: true, label: '2 rebar ties', detail: `tie-wire roll ${usd(tie)} / ~${D.rebar.tiesPerRollEstimate} ties`, amount: tie == null ? null : r2(tie * 2 / D.rebar.tiesPerRollEstimate), est: !X.verified('tie_wire_roll') },
       ];
       mark = { circle: [o.geometry.c, (dia / 12) / 2] };
       const fo = l.params;
       const site = (X.est.raw && X.est.raw.report) || {};
       const depthNote = X.depthNote ? X.depthNote(o) : (fo.frostDepthIn ? `bottom ${Math.round(-o.z * 12)} in below grade · frost ${fo.frostDepthIn} in${site.frostSource ? ` (${site.frostSource})` : ''}` : `frost depth unknown — drawn at the ${fo.placeholderFrostIn} in conservative placeholder (FLAGGED)`);
-      return out(`Ø${dia} in Sonotube pier, ${fmtLen(h)} tall`, rows, { sub: `${o.props.manual ? 'Manual' : 'Auto'} pier · ${depthNote}` });
+      return out(`Ø${dia} in Sonotube pier, ${fmtLen(h)} tall`, rows, { piece: [{ types: ['pier'], lengthFt: h }], sub: `${o.props.manual ? 'Manual' : 'Auto'} pier · ${depthNote}` });
     }
     if (o.type === 'beam' && o.props.role === 'gradeBeam') {
       const L = plen(o); const wIn = o.props.widthIn, dIn = l.params.gradeBeamDepthIn; const bars = D.rebar.gradeBeamBarsEXAMPLE.top + D.rebar.gradeBeamBarsEXAMPLE.bottom;
       const f2 = X.unit('lumber_2x12_16');
       return out(`${fmtLen(L)} grade beam ${wIn}×${dIn} in`, [concreteRow(L * wIn / 12 * dIn / 12, `${fmtLen(L)} × ${wIn}×${dIn} in`), rebarRow(bars * L, `${bars} bars × ${fmtLen(L)} (laps not shown)`),
-        { label: `${(3 * L).toFixed(1)} ft 2x12 forms (reusable)`, detail: `16 ft 2x12 at ${usd(f2)} — share`, amount: f2 == null ? null : r2(f2 * 3 * L / 16), est: !X.verified('lumber_2x12_16') }], { sub: 'EXAMPLE section — engineer/plans govern' });
+        { label: `${(3 * L).toFixed(1)} ft 2x12 forms (reusable)`, detail: `16 ft 2x12 at ${usd(f2)} — share`, amount: f2 == null ? null : r2(f2 * 3 * L / 16), est: !X.verified('lumber_2x12_16') }], { piece: [{ types: ['grade_beam'], lengthFt: L }], sub: 'EXAMPLE section — engineer/plans govern' });
     }
     if (o.type === 'footing') {
       const L = plen(o); const vol = L * (o.props.widthIn / 12) * o.height;
@@ -289,25 +289,71 @@ export function inspectInfo(X, hit) {
         rows.push(wholeRow(X, 'hurricane_h25a', '1 H2.5A hurricane tie', `${usd(X.unit('hurricane_h25a'))} each`));
         rows.push(fastenerRow(X, 10, connector(X, 'nails_connector_n8_150'), FASTENER_LABEL.nails_connector_n8_150, '10 per tie (rules)'));
       }
-      return out(`${fmtLen(len)} ${rp.rafterSize} ${barge ? 'barge rafter' : 'rafter'}`, rows, { typical: true, sub: `pitch ${rp.pitch}:12, overhang ${rp.overhangIn} in${barge ? ' · barge/rake rafter: no hurricane tie' : ''}` });
+      return out(`${fmtLen(len)} ${rp.rafterSize} ${barge ? 'barge rafter' : 'rafter'}`, rows, { typical: true, piece: [{ types: barge ? ['rafter_barge', 'rafter'] : ['rafter'], size: rp.rafterSize, lengthFt: len }], sub: `pitch ${rp.pitch}:12, overhang ${rp.overhangIn} in${barge ? ' · barge/rake rafter: no hurricane tie' : ''}` });
     }
     if (o.props.role === 'ridge') {
       const L = plen(o); const rs = X.D.roof.ridgeOneSizeUp[rp.rafterSize]; const pu = framingNails(X);
-      return out(`${fmtLen(L)} ${rs} ridge board`, [lumberRow(X, 'lumber', rs, L, `${rs} ridge, ${fmtLen(L)}`), fastenerRow(X, L * X.NP.ridge_lf, pu, nailLabel(pu), `${X.NP.ridge_lf} per ft · ${TYPICAL}`)], { typical: true, sub: 'one size up from the rafters (rules)' });
+      return out(`${fmtLen(L)} ${rs} ridge board`, [lumberRow(X, 'lumber', rs, L, `${rs} ridge, ${fmtLen(L)}`), fastenerRow(X, L * X.NP.ridge_lf, pu, nailLabel(pu), `${X.NP.ridge_lf} per ft · ${TYPICAL}`)], { typical: true, piece: [{ types: ['ridge_board'], size: rs, lengthFt: L }], sub: 'one size up from the rafters (rules)' });
     }
     if (o.props.role === 'outline') {
       const pu = sheathingNails(X); const R = X.D.roof;
       const rows = [wholeRow(X, 'osb_716_4x8', '4×8 sheet 7/16 OSB'), fastenerRow(X, R.sheathingNailsPerSheet, pu, nailLabel(pu), 'per sheet (rules)'), fastenerRow(X, R.sheathingClipsPerSheet, connector(X, 'h_clip_716_50'), FASTENER_LABEL.h_clip_716_50, 'per sheet (rules)')];
       const sheets = (X.est.report && X.est.report.roofSheets) || 0; const per = rows.reduce((s, r) => s + ((r && r.amount) || 0), 0);
       mark = { poly: o.geometry.pts };
-      return out('4×8 roof sheathing panel', rows, { sub: sheets ? `whole roof: ${sheets} sheets ≈ ${usd(r2(per * sheets))} (${Math.ceil(sheets / 2)} per side)` : '' });
+      return out('4×8 roof sheathing panel', rows, { piece: [{ types: ['roof_sheet'] }], sheets, sub: sheets ? `whole roof: ${sheets} sheets ≈ ${usd(r2(per * sheets))} (${Math.ceil(sheets / 2)} per side)` : '' });
     }
   }
   return { none: `${o.props.label || o.type} — no per-piece price rule`, layer: l.name };
 }
 
+// ---------- Remodel Guide's fastener schedule: rebuild the popup from the engine's pieces[] (fastener-schedule.json
+// counts + its hover copy). Engine pieces carry no app ids, so match by type + size + closest length.
+function findPiece(X, spec) {
+  const P = (X.est.pieces || []).filter((p) => spec.types.includes(p.type) && (!spec.size || !p.size || p.size === spec.size));
+  if (!P.length) return null;
+  const byType = spec.types.map((t) => P.filter((p) => p.type === t)).find((a) => a.length) || P;
+  if (spec.lengthFt == null) return byType[0];
+  let best = byType[0]; byType.forEach((p) => { if (Math.abs((p.length || 0) - spec.lengthFt) < Math.abs((best.length || 0) - spec.lengthFt)) best = p; });
+  return best;
+}
+const lineEst = (X, id) => { const l = X.est.lines.find((x) => x.id === id); return !l || l.status !== 'hd'; };
+function scheduleRows(X, piece, n) {
+  return (piece.fasteners || []).map((f) => {
+    const c = Math.round(f.count * n * 10) / 10;
+    const per = f.kind === 'lf' || /\(lf\)/.test(f.label) ? '/lf' : ' each';
+    return { label: `${c} x ${f.label}`, detail: `@ ${f.unitPrice == null ? 'PRICE NEEDED' : (f.unitPrice < 1 ? '$' + f.unitPrice.toFixed(3) : usd(f.unitPrice)) + per} — fastener-schedule.json`, amount: f.subtotal == null ? null : r2(f.subtotal * n), est: f.unitPrice == null || lineEst(X, f.bought_on), fastener: true, sched: true };
+  });
+}
+export function applySchedule(X, info) {
+  if (!info.piece || !(X.est.pieces && X.est.pieces.length)) return info;
+  const specs = info.piece.filter((sp) => (sp.n == null ? 1 : sp.n) > 0);
+  const found = specs.map((sp) => ({ sp, n: sp.n == null ? 1 : sp.n, p: findPiece(X, sp) }));
+  if (found.some((f) => !f.p)) return info;
+  let rows;
+  if (found.every((f) => f.p.price != null)) {
+    rows = [];
+    found.forEach(({ p, n }) => {
+      const len = p.length && p.type !== 'subfloor_sheet' && p.type !== 'roof_sheet' ? `, ${fmtLen(p.length)}` : '';
+      const name = X.P[p.price_ref] ? X.P[p.price_ref].name : p.price_ref;
+      rows.push({ label: `${n > 1 ? n + ' × ' : ''}${p.size ? p.size + ' ' : ''}${p.label.replace(/\s*\(.*\)$/, '')}${len}`, detail: `${n > 1 ? `${n} × ${usd(p.price)} · ` : ''}${p.priceBasis || 'one purchased unit'}${name ? ` — ${name}` : ''}`, amount: r2(p.price * n), est: !X.verified(p.price_ref), ref: p.price_ref });
+      rows.push(...scheduleRows(X, p, n));
+    });
+    rows = rows.concat(info.rows.filter((r) => r.keep));
+  } else {
+    // concrete pieces: the engine prices concrete/rebar on the foundation lines; keep this pier's share rows, swap ties for the schedule
+    rows = info.rows.filter((r) => !r.fastener && !r.tie);
+    found.forEach(({ p, n }) => rows.push(...scheduleRows(X, p, n)));
+  }
+  info.rows = rows;
+  info.hover = found.map(({ p, n }) => (n > 1 ? `${n} × ` : '') + p.hover.join(' · '));
+  info.schedule = true; info.typical = false;
+  if (info.sheets && info.sub) { const per = rows.reduce((s, r) => s + (r.amount || 0), 0); info.sub = info.sub.replace(/≈ \$[0-9,]+\.\d\d/, `≈ ${usd(r2(per * info.sheets))}`); }
+  return info;
+}
+
 export function finishInfo(X, info) {
   if (info.none) return info;
+  applySchedule(X, info);
   info.total = r2(info.rows.reduce((s, r) => s + (r.amount || 0), 0));
   info.est = info.rows.some((r) => r.est) || info.rows.some((r) => r.amount == null);
   const g = X.est.groups.find((x) => x.id === info.layerId);
@@ -328,6 +374,8 @@ export function infoHTML(info) {
 ${info.wallTotal != null ? `<div class="ip-meta">This whole wall's studs + plates + nails ≈ ${usd(info.wallTotal)}</div>` : ''}
 ${info.layerSubtotal ? `<div class="ip-meta">${esc(info.layerSubtotal.name)} in Price check: ${usd(info.layerSubtotal.total)}</div>` : ''}
 ${info.typical ? '<div class="ip-meta">Nail counts are typical (EXAMPLE schedule, cf. IRC Table R602.3(1)) — verify.</div>' : ''}
+${info.schedule ? '<div class="ip-meta ip-sched">Fastener counts: Remodel Guide fastener-schedule.json (2024 IRC as adopted in MT, Table R602.3(1) + manufacturer instructions) — EXAMPLE, verify.</div>' : ''}
+${info.hover && info.hover.length ? `<div class="ip-hover" data-hover>${info.hover.map((h) => `<div>${esc(h)}</div>`).join('')}</div>` : ''}
 <div class="ip-src">${esc(info.snapshot)}. Fasteners: box price ÷ count.${info.taxNote ? ' ' + esc(info.taxNote) + '.' : ''}</div>`;
 }
 

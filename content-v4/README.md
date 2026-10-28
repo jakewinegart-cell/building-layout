@@ -6,15 +6,18 @@ These are content files only. No app code was changed. Price snapshot: **2026-10
 |---|---|
 | `takeoff-rules.json` | Machine rules. Contains `model_paths`, `defaults` (waste, stock lengths, concrete, rebar EXAMPLE, anchor bolts, nailing EXAMPLE, roof), `items[]` (each has `id, layer, formula, params, unit, waste, price_ref`) and `missing_fields[]`. |
 | `takeoff-rules.md` | The same rules in plain English, including how waste is rounded and the stock-length rule. |
-| `homedepot-prices.json` | 82 Home Depot price entries keyed by `price_ref`: name, internet #, model, unit, pack_qty, price, bulk_price, URL, date, `verified`, `denver_localized`, estimate_source, notes. 73 verified, 9 estimated. |
+| `homedepot-prices.json` | 88 Home Depot price entries (v4 fasteners added 2026-10-28: 16d common, 8d HDG common, 8d gun nail, 1-3/4 roofing nail, 2 PRICE NEEDED) keyed by `price_ref`: name, internet #, model, unit, pack_qty, price, bulk_price, URL, date, `verified`, `denver_localized`, estimate_source, notes. 76 verified, 9 estimated or unconfirmed, 3 PRICE NEEDED (price null). |
 | `jurisdictions.json` | **New.** Zip → place, code jurisdiction(s), code edition, frost depth, snow-load status, ice barrier, permits, who to call, sales tax and nearest store. Every value has a source and a `verified` flag. Seed entry: 59833 (Florence, MT). Includes the unknown-zip `fallback`. |
 | `zip-popup-spec.md` | **New.** Startup "Where are you building?" modal: copy, validation, county picker, what it writes into the model, data flow (pier depth = max(frost + margin, 12)), tax, fallback. |
 | `pricing-rules.md` | Total formula (materials + tax + contingency + delivery + optional labor), the reasoning, the required disclaimer, and the worked 20×16 example. |
 | `instructions.md` | Plain-language build guide template with `{variables}` and `[if …]` blocks. Covers layout → piers → sill → joists → subfloor → walls → roof → dry-in, plus inspections, safety, and permit/engineer triggers. Includes a variable-source table. |
-| `reference/takeoff-reference.mjs` | Working reference engine: `takeoff(model, rules, prices, opts)`. Pure JS, imports nothing from the app. |
+| `fastener-schedule.json` | **New (fasteners).** Per piece type: connections, IRC 2024 (MT) item, fastener type/size, count rule, nails-vs-screws flag, sources; fastener types → `homedepot-prices.json` box options; heel-joint table; UNVERIFIED list. |
+| `fastener-schedule.md` | **New (fasteners).** Plain-English schedule, per-piece counts, example change, **hover-copy format for $ inspect**, unverified items. |
+| `reference/takeoff-reference.mjs` | Working reference engine: `takeoff(model, rules, prices, opts)`. Pure JS, imports nothing from the app. With `opts.fastenerSchedule` it returns `pieces[]` ({pieceId, type, length, price, fasteners[{type, count, unitPrice, subtotal}], total, hover[]}) and `fasteners` totals. |
 | `reference/run-example.mjs` | `node reference/run-example.mjs` prints the example and rewrites `example-20x16.takeoff.json`. |
 | `reference/example-20x16*.model.json` | Models produced by the app's own `regenerate()`: defaults (24 in placeholder); frost 36 in (the 59833 base); 2x12 clear-span at frost 36 in. |
 | `reference/example-20x16.takeoff.json` | Full line list, totals and deltas for the example. |
+| `reference/example-20x16.pieces.json` | **New.** All 318 piece records with fasteners and hover copy, plus aggregate fastener totals (EXAMPLE). |
 
 ## How App Builder should use them
 
@@ -61,4 +64,5 @@ These are content files only. No app code was changed. Price snapshot: **2026-10
 - **Location from ZIP:** tax, frost depth, ice barrier, code and permit notes now come from `jurisdictions.json` via the startup pop-up. Denver defaults are removed.
 - **Engine** (`reference/takeoff-reference.mjs`): adds `resolveJurisdiction()` and `requiredPierDepthIn()`. New flags: frost not applied, pier too shallow, ZIP spans multiple jurisdictions, snow load unverified, tax unknown. Adds `totals.taxSource`.
 - **Example rerun for 59833:** materials $8,197.68, tax $0 (0%), contingency $819.77, **total $9,017.45**. That's −$611.47 vs v3's $9,628.92 (all EXAMPLE).
+- **Fasteners ($ inspect, 2026-10-28):** `fastener-schedule.json/.md` + engine `pieces[]`. Example total **$9,066.74** (+$49.29 vs $9,017.45; fastener lines $360.18 → $404.99). Floor/roof groups drop because their nail lines moved to `all`.
 - **Rule kept:** piers go only under wall lines and corners with the grade beam, never mid-span.

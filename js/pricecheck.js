@@ -17,6 +17,21 @@ export function modelSig(m) {
   return `${s.length}-${h1.toString(36)}-${h2.toString(36)}`;
 }
 
+const hash = (s) => { let h1 = 0x811c9dc5, h2 = 0; for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 16777619) >>> 0; h2 = (h2 * 31 + c) >>> 0; } return `${s.length}-${h1.toString(36)}-${h2.toString(36)}`; };
+/** Signature of one layer (its params + objects): an edit to a Complete layer after a run makes that layer's price stale. */
+export function layerSig(m, id) { const l = m.layers.find((x) => x.id === id); return l ? hash(JSON.stringify({ p: l.params, o: l.objects })) : ''; }
+export function layerSigs(m) { const o = {}; m.layers.forEach((l) => { if (!l.stub) o[l.id] = layerSig(m, l.id); }); return o; }
+/** Price state of a layer vs the last run: 'open' (not Complete) | 'unpriced' (Complete, not in the last run) | 'priced' | 'stale' (edited since). */
+export function layerPriceState(m, run, id) {
+  const l = m.layers.find((x) => x.id === id); if (!l || !l.complete) return 'open';
+  const ids = run && (run.completeIds || (run.model && run.model.layers.filter((x) => !x.stub).map((x) => x.id)));
+  if (!run || !ids || !ids.includes(id)) return 'unpriced';
+  const sig = run.layerSigs ? run.layerSigs[id] : (run.model ? layerSig(run.model, id) : null);
+  return sig && sig === layerSig(m, id) ? 'priced' : 'stale';
+}
+/** Set of Complete layer ids as a stable string (part of "is the report out of date"). */
+export const completeKey = (m) => m.layers.filter((l) => !l.stub && l.complete).map((l) => l.id).sort().join(',');
+
 /** Mid floor beam state: girders, and the piers the user chose to put under them. */
 export function beamState(m) {
   const fl = getLayer(m, 'floor');

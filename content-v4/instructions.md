@@ -65,7 +65,7 @@
 
 1. Stand the **{joist_size} rim joists** on edge at the outside edge of the sill. Toenail them to the sill.
 2. Mark the joist layout on the rims at **{joist_oc_in} in on center**, measured from the same end on both sides. Put an X on the side of the line where each joist goes.
-3. Install **{joist_count} joists**, spanning {joist_span_ft} ft. Crown up: sight down each board and put the hump on top. End-nail through the rim (3 × 16d) and toenail to the sill. [if hangers] At the flush beam, hang the joists in **face-mount hangers** and fill every nail hole with the specified nails. [/if]
+3. Install **{joist_count} joists**, spanning {joist_span_ft} ft. Crown up: sight down each board and put the hump on top. End-nail through the rim (4 × 3 in × 0.131) and toenail to the sill (3 × 3 in × 0.131), per IRC Table R602.3(1) items 22 and 27 (see `fastener-schedule.md`). [if hangers] At the flush beam, hang the joists in **face-mount hangers** and fill every nail hole with the specified nails (LUS210: 12 × 0.148 × 3). [/if]
 4. Add doubled joists under any wall that runs parallel to the joists, and around floor openings.
 5. **Framing inspection** of the floor system may be required before you sheathe it if the underside will be closed off. Ask.
 
@@ -73,7 +73,7 @@
 
 1. Snap a line 48-1/8 in in from the edge for the first row. Run **{subfloor_sheets} sheets of 3/4 (23/32) T&G** with the long side **across** the joists, groove side toward you, and stagger the end joints by at least 2 joists.
 2. Put a **bead of subfloor adhesive** on every joist under the sheet. Only lay as much glue as you'll cover in about 10 minutes.
-3. Leave a 1/8 in gap at the panel ends; T&G edges get no gap. Nail with 2-3/8 in ring-shank nails at 6 in along the edges and 12 in in the field, or screw it down.
+3. Leave a 1/8 in gap at the panel ends; T&G edges get no gap. Nail with 2-3/8 in ring-shank nails at 6 in on supported panel ends and 12 in at the joists in between (Table R602.3(1) item 32). Screws only if the subfloor or adhesive maker's instructions allow them.
 
 ## 6. Walls
 
@@ -82,7 +82,7 @@
 2. Tack the bottom plate and one top plate together and mark the studs at **{stud_oc_in} in on center**, plus the corners, intersections and openings. Openings: {opening_list}.
 
 **Framing** (build each wall flat on the deck)
-3. Studs are **{stud_length_in} in** long. For an 8 ft wall, buy 92-5/8 precuts and trim 1-1/8 in (or build the wall 97-1/8 in tall). Nail through the plates with 2 × 16d per end.
+3. Studs are **{stud_length_in} in** long. For an 8 ft wall, buy 92-5/8 precuts and trim 1-1/8 in (or build the wall 97-1/8 in tall). Nail through the plates with 3 × 3 in × 0.131 per end (item 17).
 4. At each opening:
    - **King studs** run full height.
    - **Jack (trimmer) studs** carry the header.
@@ -91,10 +91,10 @@
 5. Build the **corners** with a backer stud or ladder blocking so there's nailing for drywall.
 
 **Sheathe while it's flat** (optional, but faster and squarer)
-6. Square the wall: the diagonals must match. Then nail on the **7/16 OSB**: 8d (2-3/8) at 6 in on the edges and 12 in in the field, with 1/8 in gaps. The house needs **{wall_sheets} sheets**. Cut out the openings after nailing.
+6. Square the wall: the diagonals must match. Then nail on the **7/16 OSB**: 2-3/8 in × 0.113 ring-shank at 6 in on the edges and 12 in in the field (Table R602.3(3); check your wind speed), with 1/8 in gaps. The house needs **{wall_sheets} sheets**. Cut out the openings after nailing.
 
 **Raise, plumb, brace**
-7. Raise the long walls first, with at least two people per 10 ft of wall. Nail the bottom plate to the rim and joists (16d at 16 in).
+7. Raise the long walls first, with at least two people per 10 ft of wall. Nail the bottom plate to the rim and joists (4 × 3 in × 0.131 every 16 in, item 16).
 8. **Plumb** each corner with a level or plumb bob and hold it with temporary **diagonal braces** (2x4s staked or nailed to the deck). Keep the braces in until the roof is sheathed.
 9. Add the **second top plate**, overlapping the corners and lapping the splices at least 4 ft from the joints below.
 
@@ -106,9 +106,9 @@
 2. **Ridge:** **{ridge_size}**, {ridge_length_ft} ft long including overhangs. The ridge sits about **{ridge_height_ft} ft above the top plate**. Hold it up on temporary posts that are braced plumb.
 3. **Rafters:** **{rafter_count} × {rafter_size}** at **{rafter_oc_in} in on center**, each about **{rafter_length_ft} ft** long. Make **one pattern rafter**, test it at both ends of the building, then cut the rest from it. Cut a bird's-mouth seat about 1/3 of the rafter depth, no deeper. Install them in opposing pairs so you don't push the ridge out of line.
 4. **Collar ties:** 2x4s in the upper third, on every other pair.
-5. **Hurricane ties:** one **H2.5A** at every rafter-to-wall connection (**{hurricane_ties}**), with every nail hole filled.
+5. **Hurricane ties:** one **H2.5A** at every rafter-to-wall connection (**{hurricane_ties}**), with every nail hole filled (10 × 0.131 × 2-1/2 nails; not the short 1-1/2 in ones).
 6. **Gable ends:** frame the studs at {stud_oc_in} in under the end rafters. *The app doesn't draw these yet.* Add 2x4 lookouts for the barge (fly) rafters at the {overhang_in} in rake overhang.
-7. **Roof sheathing:** **{roof_sheets} sheets of 7/16 OSB**. Check the stamp says 24/16 for rafters at 24 in, or use 1/2 in. Run the long side across the rafters, stagger the joints, use H-clips between rafters, leave 1/8 in gaps, and nail 6/12.
+7. **Roof sheathing:** **{roof_sheets} sheets of 7/16 OSB**. Check the stamp says 24/16 for rafters at 24 in, or use 1/2 in. Run the long side across the rafters, stagger the joints, use H-clips between rafters, leave 1/8 in gaps, and nail 8d (2-1/2 × 0.131, 0.281 head) at 6 in on the edges **and** 6 in in the field (2024 IRC Table R602.3(1) item 31; 4 in near edges in high-wind areas).
 8. **Framing inspection:** walls, roof framing, connectors and shear nailing. This is usually before the wrap and roofing go on. Ask.
 
 **Safety:** this is the most dangerous stage. Use fall protection, toe boards or roof jacks, a stable scaffold, and no one working alone.

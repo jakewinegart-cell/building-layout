@@ -90,7 +90,7 @@ Sheet formula (`sheet_rule`): `2 × (w/edge + 1) + (supports − 2) × (w/field 
 
 - **Groups:** floor 1,182.34 → 1,073.27 and roof 2,031.77 → 1,948.57, because their nail and screw lines moved to `all`. `all` (fasteners) 167.91 → 404.99.
 - **Main changes:** heel joints (340 × 16d, which v3 did not count), roof sheathing at 6/6 with 8d instead of ring nails, H2.5A nails corrected to 2-1/2 in, and the screw line dropped.
-- **Value vs. purchase:** the fasteners actually used are worth $239.06 (nails only $125.77); the rest is leftover in boxes.
+- **Value vs. purchase:** the nails the pieces actually use are worth $125.77 of the $404.99 bought (`fasteners.usedValueNailsOnly`); the rest is left over in partly used boxes.
 - **2x12 clear-span variant:** $8,937.52 (−$129.22 vs. the base).
 
 ## Hover copy format (for App Builder)

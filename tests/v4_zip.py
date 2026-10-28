@@ -1,5 +1,5 @@
 """v4 startup ZIP pop-up tests (content-v4/zip-popup-spec.md): copy + validation, county picker, verified/source
-badges, what 'Use these values' writes, pier depth = max(frost + margin, 12), 59833 total $9,017.45 in Price check
+badges, what 'Use these values' writes, pier depth = max(frost + margin, 12), 59833 total $9,299.57 in Price check (was $9,017.45 before fastener-schedule.json + roofing fixes)
 and the same ZIP values in the $ inspect popup, unknown-ZIP fallback (48 in + flags), Skip, phone layout.
    python3 tests/v4_zip.py [base_url]"""
 import sys, json, re, os
@@ -26,11 +26,16 @@ def fresh(pg, example=None):
 def run_price_check(pg):
     pg.click('#doneBtn'); pg.wait_for_selector('#pcRun', timeout=15000)
     if pg.locator('.pc-skip[data-skip="beam"]').count(): pg.click('.pc-skip[data-skip="beam"]')
-    pg.click('#pcRun'); pg.wait_for_selector('#rpTotal', timeout=20000); pg.wait_for_timeout(400)
+    mark_all_complete(pg); pg.click('#pcRun'); pg.wait_for_selector('#rpTotal', timeout=20000); pg.wait_for_timeout(400)
     return money(pg.inner_text('#rpTotal'))
 def close_report(pg): pg.click('#rpClose'); pg.wait_for_timeout(300)
 
 EX = 'content-v4/reference/example-20x16.model.json'
+def mark_all_complete(pg):
+    """Feature C: Price check prices only layers marked Complete; older suites price the whole plan."""
+    for i in [e.get_attribute('data-complete') for e in pg.locator('#pcLayers input[data-complete]:not(:checked)').all()]:
+        pg.check(f'#pcLayers input[data-complete="{i}"]'); pg.wait_for_timeout(60)
+
 with sync_playwright() as p:
     b = p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'])
     pg = b.new_page(viewport={'width': 1280, 'height': 860}); errs = []
@@ -84,9 +89,17 @@ with sync_playwright() as p:
     check('layer panel shows the location line', 'ZIP 59833' in pg.inner_text('#locLine'))
     # ------------------------------------------------ Price check with the ZIP values
     tot = run_price_check(pg)
-    check('Price check 20x16 @ 59833 = $9,017.45', abs((tot or 0) - 9017.45) < 0.005, tot)
+    # $9,017.45 (legacy tally) → $9,066.74 (fastener-schedule.json) → $9,299.57 (+ Remodel Guide roofing fixes: 2 ice courses, 19/32 roof OSB)
+    check('Price check 20x16 @ 59833 = $9,299.57 (fastener schedule + roofing fixes)', abs((tot or 0) - 9299.57) < 0.005, tot)
+    alt = pg.evaluate("""async () => { const E = await import('./js/estimate.js'); const { getContent } = await import('./js/report.js'); const C = await getContent(); const m = __layout.getModel();
+        const a = E.runEstimate(m, C, { noRoofingFixes: true }); const L = await import('./js/content.js');
+        return { sched: a.totals.total, buy: a.fasteners.purchasedCost, used: a.fasteners.usedValueNailsOnly }; }""")
+    check('same plan without the roofing fixes = $9,066.74 (Remodel Guide fastener-schedule total)', abs(alt['sched'] - 9066.74) < 0.005, alt)
     rows = pg.inner_text('#rpBreak')
-    check('materials $8,197.68 · tax $0.00 @ 0% (zip 59833 lookup) · contingency $819.77', all(x in rows for x in ['$8,197.68', '$0.00', '$819.77', 'zip 59833 lookup']), rows[-300:])
+    check('materials $8,454.15 · tax $0.00 @ 0% (zip 59833 lookup) · contingency $845.42', all(x in rows for x in ['$8,454.15', '$0.00', '$845.42', 'zip 59833 lookup']), rows[-300:])
+    fn = pg.inner_text('#rpFastNote')
+    check('report shows fasteners used vs full box purchase, labelled', 'Full box purchase: $404.99' in fn and 'Fasteners actually used by the pieces: $239.06' in fn, fn)
+    check('roofing fixes listed in Check these (19/32 + 2 ice courses)', '19/32' in pg.inner_text('#rpRoofFix') and '2 course' in pg.inner_text('#rpRoofFix'))
     check('no Denver default anywhere in the report', 'Denver store' not in pg.inner_text('#report') and '9.15' not in pg.inner_text('#report'))
     check('frost card: 36 in from the zip lookup, no placeholder', '36 in' in pg.inner_text('#rpFrost') and pg.locator('#rpFrost[data-skipped]').count() == 0)
     check('engine flags: snow load UNVERIFIED + multi-jurisdiction', 'snow load' in pg.inner_text('#rp-check') and 'more than one code jurisdiction' in pg.inner_text('#rp-check'))
@@ -127,7 +140,7 @@ with sync_playwright() as p:
     close_report(pg)
     # entered values on an unknown ZIP; 12 in minimum
     pg.evaluate("() => __layout.zipModal.open()"); pg.wait_for_selector('#zmZip')
-    pg.fill('#zmZip', '10001'); pg.click('#zmContinue'); pg.wait_for_selector('#zmUFrost')
+    pg.fill('#zmZip', '10001'); pg.click('#zmContinue'); pg.wait_for_selector('#zmUFrost'); pg.wait_for_timeout(200)  # let the 30 ms autofocus land first
     pg.fill('#zmUFrost', '6'); pg.fill('#zmUTax', '8.875'); pg.click('#zmUseU'); pg.wait_for_timeout(800)
     f = fnd(pg)
     check('user frost 6 in → piers 12 in deep (IRC R403.1.4 minimum), sources = user', f['bottoms'] == [12] and f['site']['frostSource'] == 'user' and f['site']['taxSource'] == 'user', (f['bottoms'], f['site']))

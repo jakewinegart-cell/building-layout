@@ -63,30 +63,32 @@ Assumptions:
 |---|---|
 | Site layout | 59.20 |
 | Foundation | 2,366.48 |
-| Floor | 1,182.34 |
+| Floor | 1,073.27 |
 | Walls | 2,389.98 |
-| Roof | 2,031.77 |
-| Fasteners | 167.91 |
-| **Materials** | **8,197.68** (of which $1,400 is from estimated prices: ready-mix 5 yd $750 + short-load fee $125 + door $525) |
+| Roof | 1,948.57 |
+| Fasteners (all nails, from `fastener-schedule.json`) | 404.99 |
+| **Materials** | **8,242.49** (of which $1,421 is from estimated prices: ready-mix 5 yd $750 + short-load fee $125 + door $525 + 1-3/4 in roofing nails $21) |
 | Tax 0% (MT, zip 59833 lookup) | 0.00 |
-| Contingency 10% | 819.77 |
+| Contingency 10% | 824.25 |
 | Delivery / labor | 0 / not included |
-| **Total** | **≈ $9,017.45** |
+| **Total** | **≈ $9,066.74** |
 
 **Change from v3** (v3: Denver 9.15% tax, 24 in placeholder piers, total $9,628.92):
 
 | | v3 | v4 (59833) | Change |
 |---|---|---|---|
-| Materials | 8,019.75 | 8,197.68 | **+177.93** (piers 42 → 54 in: more concrete, tube and rebar) |
+| Materials | 8,019.75 | 8,242.49 | **+222.74** (piers 42 → 54 in: more concrete, tube and rebar; code fastener counts +44.81) |
 | Tax | 733.81 (9.15%) | 0.00 (0%) | **−733.81** |
-| Contingency 10% | 875.36 | 819.77 | −55.59 |
-| **Total** | **9,628.92** | **9,017.45** | **−611.47** |
+| Contingency 10% | 875.36 | 824.25 | −51.11 |
+| **Total** | **9,628.92** | **9,066.74** | **−562.18** |
 
 How the 59833 total changes:
 
 | Variant | Total | Change |
 |---|---|---|
-| 2x12 joists clear-spanning, no mid beam or hangers (verify span) | $8,839.14 | −$178.31 |
-| 80 lb bags (220) instead of ready-mix | $9,620.69 | +$603.24 |
+| 2x12 joists clear-spanning, no mid beam or hangers (verify span) | $8,937.52 | −$129.22 |
+| 80 lb bags (220) instead of ready-mix | $9,669.98 | +$603.24 |
 
-The full line list is in `reference/example-20x16.takeoff.json`. To regenerate it, run `node reference/run-example.mjs`.
+**Fasteners (v4, 2026-10-28):** nail counts now come from `fastener-schedule.json` (2024 IRC MT Table R602.3(1) + manufacturer instructions) per piece. Before that, the EXAMPLE tally gave $9,017.45; the change is **+$49.29** (fastener lines $360.18 → $404.99, contingency +4.48). Floor and roof groups drop because their nail/screw lines moved to Fasteners. See `fastener-schedule.md`.
+
+The full line list is in `reference/example-20x16.takeoff.json`, and per-piece hover data is in `reference/example-20x16.pieces.json`. To regenerate it, run `node reference/run-example.mjs`.

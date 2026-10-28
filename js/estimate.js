@@ -10,6 +10,7 @@ import { ESTIMATE_DEFAULTS } from './config.js';
 import { getLayer } from './model.js';
 import { regenerate } from './generate.js';
 import { takeoff as placeholderTakeoff, measure } from './takeoff.js';
+import { applyRoofingFixes, withFixPrices } from './roofing-fixes.js';
 
 const r2 = (x) => Math.round(x * 100) / 100;
 export const GROUPS = [
@@ -40,8 +41,11 @@ export function runEstimate(m, C, optsOverride = {}) {
   const taxSet = !(set.taxRatePct == null || set.taxRatePct === '');
   if (C.mode === 'hd') {
     const J = siteJurisdiction(m, C);
-    const opts = Object.assign(engineOpts(m), J ? { jurisdiction: J } : {}, optsOverride);
+    const opts = Object.assign(engineOpts(m), J ? { jurisdiction: J } : {}, C.fastenerSchedule ? { fastenerSchedule: C.fastenerSchedule } : {}, optsOverride);
+    withFixPrices(C.prices);
     const r = C.engine.takeoff(mm, C.rules, C.prices, opts);
+    // Remodel Guide roofing fixes (ice-barrier courses, 19/32 at 24 in o.c., double underlayment 2:12–<4:12)
+    if (!optsOverride.noRoofingFixes) applyRoofingFixes(r, getLayer(mm, 'roof').params, C.prices.prices, { defaults: C.rules.defaults, hoverCopy: C.engine.hoverCopy });
     const P = C.prices.prices;
     const lines = r.lines.map((l) => {
       const p = l.price_ref ? P[l.price_ref] : null;
@@ -61,6 +65,7 @@ export function runEstimate(m, C, optsOverride = {}) {
       jurisdiction: J,
       totals: { materials: t.materials, fromEstimates: t.materials_from_estimated_prices, unpriced: t.unpriced_lines, taxSet: t.taxSource ? t.taxSource !== 'unknown' : taxSet, taxSource: t.taxSource || (taxSet ? 'user' : 'unknown'), taxRatePct: (t.taxSource ? t.taxSource !== 'unknown' : taxSet) ? t.taxRatePct : null, tax: t.tax, contingencyPct: t.contingencyPct, contingency: t.contingency, delivery: t.delivery, labor: t.labor === 'not included' ? null : t.labor, total: t.total },
       snapshotDate: C.snapshotDate, raw: r,
+      pieces: r.pieces || [], fasteners: r.fasteners || null, roofingFixes: r.roofingFixes || [],
     };
   }
   // placeholder engine
@@ -97,4 +102,56 @@ export function clearSpanAlternative(m, C, base) {
   regenerate(mm, 'floor');
   const alt = runEstimate(mm, C);
   return { total: alt.totals.total, materials: alt.totals.materials, delta: r2(alt.totals.total - base.totals.total), withinTypical: midBeamInfo(m).spanFt <= CLEAR_SPAN_TYPICAL_MAX_FT };
+}
+
+// ---------------------------------------------------------------------------
+// Feature C: Price check prices only the layers marked Complete.
+export const PRICED_LAYERS = ['site', 'foundation', 'floor', 'walls', 'roof'];
+const PIECE_LAYER = { pier: 'foundation', grade_beam: 'foundation' };
+/** ids of layers the user checked Complete (any non-stub layer). */
+export function completeLayerIds(m) { return m.layers.filter((l) => !l.stub && l.complete).map((l) => l.id); }
+/** The priced layers present in this model (stub/custom layers have no price rules). */
+export function pricedLayers(m) { return PRICED_LAYERS.map((id) => m.layers.find((l) => l.id === id && !l.stub)).filter(Boolean); }
+/**
+ * Restrict a full estimate to the Complete layers. Fasteners (bought as shared boxes, layer "all") are
+ * allocated by the fastener value the completed layers' pieces use (fastener-schedule pieces[]); without
+ * pieces, by those layers' share of material cost. Totals re-run with the same formula as the engine.
+ */
+export function partialEstimate(est, m, ids) {
+  const done = new Set(ids);
+  const layers = pricedLayers(m);
+  const priced = layers.filter((l) => done.has(l.id)).map((l) => ({ id: l.id, name: l.name }));
+  const notPriced = layers.filter((l) => !done.has(l.id)).map((l) => ({ id: l.id, name: l.name }));
+  const info = { isPartial: notPriced.length > 0, none: priced.length === 0, priced, notPriced, completeIds: [...done] };
+  if (!info.isPartial) return Object.assign({}, est, { partial: info });
+  const T = est.totals;
+  // fastener share
+  let share = 0, shareBasis = '';
+  const pcs = est.pieces || [];
+  const layerOf = (p) => (p.line ? p.line.split('.')[0] : PIECE_LAYER[p.type] || null);
+  const boxVal = (p) => p.fasteners.filter((f) => String(f.bought_on || '').startsWith('fast.')).reduce((s, f) => s + (f.subtotal || 0), 0);
+  if (pcs.length) {
+    const all = pcs.reduce((s, p) => s + boxVal(p), 0); const mine = pcs.filter((p) => done.has(layerOf(p))).reduce((s, p) => s + boxVal(p), 0);
+    share = all ? mine / all : 0; shareBasis = 'by the nails the completed layers\u2019 pieces use (fastener-schedule.json)';
+  } else {
+    const nonF = est.groups.filter((g) => g.id !== 'fasteners'); const all = nonF.reduce((s, g) => s + g.total, 0); const mine = nonF.filter((g) => done.has(g.id)).reduce((s, g) => s + g.total, 0);
+    share = all ? mine / all : 0; shareBasis = 'by the completed layers\u2019 share of material cost';
+  }
+  const groups = [];
+  est.groups.forEach((g) => {
+    if (g.id === 'fasteners') {
+      if (!share) return;
+      const lines = g.lines.map((l) => Object.assign({}, l, { total: l.total == null ? null : r2(l.total * share), shareOf: l.total, note: `${Math.round(share * 1000) / 10}% share of ${l.total == null ? 'needs a price' : '$' + l.total.toFixed(2)} for the completed layers${l.note ? ' · ' + l.note : ''}` }));
+      groups.push(Object.assign({}, g, { name: `${g.name} (share for completed layers)`, total: r2(lines.reduce((s, l) => s + (l.total || 0), 0)), lines, fullTotal: g.total }));
+    } else if (done.has(g.id)) groups.push(g);
+  });
+  const lines = groups.reduce((a, g) => a.concat(g.lines), []);
+  const materials = r2(groups.reduce((s, g) => s + g.total, 0));
+  const rate = T.taxSet ? Number(T.taxRatePct) || 0 : 0;
+  const tax = r2(materials * rate / 100);
+  const contingency = r2((materials + tax) * (T.contingencyPct || 0) / 100);
+  const total = r2(materials + tax + contingency + (T.delivery || 0) + (T.labor || 0));
+  const totals = Object.assign({}, T, { materials, tax, contingency, total, fromEstimates: r2(lines.filter((l) => l.status === 'estimate').reduce((s, l) => s + (l.total || 0), 0)), unpriced: lines.filter((l) => l.status === 'unpriced').map((l) => l.desc), fullTotal: T.total });
+  info.fastenerShare = share; info.fastenerShareBasis = shareBasis;
+  return Object.assign({}, est, { groups, lines, totals, partial: info, full: est });
 }

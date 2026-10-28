@@ -3,7 +3,7 @@
 This is the human-readable companion to **`takeoff-rules.json`**. The JSON is the source of truth. **`reference/takeoff-reference.mjs`** is a working implementation of it: pure JS with no DOM and no app imports, and it has been tested against the 20×16 example.
 
 Input: the saved model **after** `regenerate()` (`m.layers[*].params`, `.objects`, `.params.computed`).
-Output: lines `{id, layer, desc, qty_calc, unit, buy, price_ref, unit_price, ext, verified}`, plus `groups`, `totals`, `flags` and `report`.
+Output: lines `{id, layer, desc, qty_calc, unit, buy, price_ref, unit_price, ext, verified}`, plus `groups`, `totals`, `flags` and `report`. With `opts.fastenerSchedule` (`fastener-schedule.json`) it also returns `pieces[]` (per-piece price + fasteners + hover copy) and `fasteners` (aggregate totals). See `fastener-schedule.md`.
 
 ## General rules
 
@@ -66,8 +66,8 @@ They come from the startup zip pop-up (`zip-popup-spec.md`) and `jurisdictions.j
 - **Sill:** PT `sillSize` along each sill object (stock rule), plus sill gasket (100 lf per 2-pack).
 - **Rim:** `joistSize` along each rim object.
 - **Joists:** one per joist object.
-  - If a girder sits **flush** with the joists (same z), each joist is cut into 2 pieces and gets **2 face-mount hangers** (LUS2x), with 12 × 0.148×3 nails per hanger.
-- **Girder (flagged):** the ply count comes from `props.widthIn/1.5` and is bought by the stock rule, plus structural screws at 2 per 16 in. **Supports are not priced.**
+  - If a girder sits **flush** with the joists (same z), each joist is cut into 2 pieces and gets **2 face-mount hangers** (LUS2x), with 12 × 0.148×3 nails per hanger (LUS210; 10 for LUS28).
+- **Girder (flagged):** the ply count comes from `props.widthIn/1.5` and is bought by the stock rule, nailed per Table R602.3(1) item 28 when the fastener schedule is used (legacy fallback: structural screws at 2 per 16 in). **Supports are not priced.**
   - This conflicts with Jake's rule that piers go only under walls. The engine flags it and points to a deeper clear-span joist.
 - **Subfloor:** 23/32 T&G, ceil(area × 1.10 / 32).
 - **Adhesive:** total lf of joists + rims + beams ÷ 40 lf per 28 oz tube.
@@ -97,7 +97,7 @@ They come from the startup zip pop-up (`zip-popup-spec.md`) and `jurisdictions.j
 - **Ridge:** one lumber size deeper than the rafters, overhang to overhang.
 - **Ceiling joists / rafter ties:** one per bearing rafter pair, sized from the EXAMPLE span table, flagged verify.
 - **Collar ties:** 2x4 on every 2nd pair, ⅓ of the span long.
-- **Hurricane ties:** 1 H2.5A per bearing rafter end, with 10 N8 nails each.
+- **Hurricane ties:** 1 H2.5A per bearing rafter end, with 10 × 0.131×2-1/2 nails each (Simpson; v3's 1-1/2 in N8 nail is for truss chords only - legacy fallback still uses it).
 - **Gable-end studs:** Σ triangle stud lf at wall o.c. The app doesn't model these yet.
 - **Rake lookouts:** 2x4 × 2 ft at 24 in along each rake.
 - **Roof sheathing:** 2 × rafter length × ridge length × 1.10 / 32, with H-clips at 4 per sheet. Panels must be rated for 24 in o.c. (the "16/0" OSB in the snapshot is flagged).
@@ -106,13 +106,12 @@ They come from the startup zip pop-up (`zip-popup-spec.md`) and `jurisdictions.j
 - **Shingles:** area/100 = squares; × 1.10 × **3 bundles per square**.
 - **Drip edge:** (eaves + rakes) × 1.10 / 10 ft.
 - **Starter:** eaves + rakes. **Ridge cap:** ridge lf × 1.05.
-- **Roofing nails:** about 2.5 lb per square.
-- **Cap nails:** for the underlayment and house wrap.
+- **Roofing nails / cap nails:** from the fastener schedule (GAF, Stinger EXO, Tyvek patterns). Legacy fallback: about 2.5 lb per square and 150 cap nails per square + 0.5 per sq ft of wall.
 
 ## Fasteners
 
-- **Framing nails:** EXAMPLE nail counts per piece (stud, joist, rafter, plate lf, …) +15%, bought as the cheapest mix of 1000 and 4000 boxes.
-- **Sheathing nails:** about 60 per subfloor sheet, 50 per wall sheet and 40 per roof sheet.
+- **With `fastener-schedule.json` (default in run-example):** every piece gets code/manufacturer connection counts (2024 IRC MT Table R602.3(1), R802.5.2(1), R905, R703; Simpson, GAF, Stinger, DuPont). Counts are summed per fastener type, +`extra_pct`, and bought as the cheapest box mix → lines `fast.<fastenerId>` in layer `all`. Fastener types that pick the same single box share one purchase (8d HDG for H2.5A + roof sheathing).
+- **Legacy fallback (no schedule, flagged):** EXAMPLE nail counts per piece (`framingNailsPerPieceEXAMPLE`) +15% in 1000/4000 boxes; sheathing nails 60/50/40 per floor/wall/roof sheet.
 
 ## Missing model fields (the engine uses defaults until these exist)
 

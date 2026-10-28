@@ -358,3 +358,25 @@ body.inspecting #plan, body.inspecting #view3d, body.inspecting #view3d canvas {
 .zipBanner button { font: inherit; border: 0; border-radius: 12px; padding: 3px 10px; cursor: pointer; }
 .locLine { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 8px; margin: 0 0 8px; background: #f3f6f8; border-radius: 8px; font-size: 12.5px; }
 .frostFlag { margin-top: 4px; background: #fde4e1; color: #a1271b; border-radius: 6px; padding: 3px 6px; font-size: 11.5px; font-weight: 600; text-align: left; }
+
+/* Feature C: per-layer Complete box + price state */
+.lmain { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.lcomplete { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #556; padding: 0 0 4px 6px; }
+.lcomplete label { display: inline-flex; align-items: center; gap: 3px; cursor: pointer; }
+.lcomplete input { margin: 0; width: 14px; height: 14px; }
+.lprice { border-radius: 8px; padding: 0 6px; font-size: 10.5px; line-height: 16px; }
+.lprice.priced { background: #e3f4e6; color: #1d6b2c; }
+.lprice.stale { background: #fff1d6; color: #8a5a00; font-weight: 600; }
+.lprice.unpriced, .lprice.none { background: #eef0f4; color: #556; }
+.pc-layers .pc-lyr { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 4px 12px; margin-top: 6px; }
+.pc-lyr-row { display: flex; align-items: center; gap: 6px; }
+.pc-lyr-row .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.pc-none { background: #fff6e0; border: 1px solid #f0d28a; border-radius: 8px; padding: 8px 10px; margin: 6px 0; }
+.pc-run:disabled { opacity: .45; cursor: not-allowed; }
+.rp-partial { background: #fff6e0; border: 1px solid #f0d28a; border-radius: 8px; padding: 8px 10px; margin: 0 0 8px; }
+.rp-total .lbl { flex-basis: 100%; font-size: 12px; color: #667; text-transform: uppercase; letter-spacing: .04em; }
+tr.np td { color: #889; font-style: italic; }
+.rp-notinc { border: 1px dashed #c9cdd6; border-radius: 8px; padding: 10px; color: #667; background: #f7f8fa; }
+.rp-phase.notinc h3 { color: #889; }
+.rp-fastnote { font-size: 12.5px; background: #f3f6fa; border-radius: 8px; padding: 8px 10px; margin-top: 8px; line-height: 1.5; }
+.ip-hover { font-size: 11px; color: #445; background: #f4f6f9; border-radius: 6px; padding: 5px 7px; margin-top: 6px; line-height: 1.4; }

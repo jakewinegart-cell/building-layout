@@ -9,6 +9,7 @@ import { fmtFtIn, dist } from './geom.js';
 import { createInspector } from './inspect.js';
 import { createZipModal, siteSummary } from './zipmodal.js';
 import { frostKnown } from './config.js';
+import { loadRun, layerPriceState } from './pricecheck.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -245,7 +246,18 @@ function locationLine() {
   const S = siteSummary(model, zipModal && zipModal.getJdoc());
   return `<div class="locLine" id="locLine"><span>📍 <b>${S.zip ? 'ZIP ' + S.zip : 'No ZIP'}</b>${S.known ? ' · ' + S.label : S.zip ? ' · no local data yet' : ' · frost + tax unknown'}</span><button class="btn" id="locChange" type="button">${S.zip ? 'Change' : 'Enter ZIP'}</button></div>`;
 }
+// Feature C: each layer's "Complete" box. Price check prices only Complete layers; editing a Complete
+// layer after a price check keeps the check but marks that layer's price stale.
+const PRICED_LAYERS = ['site', 'foundation', 'floor', 'walls', 'roof']; // same list as estimate.js
+const PRICE_STATE = { priced: ['priced', 'Priced in the last price check'], stale: ['price stale', 'Edited since the last price check — re-run Price check'], unpriced: ['not priced yet', 'Marked complete — run Price check to price it'] };
+function completeRow(l) {
+  const st = layerPriceState(model, lastRun, l.id); const b = PRICE_STATE[st];
+  const priced = PRICED_LAYERS.includes(l.id);
+  return `<div class="lcomplete"><label title="Price check prices only layers marked Complete"><input type="checkbox" data-complete="${l.id}" ${l.complete ? 'checked' : ''} aria-label="${l.name} complete"> Complete</label>${l.complete && b && priced ? `<span class="lprice ${st}" data-pricestate="${st}" title="${b[1]}">${b[0]}</span>` : ''}${l.complete && !priced ? '<span class="lprice none">no price rule</span>' : ''}</div>`;
+}
+let lastRun = null;
 function renderLayers() {
+  lastRun = loadRun();
   const pane = $('#layersPane');
   const all = stackOrder(model);
   // top of the building first, like a layer stack; stub layers grouped at the end
@@ -278,14 +290,21 @@ function renderLayers() {
     row.innerHTML = `
       <button class="ib ${l.visible ? '' : 'off'}" data-act="vis" title="${l.visible ? 'Hide' : 'Show'} ${l.name}" aria-label="${l.visible ? 'Hide' : 'Show'} ${l.name}" aria-pressed="${l.visible}" ${l.stub ? 'disabled' : ''}>${l.visible ? ICON.eye : ICON.eyeOff}</button>
       <button class="ib ${l.locked ? 'on' : 'off'}" data-act="lock" title="${l.locked ? 'Unlock' : 'Lock'} ${l.name}" aria-label="${l.locked ? 'Unlock' : 'Lock'} ${l.name}" aria-pressed="${l.locked}" ${l.stub ? 'disabled' : ''}>${l.locked ? ICON.lock : ICON.unlock}</button>
-      <button class="name" data-act="active" aria-label="Make ${l.name} active">
+      <div class="lmain"><button class="name" data-act="active" aria-label="Make ${l.name} active">
         <div class="t"><span class="dot" style="background:${l.color}"></span>${l.name}${l.stub ? ' <span class="muted">(stub)</span>' : ''}</div>
         <div class="z">${zRange(l)}</div>${note}${l.id === 'foundation' && !frostKnown(l.params) ? `<div class="frostFlag" id="frostFlag">Frost depth unknown. Piers drawn at ${l.params.placeholderFrostIn} in as a conservative placeholder. Enter your local value.</div>` : ''}
-      </button>
+      </button>${l.stub ? '' : completeRow(l)}</div>
       <button class="ib ${l.ghost ? 'on' : 'off'}" data-act="ghost" title="Ghost ${l.name} (~30%)" aria-label="Ghost ${l.name}" aria-pressed="${l.ghost}" ${l.stub ? 'disabled' : ''}>${ICON.ghost}</button>
       <button class="ib ${iso ? 'on' : 'off'}" data-act="iso" title="Isolate ${l.name}" aria-label="Isolate ${l.name}" aria-pressed="${iso}" ${l.stub ? 'disabled' : ''}>${ICON.isolate}</button>
       <button class="ib" data-act="active" title="Active layer" aria-label="Active: ${l.name}" ${l.stub ? 'disabled' : ''}><span class="radio"></span></button>`;
     host.appendChild(row);
+  });
+  host.addEventListener('change', (e) => {
+    const cb = e.target.closest('input[data-complete]'); if (!cb) return;
+    const l = getLayer(model, cb.dataset.complete); if (!l) return;
+    l.complete = cb.checked; persist(); renderLayers();
+    if (reportCtl && !$('#report').hidden) reportCtl.markStale();
+    toast(cb.checked ? `${l.name} marked complete — Price check will price it` : `${l.name} unmarked — Price check will skip it`);
   });
   host.addEventListener('click', (e) => {
     const b = e.target.closest('[data-act]'); if (!b || b.disabled) return;

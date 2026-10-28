@@ -5,8 +5,8 @@
 // ============================================================================
 import { getContentCached } from './content.js';
 import { siteSummary } from './zipmodal.js';
-import { runEstimate, siteJurisdiction, estimateSettings, clearSpanAlternative, CLEAR_SPAN_TYPICAL_MAX_FT } from './estimate.js';
-import { modelSig, beamState, applyAnswers, saveRun, loadRun } from './pricecheck.js';
+import { runEstimate, siteJurisdiction, estimateSettings, clearSpanAlternative, CLEAR_SPAN_TYPICAL_MAX_FT, partialEstimate, completeLayerIds, pricedLayers } from './estimate.js';
+import { modelSig, beamState, applyAnswers, saveRun, loadRun, layerSig, layerSigs, completeKey } from './pricecheck.js';
 import { instructionVars, renderInstructions } from './instructions.js';
 import { allSheets } from './sheets.js';
 import { getLayer } from './model.js';
@@ -32,7 +32,7 @@ function priceCell(l, C) {
   return `${each}<br><span class="ph">PLACEHOLDER — not a real Home Depot price</span>`;
 }
 function linkCell(l) {
-  if (l.status === 'hd' && l.url) return `<a href="${esc(l.url)}" target="_blank" rel="noopener">Home Depot ↗</a>${l.internetNumber ? ` <span class="rp-meta">Internet #${esc(l.internetNumber)}</span>` : ''}`;
+  if (l.status === 'hd' && (l.url || l.sourceUrl)) return `<a href="${esc(l.url || l.sourceUrl)}" target="_blank" rel="noopener">Home Depot ↗</a>${l.internetNumber ? ` <span class="rp-meta">Internet #${esc(l.internetNumber)}</span>` : ''}`;
   if (l.status === 'estimate') return `<div class="rp-est-src"><b>Estimate source:</b> ${esc(l.estimateSource)}${l.sourceUrl ? ` <a href="${esc(l.sourceUrl)}" target="_blank" rel="noopener">source ↗</a>` : ''}${l.url ? ` · <a href="${esc(l.url)}" target="_blank" rel="noopener">Home Depot ↗</a>` : ''}</div>`;
   if (l.search) return `<a href="${esc(l.search)}" target="_blank" rel="noopener">Search Home Depot ↗</a>`;
   return '';
@@ -57,7 +57,8 @@ export async function renderReport(root, opts) {
     const prev = set.beamChoice;
     const lastStale = run ? modelSig(m) !== run.sig : false;
     let h = `<div class="rp-bar"><b>Price check</b><button id="pcCancel">Cancel</button></div><div class="rp-body pc">
-<p class="pc-intro">Prices your floor plan <b>as it is right now</b>. Answer what you know — every item can be skipped, and anything skipped is flagged in the report.</p>
+<p class="pc-intro">Prices the layers you've marked <b>Complete</b>, as they are right now. Answer what you know — every item can be skipped, and anything skipped is flagged in the report.</p>
+${layersCard(m)}
 ${run ? `<p class="rp-meta">Last price check: ${esc(new Date(run.ranAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}${lastStale ? ' — <b class="rp-warn">out of date</b>' : ''}. <a href="#" id="pcViewLast">View last report</a></p>` : ''}
 ${(() => {
   const S = siteSummary(m, C.jdoc); const J = siteJurisdiction(m, C);
@@ -81,10 +82,11 @@ ${(() => {
 <label class="pc-opt"><input type="radio" name="pcBeam" value="clearspan"> <span><b>Use 2x12 joists spanning wall to wall instead</b><br><span class="rp-meta">No mid beam.${beam.spanFt > CLEAR_SPAN_TYPICAL_MAX_FT ? ` <span class="rp-warn">Caution: ${beam.spanFt} ft is longer than the ~${CLEAR_SPAN_TYPICAL_MAX_FT} ft a 2x12 typically spans — likely not enough.</span>` : ' Verify against your span table.'}</span></span></label>
 <label class="pc-opt"><input type="radio" name="pcBeam" value="skip"${sel === 'skip' ? ' checked' : ''}> <span>Skip — leave it unsupported and flag it</span></label></div>`;
     }
-    h += `<button id="pcRun" class="pc-run">Run price check</button><p class="rp-meta" style="text-align:center">Runs the material takeoff on your current plan and opens the report.</p></div>`;
+    h += `<button id="pcRun" class="pc-run"${completeLayerIds(m).some((id) => pricedLayers(m).some((l) => l.id === id)) ? '' : ' disabled'}>Run price check</button><p class="rp-meta" style="text-align:center">Runs the material takeoff on your current plan and opens the report.</p></div>`;
     root.innerHTML = h; root.scrollTop = 0;
     const q = (s) => root.querySelector(s);
     q('#pcCancel').onclick = () => onClose && onClose();
+    renderPrecheckLayersBind();
     if (q('#pcZipBtn')) q('#pcZipBtn').onclick = () => { const zm = window.__layout && window.__layout.zipModal; if (zm) zm.open({ zip: (getModel().site || {}).zip, onDone: () => renderPrecheck() }); };
     if (q('#pcViewLast')) q('#pcViewLast').onclick = (e) => { e.preventDefault(); renderRun(); bindRun(); };
     root.querySelectorAll('.pc-skip').forEach((b) => b.addEventListener('click', () => {
@@ -96,6 +98,7 @@ ${(() => {
     }));
     root.querySelectorAll('.pc-card input').forEach((i) => i.addEventListener('input', () => { const c = i.closest('.pc-card'); c.classList.remove('skipped'); const sb = c.querySelector('.pc-skip'); if (sb) sb.textContent = 'Skip'; }));
     q('#pcRun').onclick = () => {
+      if (!completeLayerIds(getModel()).some((id) => pricedLayers(getModel()).some((l) => l.id === id))) { toast && toast('Check a layer complete first'); return; }
       const tax = numOrNull(q('#pcTaxPct').value); const frost = numOrNull(q('#pcFrostIn').value);
       const bsel = root.querySelector('input[name=pcBeam]:checked');
       const answers = {
@@ -108,13 +111,30 @@ ${(() => {
     };
   }
 
+  /** "Layers to price" card: the Complete checkboxes (same flag as the layer rows). */
+  function layersCard(m) {
+    const L = pricedLayers(m); const done = new Set(completeLayerIds(m)); const n = L.filter((l) => done.has(l.id)).length;
+    return `<div class="pc-card pc-layers" id="pcLayers"><div class="pc-h"><span class="pc-n">✓</span><b>Layers to price</b><span class="rp-meta">${n} of ${L.length} complete</span></div>
+${n ? `<p class="rp-meta">Only layers checked <b>Complete</b> are priced.${n < L.length ? ' The rest are listed as "Not priced yet (not marked complete)" and the total is a <b>partial total</b>.' : ' All layers are complete — this is the full estimate.'}</p>` : `<div class="pc-none" id="pcNone"><b>Check a layer complete first.</b> Price check only prices layers you've marked Complete. Tick the layers you've finished below (or with the Complete box on each layer row), then run it.</div>`}
+<div class="pc-lyr">${L.map((l) => `<label class="pc-lyr-row"><input type="checkbox" data-complete="${esc(l.id)}"${done.has(l.id) ? ' checked' : ''}> <span class="dot" style="background:${esc(l.color)}"></span>${esc(l.name)}</label>`).join('')}</div></div>`;
+  }
+  function renderPrecheckLayersBind() {
+    const q = (s) => root.querySelector(s); const m = getModel();
+    root.querySelectorAll('#pcLayers input[data-complete]').forEach((cb) => cb.addEventListener('change', () => {
+      const l = getModel().layers.find((x) => x.id === cb.dataset.complete); if (!l) return;
+      l.complete = cb.checked; persist();
+      q('#pcLayers').outerHTML = layersCard(getModel()); renderPrecheckLayersBind();
+    }));
+    const any = completeLayerIds(m).some((id) => pricedLayers(m).some((l) => l.id === id));
+    if (q('#pcRun')) q('#pcRun').disabled = !any;
+  }
   function runPriceCheck(answers) {
     const m = getModel();
     const srcs = applyAnswers(m, answers);
     srcs.forEach((s) => commit(s));
     persist();
     const live = getModel();
-    run = { ranAt: new Date().toISOString(), sig: modelSig(live), answers, model: JSON.parse(JSON.stringify(live)), snaps: takeSnaps() };
+    run = { ranAt: new Date().toISOString(), sig: modelSig(live), completeIds: completeLayerIds(live), completeKey: completeKey(live), layerSigs: layerSigs(live), answers, model: JSON.parse(JSON.stringify(live)), snaps: takeSnaps() };
     memRun = run; saveRun(run);
     renderRun(); bindRun();
     toast && toast('Price check done');
@@ -134,12 +154,18 @@ ${(() => {
   function renderRun() {
     const m = run.model;
     const ans = run.answers || {};
-    const est = runEstimate(m, C);
+    const runIds = run.completeIds || pricedLayers(m).map((l) => l.id); // legacy runs priced everything
+    const fullEst = runEstimate(m, C);
+    const est = partialEstimate(fullEst, m, runIds);
+    const PT = est.partial; const incl = (id) => runIds.includes(id);
     const set = estimateSettings(m);
     const fnd = getLayer(m, 'foundation'); const f = fnd.params;
     const beam = beamState(m);
-    const alt = beam.has && !beam.supported && C.mode === 'hd' ? clearSpanAlternative(m, C, est) : null;
-    const stale = modelSig(getModel()) !== run.sig;
+    const alt = beam.has && !beam.supported && C.mode === 'hd' && incl('floor') && !PT.isPartial ? clearSpanAlternative(m, C, est) : null;
+    const live = getModel();
+    const completeChanged = completeKey(live) !== (run.completeKey != null ? run.completeKey : completeKey(live));
+    const staleLayers = runIds.filter((id) => run.layerSigs && run.layerSigs[id] && run.layerSigs[id] !== layerSig(live, id)).map((id) => (live.layers.find((l) => l.id === id) || {}).name || id);
+    const stale = modelSig(live) !== run.sig || completeChanged;
     if (!run.snaps && !stale) run.snaps = takeSnaps();
     const frostSet = f.frostDepthIn != null && f.frostDepthIn !== '';
     const T = est.totals; const hd = C.mode === 'hd';
@@ -155,7 +181,7 @@ ${(() => {
     let h = `<div class="rp-bar"><b>Your addition — estimate &amp; plans</b><button id="rpPrint" class="primary">Print / PDF</button><button id="rpClose">Close</button></div>
 <nav class="rp-toc"><a href="#rp-total">Total</a><a href="#rp-check">Check these</a><a href="#rp-mat">Materials</a><a href="#rp-A1">A1 Plan</a><a href="#rp-S1">S1 Foundation</a><a href="#rp-S2">S2 Floor</a><a href="#rp-S3">S3 Walls</a><a href="#rp-S4">S4 Roof</a><a href="#rp-3d">3D</a><a href="#rp-steps">Build steps</a><a href="#rp-disc">Disclaimer</a></nav>
 <div class="rp-body">`;
-    if (stale) h += `<div class="rp-stale" id="rpStale"><b>Out of date</b>You changed the plan after this price check. Everything below is for the plan as it was at ${esc(ranAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))}; nothing has been re-priced. <button id="rpRerun" class="btn primary">Re-run price check</button></div>`;
+    if (stale) h += `<div class="rp-stale" id="rpStale"><b>Out of date</b>You changed the plan after this price check${staleLayers.length ? ` (edited since: <b>${staleLayers.map(esc).join(', ')}</b> — price stale)` : ''}${completeChanged ? ' and changed which layers are marked Complete' : ''}. Everything below is for the plan as it was at ${esc(ranAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))}; nothing has been re-priced. <button id="rpRerun" class="btn primary">Re-run price check</button></div>`;
     else h += `<div class="rp-fresh rp-meta" id="rpFresh">Priced from your plan as of this price check. If you edit the plan, this report is marked out of date until you re-run it.</div>`;
 
     // ---------- 1. total + breakdown
@@ -164,7 +190,8 @@ ${(() => {
     h += hd
       ? `<div class="rp-price-src" id="rpPriceSrc"><b>Prices: ${esc(hdLabel(snapDate))}.</b> Snapshot date <b>${esc(snapDate)}</b> (America/Denver). ${nHd} lines use checked Home Depot prices${nEst ? `; <b>${nEst} lines are estimates</b> (marked <span class="ph est">est.</span>, source shown)` : ''}${T.unpriced.length ? `; ${T.unpriced.length} need a price` : ''}.</div>`
       : `<div class="rp-ph-banner"><b>PLACEHOLDER PRICES</b>Remodel Guide's Home Depot price data wasn't found, so every price here is a made-up placeholder, not a real Home Depot price.</div>`;
-    h += `<div class="rp-total"><span class="amt" id="rpTotal">${usd(T.total)}</span><span class="rp-meta">${T.taxSet ? `includes ${T.taxRatePct}% sales tax${T.taxSource && T.taxSource !== 'user' ? ` (${esc(T.taxSource)})` : ''}` : '<b class="rp-warn">sales tax not included — rate unknown</b>'}${T.contingencyPct ? ` · ${T.contingencyPct}% contingency` : ''}${T.labor == null ? ' · labor not included' : ''}</span></div>`;
+    if (PT.isPartial) h += `<div class="rp-partial" id="rpPartial"><b>Partial total — ${PT.priced.length} of ${PT.priced.length + PT.notPriced.length} layers priced</b> (${PT.priced.map((l) => esc(l.name)).join(', ')}). <span id="rpNotPriced">Not priced yet (not marked complete): ${PT.notPriced.map((l) => `<b>${esc(l.name)}</b>`).join(', ')}</span>. Mark them Complete and re-run to get the full estimate.</div>`;
+    h += `<div class="rp-total"><span class="lbl">${PT.isPartial ? 'Partial total' : 'Total'}</span><span class="amt" id="rpTotal">${usd(T.total)}</span><span class="rp-meta">${T.taxSet ? `includes ${T.taxRatePct}% sales tax${T.taxSource && T.taxSource !== 'user' ? ` (${esc(T.taxSource)})` : ''}` : '<b class="rp-warn">sales tax not included — rate unknown</b>'}${T.contingencyPct ? ` · ${T.contingencyPct}% contingency` : ''}${T.labor == null ? ' · labor not included' : ''}</span></div>`;
     h += `<div class="rp-settings" id="rpSettings">
 <label>Sales tax rate %<input id="rpTax" inputmode="decimal" type="number" step="0.01" min="0" max="20" placeholder="${T.taxSet ? `from ZIP: ${T.taxRatePct}%` : 'not set — enter your rate'}" value="${set.taxRatePct == null ? '' : esc(set.taxRatePct)}"></label>
 <label>Contingency %<input id="rpCont" inputmode="decimal" type="number" step="1" min="0" max="50" value="${esc(set.contingencyPct)}"></label>
@@ -176,12 +203,19 @@ ${hd ? `<label>Concrete<select id="rpConc">${['auto', 'bags80', 'bags60', 'ready
     h += `<table class="rp-break" id="rpBreak"><tbody>`;
     const maxG = Math.max(1, ...est.groups.map((g) => g.total));
     est.groups.forEach((g) => { h += `<tr data-group="${g.id}"><td>${esc(g.name)}<div class="bar" style="width:${Math.round((g.total / maxG) * 100)}%"></div></td><td class="n">${usd(g.total)}</td></tr>`; });
+    PT.notPriced.forEach((l) => { h += `<tr class="np" data-notpriced="${esc(l.id)}"><td>${esc(l.name)} <span class="rp-meta">— Not priced yet (not marked complete)</span></td><td class="n">—</td></tr>`; });
     h += `<tr class="sub"><td>Materials (waste included)${T.fromEstimates ? `<div class="rp-meta">of which ${usd(T.fromEstimates)} is from estimated prices (est.)</div>` : ''}${T.unpriced.length ? `<div class="rp-meta">${T.unpriced.length} line(s) need a price and aren't counted</div>` : ''}</td><td class="n">${usd(T.materials)}</td></tr>`;
     h += `<tr id="rpTaxRow"><td>Sales tax ${T.taxSet ? `@ <b>${T.taxRatePct}%</b> (${T.taxSource === 'user' ? 'your rate' : esc(T.taxSource)})` : '— <b>rate unknown, 0% used</b>. Enter your ZIP or your local rate above.'}${hd ? '<div class="rp-meta">If your jurisdiction collects use tax on materials at permit time, use that rate.</div>' : ''}</td><td class="n">${usd(T.tax)}</td></tr>`;
     h += `<tr><td>Contingency ${T.contingencyPct}% (on materials + tax)</td><td class="n">${usd(T.contingency)}</td></tr>`;
     h += `<tr><td>Delivery${T.delivery ? '' : ' <span class="rp-meta">(not added)</span>'}</td><td class="n">${usd(T.delivery)}</td></tr>`;
     h += `<tr><td>Labor</td><td class="n">${T.labor == null ? 'not included' : usd(T.labor)}</td></tr>`;
-    h += `<tr class="sum"><td>Total <span class="rp-meta">(tax rate used: ${T.taxSet ? T.taxRatePct + '%' : 'none — 0%'})</span></td><td class="n">${usd(T.total)}</td></tr></tbody></table>`;
+    h += `<tr class="sum"><td>${PT.isPartial ? 'Partial total' : 'Total'} <span class="rp-meta">(tax rate used: ${T.taxSet ? T.taxRatePct + '%' : 'none — 0%'})</span></td><td class="n">${usd(T.total)}</td></tr></tbody></table>`;
+    if (est.fasteners && est.fasteners.purchasedCost != null) {
+      const F = est.fasteners;
+      h += `<div class="rp-fastnote" id="rpFastNote"><b>Fasteners</b> (counts per piece from fastener-schedule.json, IRC 2024 MT Table R602.3(1)):<br>
+<span id="rpFastBuy">Full box purchase: <b>${usd(F.purchasedCost)}</b></span> — what you pay; the fastener lines in the total.<br>
+<span id="rpFastUsed">Fasteners actually used by the pieces: <b>${usd(F.usedValueNailsOnly)}</b></span> — value of the nails the pieces use (box price ÷ count); the rest is left over in partly used boxes.${PT.isPartial ? `<br>Partial total includes ${usd((est.groups.find((g) => g.id === 'fasteners') || {}).total || 0)} of the box purchase (${Math.round(PT.fastenerShare * 1000) / 10}%, ${esc(PT.fastenerShareBasis)}).` : ''}</div>`;
+    }
     if (est.concreteAlternatives) {
       const ca = est.concreteAlternatives; const r = est.report;
       h += `<p class="rp-meta">Concrete: ${r.concreteYd} cu yd (${r.concreteCuFt} cu ft) ${r.pierCount ? `incl. ${r.pierCount} piers` : 'for the foundation'}. Using <b>${esc(r.concreteMode)}</b>. Concrete cost by method (materials only): ${ca.bags80.qty} × 80 lb bags ${usd(ca.bags80.cost)} · ${ca.bags60.qty} × 60 lb bags ${usd(ca.bags60.cost)} · ready-mix ${ca.readymix.yd} yd ${usd(ca.readymix.cost)}${ca.readymix.estimate ? ' <span class="ph est">est.</span>' : ''}. Change it with the Concrete setting above.</p>`;
@@ -206,6 +240,7 @@ ${hd ? `<label>Concrete<select id="rpConc">${['auto', 'bags80', 'bags60', 'ready
     } else if (ans.beam === 'clearspan') {
       h += `<div class="rp-flag ok" id="rpBeam" data-choice="clearspan"><b>Floor: ${esc(beam.joistSize)} joists spanning wall to wall (no mid beam)</b><p>Your pre-check choice. ${beam.spanFt > CLEAR_SPAN_TYPICAL_MAX_FT ? `<span class="rp-warn">Caution: a ${beam.spanFt} ft span is longer than the ~${CLEAR_SPAN_TYPICAL_MAX_FT} ft a 2x12 @ 16 in typically spans — check a span table or use engineered joists.</span>` : 'EXAMPLE size — verify against your span table.'}</p></div>`;
     }
+    if (est.roofingFixes && est.roofingFixes.length && incl('roof')) h += `<div class="rp-flag ok" id="rpRoofFix"><b>Roofing defaults (Remodel Guide fixes)</b><ul>${est.roofingFixes.map((x) => `<li data-fix="${esc(x.id)}">${esc(x.text)}</li>`).join('')}</ul></div>`;
     const shown = flags.filter((x) => !(/mid beam/i.test(x)) && !(/Frost depth (not entered|unknown)/i.test(x)) && !(/tax rate unknown/i.test(x)));
     if (shown.length) h += `<ul class="rp-flags">${shown.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
     h += `</section>`;
@@ -221,14 +256,17 @@ ${hd ? `<label>Concrete<select id="rpConc">${['auto', 'bags80', 'bags60', 'ready
 <td class="c-qty n">${esc(l.qty)}</td><td class="c-unit">${esc(l.unit)}</td><td class="c-price n">${priceCell(l, C)}</td><td class="c-total n">${l.total == null ? '—' : usd(l.total)}</td><td class="c-link">${linkCell(l)}</td></tr>`;
       });
     });
-    h += `<tr class="grp"><td colspan="6">Materials subtotal <span class="n">${usd(T.materials)}</span></td></tr></tbody></table></section>`;
+    PT.notPriced.forEach((l) => { h += `<tr class="grp np" data-notpriced="${esc(l.id)}"><td colspan="6">${esc(l.name)} <span class="n rp-meta">Not priced yet (not marked complete) — not included</span></td></tr>`; });
+    h += `<tr class="grp"><td colspan="6">Materials subtotal${PT.isPartial ? ' (completed layers only)' : ''} <span class="n">${usd(T.materials)}</span></td></tr></tbody></table></section>`;
 
     // ---------- 4. plan sheets
     const tb = (id, title) => `<div class="tb"><span><b>${id}</b> ${esc(title)}</span><span>${esc(m.name || 'Addition')} · not for construction without review</span></div>`;
     const notes = (n) => `<div class="notes">${n.map((x) => `<div>• ${esc(x)}</div>`).join('')}</div>`;
-    ['A1', 'S1', 'S2'].forEach((k) => { const s = S[k]; h += `<section class="rp-sec pb" id="rp-${k}"><h2>${k} ${esc(s.title)}</h2><div class="rp-sheet">${s.svg}${tb(k, s.title)}${notes(s.notes)}</div></section>`; });
-    h += `<section class="rp-sec pb" id="rp-S3"><h2>S3 ${esc(S.S3.title)}</h2>${S.S3.walls.map((w) => `<div class="rp-sheet">${w.svg}${tb('S3', `${w.name} · ${w.lenFt.toFixed(2)} ft · ${w.ops} opening(s)`)}</div>`).join('')}<div class="notes rp-meta">${S.S3.notes.map((x) => `<div>• ${esc(x)}</div>`).join('')}</div></section>`;
-    h += `<section class="rp-sec pb" id="rp-S4"><h2>S4 ${esc(S.S4.title)}</h2><div class="rp-sheet">${S.S4.svg}${tb('S4', S.S4.title)}</div><div class="rp-sheet">${S.S4.section}${tb('S4', 'Roof section')}${notes(S.S4.notes)}</div></section>`;
+    const SHEET_LAYER = { S1: 'foundation', S2: 'floor', S3: 'walls', S4: 'roof' };
+    const notInc = (k) => { const id = SHEET_LAYER[k]; if (!id || incl(id)) return ''; const l = m.layers.find((x) => x.id === id); return `<div class="rp-notinc" data-notinc="${esc(id)}">Not included — <b>${esc(l ? l.name : id)}</b> is not marked complete, so this sheet isn't part of this price check.</div>`; };
+    ['A1', 'S1', 'S2'].forEach((k) => { const s = S[k]; h += `<section class="rp-sec pb" id="rp-${k}"><h2>${k} ${esc(s.title)}</h2>${notInc(k) || `<div class="rp-sheet">${s.svg}${tb(k, s.title)}${notes(s.notes)}</div>`}</section>`; });
+    h += `<section class="rp-sec pb" id="rp-S3"><h2>S3 ${esc(S.S3.title)}</h2>${notInc('S3') || `${S.S3.walls.map((w) => `<div class="rp-sheet">${w.svg}${tb('S3', `${w.name} · ${w.lenFt.toFixed(2)} ft · ${w.ops} opening(s)`)}</div>`).join('')}<div class="notes rp-meta">${S.S3.notes.map((x) => `<div>• ${esc(x)}</div>`).join('')}</div>`}</section>`;
+    h += `<section class="rp-sec pb" id="rp-S4"><h2>S4 ${esc(S.S4.title)}</h2>${notInc('S4') || `<div class="rp-sheet">${S.S4.svg}${tb('S4', S.S4.title)}</div><div class="rp-sheet">${S.S4.section}${tb('S4', 'Roof section')}${notes(S.S4.notes)}</div>`}</section>`;
 
     // ---------- 5. 3D views
     h += `<section class="rp-sec pb" id="rp-3d"><h2>A2 3D views</h2><div class="rp-3d">`;
@@ -240,8 +278,12 @@ ${hd ? `<label>Concrete<select id="rpConc">${['auto', 'bags80', 'bags60', 'ready
     // ---------- 6. build steps
     h += `<section class="rp-sec pb" id="rp-steps"><h2>Build steps (in build order)</h2>`;
     if (hd && C.instructionsMd) {
-      const secs = renderInstructions(C.instructionsMd, instructionVars(m, est, C.rules));
-      h += `<p class="rp-meta">From Remodel Guide's build guide, filled in with this model's numbers.</p><div class="rp-guide">${secs.map((s, i) => `<div class="rp-phase" data-phase="${i}"><h3>${esc(s.title)}</h3>${s.html}</div>`).join('')}</div>`;
+      const secs = renderInstructions(C.instructionsMd, instructionVars(m, fullEst, C.rules));
+      const PHASE = { 1: 'site', 2: 'foundation', 3: 'floor', 4: 'floor', 5: 'floor', 6: 'walls', 7: 'roof', 8: 'roof' };
+      const phaseLayer = (t) => { const mm = /^(\d+)\./.exec(t); return mm ? PHASE[mm[1]] || null : null; };
+      const fix = (html) => (est.roofingFixes || []).some((x) => x.id === 'sheathing1932') ? html.replace('sheets of 7/16 OSB', 'sheets of 19/32 OSB').replace('Check the stamp says 24/16 for rafters at 24 in, or use 1/2 in.', '7/16 (24/16) is rated only 40 psf at 24 in o.c., so the default is 19/32 (check the stamp says 40/20).') : html;
+      h += `<p class="rp-meta">From Remodel Guide's build guide, filled in with this model's numbers.${PT.isPartial ? ' Steps for layers not marked complete are listed but not included.' : ''}</p><div class="rp-guide">${secs.map((s, i) => { const lid = phaseLayer(s.title); const out = lid && !incl(lid); const l = out ? m.layers.find((x) => x.id === lid) : null;
+        return `<div class="rp-phase${out ? ' notinc' : ''}" data-phase="${i}"${out ? ` data-notinc="${esc(lid)}"` : ''}><h3>${esc(s.title)}</h3>${out ? `<div class="rp-notinc">Not included — <b>${esc(l ? l.name : lid)}</b> is not marked complete.</div>` : fix(s.html)}</div>`; }).join('')}</div>`;
     } else if (C.steps) {
       h += `<ol class="rp-steps">${C.steps.steps.map((s) => `<li><div class="ph-h">${esc(s.phase)}</div><b class="t">${esc(s.title)}</b>${(s.body || []).map((p) => `<p>${esc(p)}</p>`).join('')}${s.check ? `<div class="chk">${esc(s.check)}</div>` : ''}</li>`).join('')}</ol>`;
     }
@@ -279,7 +321,7 @@ ${C.status.issues.length ? `Data issues: ${C.status.issues.map(esc).join('; ')}`
   /** Called by the app after any committed edit while the report is open: mark stale, never re-price. */
   function markStale() {
     if (!run || !root.querySelector('#rp-total')) return;
-    if (modelSig(getModel()) !== run.sig && !root.querySelector('#rpStale')) { scrollY = root.scrollTop; renderRun(); bindRun(); }
+    if ((modelSig(getModel()) !== run.sig || (run.completeKey != null && completeKey(getModel()) !== run.completeKey)) && !root.querySelector('#rpStale')) { scrollY = root.scrollTop; renderRun(); bindRun(); }
   }
 
   // Tapping "Price check" always starts at the pre-check for the CURRENT plan.

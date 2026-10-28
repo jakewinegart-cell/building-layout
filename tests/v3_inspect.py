@@ -64,7 +64,8 @@ with sync_playwright() as p:
     pg.mouse.move(*pt); pg.wait_for_timeout(1200)
     t = popup(pg) or ''
     check('plan hover on a wall → stud popup', re.search(r'\d+ ft .*2x\d+ (stud|king stud|jack stud)', t) is not None, t.split('\n')[0])
-    check('stud popup: precut stud price + nails at per-unit price + total', 'precut stud' in t and 'framing nails' in t and '¢ each' in t and money_total(t) is not None, money_total(t))
+    check('stud popup: engine piece price + fastener-schedule nails at per-unit price + total', 'Common stud' in t and 'x 3-1/4x.131 nail' in t and '@ $0.026 each' in t and money_total(t) is not None, money_total(t))
+    check('stud popup shows Remodel Guide hover copy (fastener-schedule.json)', re.search(r'2x\d Common stud, 7 ft 7\.5 in · \$[\d.]+ EXAMPLE · \d+ x 3-1/4x\.131 nail @ \$0\.026 each = \$[\d.]+ · total \$[\d.]+ EXAMPLE', t) is not None and 'fastener-schedule.json' in t, [x for x in t.split('\n') if 'EXAMPLE' in x][:1])
     check('popup shows the snapshot note', HD in t)
     check('plan highlight mark drawn', pg.evaluate("!!__layout.plan.getInspectMark()"))
     stud_plan = t
@@ -74,6 +75,7 @@ with sync_playwright() as p:
     pg.mouse.move(*pp); pg.wait_for_timeout(800)
     tp = popup(pg) or ''
     check('plan hover on a pier → Sonotube popup (tube, concrete, rebar, total)', 'Sonotube pier' in tp and 'Sonotube' in tp and 'concrete' in tp.lower() and 'rebar' in tp and money_total(tp) is not None, tp.split('\n')[0])
+    check('pier popup: wire ties from fastener-schedule.json + hover copy', 'x wire tie' in tp and '@ $0.098 each' in tp and re.search(r'Concrete pier, \d+ ft[^\n]*concrete \+ rebar priced on the foundation lines · 2 x wire tie @ \$0\.098 each = \$0\.20', tp) is not None, [x for x in tp.split('\n') if 'Concrete pier' in x][:1])
     pg.screenshot(path=SH + '23-inspect-pier.png')
     # clicking / dragging in plan must not edit
     pg.mouse.click(*pt); pg.wait_for_timeout(300)
@@ -87,7 +89,7 @@ with sync_playwright() as p:
     s = pg.evaluate("__layout.v3.screenOfPart(u => u.part && u.part.k === 'stud' && u.part.at > 3)")
     pg.mouse.move(*s); pg.wait_for_timeout(1200)
     t3 = popup(pg) or ''
-    check('3D hover on a stud → stud popup', ' stud' in t3.split('\n')[0] and 'precut stud' in t3 and money_total(t3) is not None, t3.split('\n')[0])
+    check('3D hover on a stud → stud popup', ' stud' in t3.split('\n')[0] and 'stud' in t3 and 'nail @ $' in t3 and money_total(t3) is not None, t3.split('\n')[0])
     check('3D hovered part is highlighted', pg.evaluate("""() => { let n = 0; __layout.v3; return true; }"""))
     pg.screenshot(path=SH + '22-inspect-2x4-3d.png')
     stud3d = t3
