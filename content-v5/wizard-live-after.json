@@ -1,0 +1,825 @@
+[
+ {
+  "phrase": "make it 20 by 16",
+  "ai": [],
+  "bot": [
+   "PREVIEW \u2014 not applied yet Footprint 32' \u00d7 24' \u2192 20' \u00d7 16' (north-west corner kept) Swap: 16' wide \u00d7 20' deep Cost change: \u2212$4,916 (materials $12,758 \u2192 $7,841) Foundation \u2212$504 \u00b7 Floor framing \u2212$1,259 \u00b7 Walls, doors & win"
+  ],
+  "preview": true,
+  "apply": "applied",
+  "report": false,
+  "changed": true,
+  "before": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "after": {
+   "fp": [
+    20,
+    16
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "errors": []
+ },
+ {
+  "phrase": "make the addition 24 ft wide",
+  "ai": [],
+  "bot": [
+   "PREVIEW \u2014 not applied yet Footprint 20' \u00d7 16' \u2192 24' \u00d7 16' (north-west corner kept) Cost change: +$850 (materials $7,841 \u2192 $8,691) Floor framing +$228 \u00b7 Walls, doors & windows +$109 \u00b7 Roof framing & roofing +$454 \u00b7 Fasten"
+  ],
+  "preview": true,
+  "apply": "applied",
+  "report": false,
+  "changed": true,
+  "before": {
+   "fp": [
+    20,
+    16
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "after": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "errors": []
+ },
+ {
+  "phrase": "add a window on the north wall",
+  "ai": [],
+  "bot": [
+   "PREVIEW \u2014 not applied yet Add a 36 in window centered on the north wall Cost change: +$301 (materials $8,691 \u2192 $8,992) Walls, doors & windows +$301 Prices: Home Depot online snapshot 2026-10-28, not a Denver store, EXAMP"
+  ],
+  "preview": true,
+  "apply": "applied",
+  "report": false,
+  "changed": true,
+  "before": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "after": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "errors": []
+ },
+ {
+  "phrase": "add a door",
+  "ai": [],
+  "bot": [
+   "Which wall gets the door? North South East West"
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "after": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "errors": []
+ },
+ {
+  "phrase": "move the door to the east wall",
+  "ai": [],
+  "bot": [
+   "PREVIEW \u2014 not applied yet Move the door on the south wall to the east wall (centered) Cost change: about $0 (materials $8,992 \u2192 $8,992) Prices: Home Depot online snapshot 2026-10-28, not a Denver store, EXAMPLE. Items ma"
+  ],
+  "preview": true,
+  "apply": "applied",
+  "report": false,
+  "changed": true,
+  "before": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "after": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:1,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "errors": []
+ },
+ {
+  "phrase": "delete the window",
+  "ai": [],
+  "bot": [
+   "Which window? There are 4. Window on the south wall (6' along) Window on the north wall (10' along) Window on the east wall (12' along) Window on the north wall (11' 9\" along)"
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:1,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "after": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:1,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "errors": []
+ },
+ {
+  "phrase": "make the walls 9 ft",
+  "ai": [],
+  "bot": [
+   "PREVIEW \u2014 not applied yet Wall height 8' \u2192 9' Cost change: +$299 (materials $8,992 \u2192 $9,290) Walls, doors & windows +$299 Prices: Home Depot online snapshot 2026-10-28, not a Denver store, EXAMPLE. Items marked PRICE NEE"
+  ],
+  "preview": true,
+  "apply": "applied",
+  "report": false,
+  "changed": true,
+  "before": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:1,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "after": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 9,
+   "roof": "gable 4 oh12",
+   "ops": "d:1,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "errors": []
+ },
+ {
+  "phrase": "gable roof",
+  "ai": [],
+  "bot": [
+   "The roof is already a gable. Try \u201cmake the roof steeper\u201d or \u201cshed roof\u201d. make it 20 by 16 make the walls 9 ft add a window on the north wall gable roof"
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 9,
+   "roof": "gable 4 oh12",
+   "ops": "d:1,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "after": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 9,
+   "roof": "gable 4 oh12",
+   "ops": "d:1,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "errors": []
+ },
+ {
+  "phrase": "make the roof steeper",
+  "ai": [],
+  "bot": [
+   "PREVIEW \u2014 not applied yet Roof pitch 4:12 \u2192 5:12 Cost change: \u2212$14 (materials $9,290 \u2192 $9,276) Roof framing & roofing +$38 \u00b7 Fasteners \u2212$52 Prices: Home Depot online snapshot 2026-10-28, not a Denver store, EXAMPLE. Item"
+  ],
+  "preview": true,
+  "apply": "applied",
+  "report": false,
+  "changed": true,
+  "before": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 9,
+   "roof": "gable 4 oh12",
+   "ops": "d:1,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "after": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 9,
+   "roof": "gable 5 oh12",
+   "ops": "d:1,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "errors": []
+ },
+ {
+  "phrase": "add a pier",
+  "ai": [],
+  "bot": [
+   "Piers go under walls and beams, spaced 6' apart now. Space them closer, or tap \u25ce Pier in Plan to place one by hand. Piers 5 ft apart Piers 4 ft apart 2x12 joists, no mid beam Cancel"
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 9,
+   "roof": "gable 5 oh12",
+   "ops": "d:1,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "after": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 9,
+   "roof": "gable 5 oh12",
+   "ops": "d:1,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "errors": []
+ },
+ {
+  "phrase": "piers 6 ft apart",
+  "ai": [],
+  "bot": [
+   "That\u2019s already the case (Foundation: piers every 6'). Nothing to change."
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 9,
+   "roof": "gable 5 oh12",
+   "ops": "d:1,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "after": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 9,
+   "roof": "gable 5 oh12",
+   "ops": "d:1,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "errors": []
+ },
+ {
+  "phrase": "undo",
+  "ai": [],
+  "bot": [
+   "Undone: Roof pitch 4:12 \u2192 5:12."
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": true,
+  "before": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 9,
+   "roof": "gable 5 oh12",
+   "ops": "d:1,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "after": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 9,
+   "roof": "gable 4 oh12",
+   "ops": "d:1,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "errors": []
+ },
+ {
+  "phrase": "price check",
+  "ai": [],
+  "bot": [
+   "Running Price check on this device (no AI used)."
+  ],
+  "preview": false,
+  "apply": null,
+  "report": true,
+  "changed": false,
+  "before": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 9,
+   "roof": "gable 4 oh12",
+   "ops": "d:1,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "after": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 9,
+   "roof": "gable 4 oh12",
+   "ops": "d:1,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "errors": []
+ },
+ {
+  "phrase": "what does this cost",
+  "ai": [],
+  "bot": [
+   "Materials come to about $9,290 (EXAMPLE, Home Depot online snapshot 2026-10-28; not labor, tax or permits). Type \u201cprice check\u201d for the full list."
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 9,
+   "roof": "gable 4 oh12",
+   "ops": "d:1,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "after": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 9,
+   "roof": "gable 4 oh12",
+   "ops": "d:1,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "errors": []
+ },
+ {
+  "phrase": "make it a deck",
+  "ai": [],
+  "bot": [
+   "I can\u2019t turn this into a deck yet: this app plans a framed, roofed addition or shed on piers. I can: resize (\u201cmake it 20 by 16\u201d), set wall height (\u201cwalls 9 ft\u201d), add / move / remove doors and windows (\u201cadd a window on th"
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 9,
+   "roof": "gable 4 oh12",
+   "ops": "d:1,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "after": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 9,
+   "roof": "gable 4 oh12",
+   "ops": "d:1,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "errors": []
+ },
+ {
+  "phrase": "shed roof",
+  "ai": [],
+  "bot": [
+   "Which side is the high side? North (back) \u2192 4:12 South (front) \u2192 4:12 East \u2192 4:12 West \u2192 4:12"
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 9,
+   "roof": "gable 4 oh12",
+   "ops": "d:1,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "after": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 9,
+   "roof": "gable 4 oh12",
+   "ops": "d:1,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "errors": []
+ },
+ {
+  "phrase": "make it 12x12",
+  "ai": [],
+  "bot": [
+   "PREVIEW \u2014 not applied yet Footprint 24' \u00d7 16' \u2192 12' \u00d7 12' (north-west corner kept) Cost change: \u2212$3,321 (materials $9,290 \u2192 $5,969) Foundation \u2212$490 \u00b7 Floor framing \u2212$828 \u00b7 Walls, doors & windows \u2212$527 \u00b7 Roof framing & r"
+  ],
+  "preview": true,
+  "apply": "applied",
+  "report": false,
+  "changed": true,
+  "before": {
+   "fp": [
+    24,
+    16
+   ],
+   "plate": 9,
+   "roof": "gable 4 oh12",
+   "ops": "d:1,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 14
+  },
+  "after": {
+   "fp": [
+    12,
+    12
+   ],
+   "plate": 9,
+   "roof": "gable 4 oh12",
+   "ops": "d:1,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 8
+  },
+  "errors": []
+ },
+ {
+  "phrase": "remove the door",
+  "ai": [],
+  "bot": [
+   "PREVIEW \u2014 not applied yet Remove the door on the east wall Cost change: \u2212$580 (materials $5,969 \u2192 $5,389) Walls, doors & windows \u2212$580 Prices: Home Depot online snapshot 2026-10-28, not a Denver store, EXAMPLE. Items mar"
+  ],
+  "preview": true,
+  "apply": "applied",
+  "report": false,
+  "changed": true,
+  "before": {
+   "fp": [
+    12,
+    12
+   ],
+   "plate": 9,
+   "roof": "gable 4 oh12",
+   "ops": "d:1,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 8
+  },
+  "after": {
+   "fp": [
+    12,
+    12
+   ],
+   "plate": 9,
+   "roof": "gable 4 oh12",
+   "ops": "w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 8
+  },
+  "errors": []
+ },
+ {
+  "phrase": "add a 36 inch door on the south wall",
+  "ai": [],
+  "bot": [
+   "PREVIEW \u2014 not applied yet Add a 36 in door centered on the south wall Cost change: +$580 (materials $5,389 \u2192 $5,969) Walls, doors & windows +$580 Prices: Home Depot online snapshot 2026-10-28, not a Denver store, EXAMPLE"
+  ],
+  "preview": true,
+  "apply": "applied",
+  "report": false,
+  "changed": true,
+  "before": {
+   "fp": [
+    12,
+    12
+   ],
+   "plate": 9,
+   "roof": "gable 4 oh12",
+   "ops": "w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 8
+  },
+  "after": {
+   "fp": [
+    12,
+    12
+   ],
+   "plate": 9,
+   "roof": "gable 4 oh12",
+   "ops": "w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 8
+  },
+  "errors": []
+ },
+ {
+  "phrase": "how tall are the walls",
+  "ai": [
+   {
+    "status": 502,
+    "body": "{\"error\":\"model did not call a tool\",\"text\":\"The walls are 9 ft tall.\"}"
+   }
+  ],
+  "bot": [
+   "The walls are 9' tall, framed 2x6 at 16 in on center."
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    12,
+    12
+   ],
+   "plate": 9,
+   "roof": "gable 4 oh12",
+   "ops": "w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 8
+  },
+  "after": {
+   "fp": [
+    12,
+    12
+   ],
+   "plate": 9,
+   "roof": "gable 4 oh12",
+   "ops": "w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 8
+  },
+  "errors": [
+   "Failed to load resource: the server responded with a status of 502 (Bad Gateway)"
+  ]
+ },
+ {
+  "phrase": "redo",
+  "ai": [],
+  "bot": [
+   "Nothing to redo."
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    12,
+    12
+   ],
+   "plate": 9,
+   "roof": "gable 4 oh12",
+   "ops": "w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 8
+  },
+  "after": {
+   "fp": [
+    12,
+    12
+   ],
+   "plate": 9,
+   "roof": "gable 4 oh12",
+   "ops": "w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 8
+  },
+  "errors": []
+ },
+ {
+  "phrase": "make the walls 10 feet tall",
+  "ai": [],
+  "bot": [
+   "PREVIEW \u2014 not applied yet Wall height 9' \u2192 10' Cost change: +$102 (materials $5,969 \u2192 $6,070) Walls, doors & windows +$102 Prices: Home Depot online snapshot 2026-10-28, not a Denver store, EXAMPLE. Items marked PRICE NE"
+  ],
+  "preview": true,
+  "apply": "applied",
+  "report": false,
+  "changed": true,
+  "before": {
+   "fp": [
+    12,
+    12
+   ],
+   "plate": 9,
+   "roof": "gable 4 oh12",
+   "ops": "w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 8
+  },
+  "after": {
+   "fp": [
+    12,
+    12
+   ],
+   "plate": 10,
+   "roof": "gable 4 oh12",
+   "ops": "w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 8
+  },
+  "errors": []
+ },
+ {
+  "phrase": "change the roof to a 6/12 pitch",
+  "ai": [],
+  "bot": [
+   "PREVIEW \u2014 not applied yet Roof pitch 4:12 \u2192 6:12 Cost change: +$52 (materials $6,070 \u2192 $6,122) Roof framing & roofing +$52 Prices: Home Depot online snapshot 2026-10-28, not a Denver store, EXAMPLE. Items marked PRICE NE"
+  ],
+  "preview": true,
+  "apply": "applied",
+  "report": false,
+  "changed": true,
+  "before": {
+   "fp": [
+    12,
+    12
+   ],
+   "plate": 10,
+   "roof": "gable 4 oh12",
+   "ops": "w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 8
+  },
+  "after": {
+   "fp": [
+    12,
+    12
+   ],
+   "plate": 10,
+   "roof": "gable 6 oh12",
+   "ops": "w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 8
+  },
+  "errors": []
+ },
+ {
+  "phrase": "make the overhang 12 inches",
+  "ai": [],
+  "bot": [
+   "That\u2019s already the case (Overhang 12 in \u2192 12 in). Nothing to change."
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    12,
+    12
+   ],
+   "plate": 10,
+   "roof": "gable 6 oh12",
+   "ops": "w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 8
+  },
+  "after": {
+   "fp": [
+    12,
+    12
+   ],
+   "plate": 10,
+   "roof": "gable 6 oh12",
+   "ops": "w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 8
+  },
+  "errors": []
+ }
+]

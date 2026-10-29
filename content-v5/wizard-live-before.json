@@ -1,0 +1,924 @@
+[
+ {
+  "phrase": "make it 20 by 16",
+  "ai": [
+   {
+    "status": 200,
+    "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"footprint.resize\",\"slots\":{\"d\":16,\"w\":20}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":1942,\"completion_tokens\":28,\"total_tokens\":1970,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":49.830909729003906}}"
+   }
+  ],
+  "bot": [
+   "What size? e.g. \"24 by 16\""
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "after": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "errors": []
+ },
+ {
+  "phrase": "make the addition 24 ft wide",
+  "ai": [
+   {
+    "status": 200,
+    "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"footprint.resize\",\"slots\":{\"widthFt\":24}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":1971,\"completion_tokens\":24,\"total_tokens\":1995,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":50.233638763427734}}"
+   }
+  ],
+  "bot": [
+   "What size? e.g. \"24 by 16\""
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "after": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "errors": []
+ },
+ {
+  "phrase": "add a window on the north wall",
+  "ai": [
+   {
+    "status": 200,
+    "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"openings.add\",\"slots\":{\"heightIn\":48,\"kind\":\"window\",\"wall\":\"north\",\"widthIn\":36}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2000,\"completion_tokens\":37,\"total_tokens\":2037,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":51.95000457763672}}"
+   }
+  ],
+  "bot": [
+   "PREVIEW \u2014 not applied yet Add a 36 in window centered on the north wall Cost change: +$281 (materials $12,758 \u2192 $13,039) Walls, doors & windows +$281 Prices: Home Depot online snapshot 2026-10-28, not a Denver store, EXA"
+  ],
+  "preview": true,
+  "apply": "applied",
+  "report": false,
+  "changed": true,
+  "before": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "after": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "errors": []
+ },
+ {
+  "phrase": "add a door",
+  "ai": [
+   {
+    "status": 200,
+    "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"openings.add\",\"slots\":{\"heightIn\":80,\"kind\":\"door\",\"wall\":\"south\",\"widthIn\":36}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2103,\"completion_tokens\":37,\"total_tokens\":2140,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":54.47818374633789}}"
+   }
+  ],
+  "bot": [
+   "PREVIEW \u2014 not applied yet Add a 36 in door centered on the south wall Cost change: +$558 (materials $13,039 \u2192 $13,597) Walls, doors & windows +$558 Prices: Home Depot online snapshot 2026-10-28, not a Denver store, EXAMP"
+  ],
+  "preview": true,
+  "apply": "applied",
+  "report": false,
+  "changed": true,
+  "before": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "after": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "errors": []
+ },
+ {
+  "phrase": "move the door to the east wall",
+  "ai": [
+   {
+    "status": 200,
+    "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"openings.move\",\"slots\":{\"opening\":\"op-mvtpo1d71e94\",\"wall\":\"east\"}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2209,\"completion_tokens\":35,\"total_tokens\":2244,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":56.925453186035156}}"
+   }
+  ],
+  "bot": [
+   "Which door? door on the south wall, 16' in window on the south wall, 6' in window on the north wall, 10' in window on the east wall, 12' in window on the north wall, 15' 9\" in"
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "after": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "errors": []
+ },
+ {
+  "phrase": "delete the window",
+  "ai": [
+   {
+    "status": 200,
+    "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"openings.remove\",\"slots\":{\"id\":\"op-win1\"}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2196,\"completion_tokens\":25,\"total_tokens\":2221,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":55.833641052246094}}"
+   }
+  ],
+  "bot": [
+   "Which door? door on the south wall, 16' in window on the south wall, 6' in window on the north wall, 10' in window on the east wall, 12' in window on the north wall, 15' 9\" in"
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "after": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "errors": []
+ },
+ {
+  "phrase": "make the walls 9 ft",
+  "ai": [
+   {
+    "status": 200,
+    "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"walls.set_height\",\"slots\":{\"heightFt\":9}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2186,\"completion_tokens\":25,\"total_tokens\":2211,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":55.58818435668945}}"
+   }
+  ],
+  "bot": [
+   "How tall? e.g. 9 ft"
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "after": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "errors": []
+ },
+ {
+  "phrase": "gable roof",
+  "ai": [
+   {
+    "status": 200,
+    "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"roof.set_shape\",\"slots\":{\"shape\":\"gable\"}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2137,\"completion_tokens\":25,\"total_tokens\":2162,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":54.385459899902344}}"
+   }
+  ],
+  "bot": [
+   "PREVIEW \u2014 not applied yet Roof shape \u2192 gable Cost change: about $0 (materials $13,597 \u2192 $13,597) Prices: Home Depot online snapshot 2026-10-28, not a Denver store, EXAMPLE. Items marked PRICE NEEDED aren\u2019t counted. Apply"
+  ],
+  "preview": true,
+  "apply": "applied",
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "after": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "errors": []
+ },
+ {
+  "phrase": "make the roof steeper",
+  "ai": [],
+  "bot": [
+   "PREVIEW \u2014 not applied yet Roof pitch 4:12 \u2192 5:12 Cost change: +$69 (materials $13,597 \u2192 $13,666) Walls, doors & windows +$14 \u00b7 Roof framing & roofing +$107 \u00b7 Fasteners \u2212$52 Prices: Home Depot online snapshot 2026-10-28, "
+  ],
+  "preview": true,
+  "apply": "applied",
+  "report": false,
+  "changed": true,
+  "before": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "after": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 5 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "errors": []
+ },
+ {
+  "phrase": "add a pier",
+  "ai": [
+   {
+    "status": 200,
+    "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"foundation.add_pier\",\"slots\":{}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2173,\"completion_tokens\":22,\"total_tokens\":2195,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":55.03727340698242}}"
+   }
+  ],
+  "bot": [
+   "Piers only go under walls. Want one of these instead? 2x12 joists, no mid beam Add a bearing wall there Cancel"
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 5 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "after": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 5 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "errors": []
+ },
+ {
+  "phrase": "piers 6 ft apart",
+  "ai": [
+   {
+    "status": 502,
+    "body": "{\"error\":\"model did not call a tool\",\"text\":\"propose_edit(edits=[{\\\"intent\\\":\\\"foundation.set_params\\\", \\\"slots\\\":{\\\"pierSpacingIn\\\":72, \\\"pierSpacingIn\\\":\\\"72\\\"}}])\"}"
+   }
+  ],
+  "bot": [
+   "The wizard couldn\u2019t understand that (502: model did not call a tool). Try saying it another way."
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 5 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "after": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 5 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "errors": [
+   "Failed to load resource: the server responded with a status of 502 ()"
+  ]
+ },
+ {
+  "phrase": "undo",
+  "ai": [],
+  "bot": [
+   "Undone: Roof pitch 4:12 \u2192 5:12."
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": true,
+  "before": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 5 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "after": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "errors": []
+ },
+ {
+  "phrase": "price check",
+  "ai": [],
+  "bot": [
+   "Running Price check on this device (no AI used)."
+  ],
+  "preview": false,
+  "apply": null,
+  "report": true,
+  "changed": false,
+  "before": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "after": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "errors": []
+ },
+ {
+  "phrase": "what does this cost",
+  "ai": [
+   {
+    "status": 502,
+    "body": "{\"error\":\"model did not call a tool\",\"text\":\"[answer_question(intent=ask.cost, topic=\\\"total cost\\\"),]\"}"
+   }
+  ],
+  "bot": [
+   "The wizard couldn\u2019t understand that (502: model did not call a tool). Try saying it another way."
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "after": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "errors": [
+   "Failed to load resource: the server responded with a status of 502 ()"
+  ]
+ },
+ {
+  "phrase": "make it a deck",
+  "ai": [
+   {
+    "status": 200,
+    "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"footprint.set_type\",\"slots\":{\"type\":\"deck\"}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2161,\"completion_tokens\":25,\"total_tokens\":2186,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":54.97454833984375}}"
+   }
+  ],
+  "bot": [
+   "The wizard can\u2019t do \"footprint set_type\" yet. You can do it by hand in Plan or 3D."
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "after": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "errors": []
+ },
+ {
+  "phrase": "shed roof",
+  "ai": [
+   {
+    "status": 200,
+    "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"roof.make_shed\",\"slots\":{\"highHeight\":\"8 ft\",\"highSide\":\"north\",\"lowHeight\":\"8 ft\"}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2174,\"completion_tokens\":41,\"total_tokens\":2215,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":56.53000259399414}}"
+   }
+  ],
+  "bot": [
+   "PREVIEW \u2014 not applied yet Shed roof: north wall 8' down to 8' (0:12) \u26d4 Pitch must be between 0.5:12 and 12:12 (this is 0:12). \u26d4 The high wall must be taller than the low wall. \u26d4 Asphalt shingles need at least 2:12 (IRC R"
+  ],
+  "preview": true,
+  "apply": "blocked",
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "after": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "errors": []
+ },
+ {
+  "phrase": "make it 12x12",
+  "ai": [
+   {
+    "status": 200,
+    "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"footprint.resize\",\"slots\":{\"d\":12,\"w\":12}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2177,\"completion_tokens\":27,\"total_tokens\":2204,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":55.521820068359375}}"
+   }
+  ],
+  "bot": [
+   "What size? e.g. \"24 by 16\""
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "after": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "errors": []
+ },
+ {
+  "phrase": "remove the door",
+  "ai": [
+   {
+    "status": 200,
+    "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"openings.remove\",\"slots\":{\"id\":\"op-door1\"}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2176,\"completion_tokens\":25,\"total_tokens\":2201,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":55.34273147583008}}"
+   }
+  ],
+  "bot": [
+   "Which door? door on the south wall, 16' in window on the south wall, 6' in window on the north wall, 10' in window on the east wall, 12' in window on the north wall, 15' 9\" in"
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "after": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "errors": []
+ },
+ {
+  "phrase": "add a 36 inch door on the south wall",
+  "ai": [
+   {
+    "status": 200,
+    "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"openings.add\",\"slots\":{\"heightIn\":80,\"kind\":\"door\",\"wall\":\"south\",\"widthIn\":36}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2176,\"completion_tokens\":37,\"total_tokens\":2213,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":56.27000427246094}}"
+   }
+  ],
+  "bot": [
+   "PREVIEW \u2014 not applied yet Add a 36 in door centered on the south wall Cost change: +$551 (materials $13,597 \u2192 $14,148) Walls, doors & windows +$551 Prices: Home Depot online snapshot 2026-10-28, not a Denver store, EXAMP"
+  ],
+  "preview": true,
+  "apply": "applied",
+  "report": false,
+  "changed": true,
+  "before": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "after": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "errors": []
+ },
+ {
+  "phrase": "how tall are the walls",
+  "ai": [
+   {
+    "status": 502,
+    "body": "{\"error\":\"model did not call a tool\",\"text\":\"[answer_question(intent=\\\"ask.value\\\", topic=\\\"wall height\\\"),]\"}"
+   }
+  ],
+  "bot": [
+   "The wizard couldn\u2019t understand that (502: model did not call a tool). Try saying it another way."
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "after": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "errors": [
+   "Failed to load resource: the server responded with a status of 502 ()"
+  ]
+ },
+ {
+  "phrase": "redo",
+  "ai": [],
+  "bot": [
+   "Nothing to redo."
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "after": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "errors": []
+ },
+ {
+  "phrase": "make the walls 10 feet tall",
+  "ai": [
+   {
+    "status": 200,
+    "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"walls.set_height\",\"slots\":{\"heightFt\":10}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2221,\"completion_tokens\":25,\"total_tokens\":2246,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":56.4472770690918}}"
+   }
+  ],
+  "bot": [
+   "How tall? e.g. 9 ft"
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "after": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "errors": []
+ },
+ {
+  "phrase": "change the roof to a 6/12 pitch",
+  "ai": [
+   {
+    "status": 200,
+    "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"roof.set_pitch\",\"slots\":{\"pitch\":\"6/12\"}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2222,\"completion_tokens\":27,\"total_tokens\":2249,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":56.626365661621094}}"
+   }
+  ],
+  "bot": [
+   "PREVIEW \u2014 not applied yet Roof pitch 4:12 \u2192 6:12 Cost change: +$174 (materials $14,148 \u2192 $14,322) Walls, doors & windows +$27 \u00b7 Roof framing & roofing +$199 \u00b7 Fasteners \u2212$52 Prices: Home Depot online snapshot 2026-10-28,"
+  ],
+  "preview": true,
+  "apply": "applied",
+  "report": false,
+  "changed": true,
+  "before": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 4 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "after": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 6 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "errors": []
+ },
+ {
+  "phrase": "make the overhang 12 inches",
+  "ai": [
+   {
+    "status": 200,
+    "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"roof.set_overhang\",\"slots\":{\"overhangIn\":\"12\"}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2203,\"completion_tokens\":28,\"total_tokens\":2231,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":56.237274169921875}}"
+   }
+  ],
+  "bot": [
+   "How big an overhang? e.g. 18 in"
+  ],
+  "preview": false,
+  "apply": null,
+  "report": false,
+  "changed": false,
+  "before": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 6 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "after": {
+   "fp": [
+    32,
+    24
+   ],
+   "plate": 8,
+   "roof": "gable 6 oh12",
+   "ops": "d:2,w:2,w:0,w:1,w:0,d:2,d:2",
+   "fnd": "piersOnly sp72",
+   "piers": 20
+  },
+  "errors": []
+ }
+]
