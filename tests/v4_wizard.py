@@ -46,6 +46,7 @@ def wait_cost(pg):
 
 with sync_playwright() as p:
     b = p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'])
+    import _skipsize; _skipsize.patch(b)
     pg = b.new_page(viewport={'width': 1280, 'height': 860}); errs = []
     pg.on('pageerror', lambda e: errs.append(str(e))); pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' and 'Failed to load resource' not in m.text else None)
     pg.on('dialog', lambda d: d.accept())

@@ -67,6 +67,7 @@ def mark_all_complete(pg):
 
 with sync_playwright() as p:
     b = p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'])
+    import _skipsize; _skipsize.patch(b)
 
     # ================================================================ 1. no price before Price check + 3D editing
     ctx, pg, errs = new_page(p, b)

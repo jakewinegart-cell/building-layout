@@ -15,6 +15,8 @@ import { setPitch, syncShedPitch } from './wizard-core.js';
 import { roofChecks, houseOf, shedFrame, edgeSide, wallEdge, wallIdForSide, fmtPitch, degreesFromPitch, snapPitch, r2 as rr2 } from './roof-calc.js';
 import { modelSig } from './pricecheck.js';
 import { SLOPE, EXISTING_ROOF_ASSUMED } from './config.js';
+import { createPlans, shareHashCode } from './plans.js';
+import { createSizeModal, generatePlan, resizeFootprint, carryLocation } from './sizemodal.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -38,7 +40,8 @@ let pending = new Set();
 let pendingSource = null;
 let saveT = 0;
 let reportCtl = null; // price-check report controller (set when opened)
-const persist = () => { clearTimeout(saveT); saveT = setTimeout(() => save(model), 150); };
+let plans = null; // v5 Plans (js/plans.js)
+const persist = () => { clearTimeout(saveT); saveT = setTimeout(() => { if (plans && plans.isShared()) return; save(model); if (plans) plans.autosave(model); }, 150); };
 
 let previewModel = null; // wizard preview: a model copy shown in Plan/3D until Apply / Cancel
 // ---------- undo / redo (20 steps; wizard + manual edits, hooked on app.commit; mirrored in sessionStorage)
@@ -248,6 +251,9 @@ $$('#menu [data-menu]').forEach((b) => b.addEventListener('click', () => {
   if (b.dataset.menu === 'foundation') { model.activeLayerId = 'foundation'; persist(); refresh({ all: true }); showTab('props', true); const c = $('#fndType'); if (c) c.scrollIntoView({ block: 'nearest' }); }
   if (b.dataset.menu === 'zip') zipModal.open({ zip: (model.site || {}).zip });
   if (b.dataset.menu === 'done') openReport();
+  if (b.dataset.menu === 'plans') plans.openPanel();
+  if (b.dataset.menu === 'newplan') plans.newPlan();
+  if (b.dataset.menu === 'resize') openSize('resize');
   if (b.dataset.menu === 'reset' && confirm('Start over with the 32×24 sample? This clears the saved model on this device.')) { clear(); model = createDefaultModel(); regenerate(model, 'init'); save(model); refresh({ all: true }); setView('plan'); plan.fit(); }
 }));
 
@@ -799,4 +805,45 @@ requestAnimationFrame(() => { plan.resize(); plan.fit(); if (fresh) toast('Sampl
 // ---------- v4 startup ZIP pop-up (content-v4/zip-popup-spec.md)
 var zipModal = createZipModal({ getModel: () => model, commit: (s) => app.commit(s), persist, toast });
 window.__layout.zipModal = zipModal;
-zipModal.maybeShowOnStart().then((r) => { window.__layout.zipStart = r || 'none'; renderLayers(); });
+
+// ---------- v5 Plans (save / open / share) + "Size of your build" pop-up
+function loadModel(m, opts = {}) {
+  if (wizard && wizard.hasPending()) wizard.close();
+  model = m; model.selection = null; model.view = model.view || 'plan';
+  regenerate(model, 'init'); hist = { undo: [], redo: [] }; saveHist(); lastSnap = snapOf(model); previewModel = null; document.body.classList.remove('wizPreview');
+  if (!opts.shared) persist();
+  if (!$('#report').hidden) closeReport();
+  refresh(); setView(model.view); requestAnimationFrame(() => { plan.resize(); plan.fit(); });
+  if (inspector) inspector.invalidate(); if (wizard) wizard.syncUndo();
+}
+const skipSize = () => { try { return !!window.__SKIP_SIZE_POPUP || localStorage.getItem('buildingLayout.skipSizePopup') === '1' || /[?&]nosize\b/.test(location.search); } catch (e) { return false; } };
+const sizeModal = createSizeModal({
+  getModel: () => model,
+  onCreate(o) {
+    const m = generatePlan(model, o); loadModel(m);
+    plans.setCurrentName(`${o.width}×${o.depth} ${o.attached ? 'addition' : 'freestanding'}`); plans.autosave(model);
+    toast(`New ${o.width} × ${o.depth} ft plan, ${o.wallFt} ft walls, piers only`);
+  },
+  onResize(w, d) { if (model.footprint.length !== 4) { toast('Resize works on rectangles. Drag the walls for other shapes.'); return; } resizeFootprint(model, w, d); nextLabel = `resize to ${w} × ${d}`; app.commit('footprint'); requestAnimationFrame(() => plan.fit()); toast(`Footprint ${w} × ${d} ft`); },
+});
+async function openSize(mode, opts = {}) {
+  if (mode === 'resize') return sizeModal.open('resize');
+  const r = await sizeModal.open('new');
+  if (r === 'skip' && opts.newPlan) { const m = carryLocation(createDefaultModel(), model); loadModel(m); }
+  return r;
+}
+plans = createPlans({ getModel: () => model, loadModel, toast, openSize });
+$('#plansBtn').addEventListener('click', (e) => { e.stopPropagation(); if (plans.isOpen()) plans.closePanel(); else plans.openPanel(); });
+const rb = $('#resizeBtn'); if (rb) rb.addEventListener('click', () => openSize('resize'));
+Object.assign(window.__layout, { plans, sizeModal, openSize, loadModel });
+
+async function boot() {
+  const code = shareHashCode(location.hash);
+  if (code && await plans.openShare(code)) { window.__layout.zipStart = 'share'; renderLayers(); window.__layout.bootDone = true; return; } // a share link never waits on the ZIP / size pop-ups
+  plans.ensureCurrent();
+  const r = await zipModal.maybeShowOnStart(); window.__layout.zipStart = r || 'none'; renderLayers();
+  if (fresh && !skipSize()) { await zipModal.whenClosed(); if (plans.isShared()) { window.__layout.bootDone = true; return; } window.__layout.sizeStart = 'modal'; await openSize('new'); }
+  window.__layout.bootDone = true;
+}
+boot();
+window.addEventListener('hashchange', () => { const c = shareHashCode(location.hash); if (!c) return; zipModal.close(); if (sizeModal.isOpen()) sizeModal.close('skip'); plans.openShare(c); });

@@ -53,6 +53,7 @@ M = "window.__layout.getModel()"
 def run(p, label, vp, phone):
     print(f'\n=== {label} {vp} ===')
     b = p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'])
+    import _skipsize; _skipsize.patch(b)
     ctx = b.new_context(viewport=vp, device_scale_factor=2 if phone else 1, is_mobile=phone, has_touch=phone)
     pg = ctx.new_page()
     errs = []

@@ -32,6 +32,7 @@ def state(pg):
 CH = ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader']
 with sync_playwright() as p:
     b = p.chromium.launch(executable_path='/usr/bin/google-chrome', args=CH)
+    import _skipsize; _skipsize.patch(b)
     for L, kw in [('desktop', dict(viewport={'width': 1280, 'height': 860})), ('phone', dict(viewport={'width': 390, 'height': 844}, device_scale_factor=2, is_mobile=True, has_touch=True))]:
         ctx = b.new_context(**kw); pg = ctx.new_page(); errs = []
         pg.on('pageerror', lambda e: errs.append(str(e))); pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' else None)

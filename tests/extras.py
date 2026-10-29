@@ -15,6 +15,7 @@ def zip_skip(pg):
 
 with sync_playwright() as p:
     b = p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'])
+    import _skipsize; _skipsize.patch(b)
     pg = b.new_page(viewport={'width': 1280, 'height': 800}); errs = []
     pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' else None)
     pg.on('pageerror', lambda e: errs.append(str(e)))

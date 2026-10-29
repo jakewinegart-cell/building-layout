@@ -190,7 +190,10 @@ ${footer()}</div>`;
     close(); toast && toast(msg);
     const cb = onDone; onDone = null; if (cb) cb();
   }
-  function close() { if (root) { root.hidden = true; root.innerHTML = ''; } document.body.classList.remove('zipOpen'); }
+  let waiters = [];
+  function close() { if (root) { root.hidden = true; root.innerHTML = ''; } document.body.classList.remove('zipOpen'); const w = waiters; waiters = []; w.forEach((f) => f()); }
+  /** v5: resolves when the pop-up is closed (Use / Skip / ✕), so the size pop-up can follow it. */
+  const whenClosed = () => (root && !root.hidden ? new Promise((r) => waiters.push(r)) : Promise.resolve());
 
   async function open(opts = {}) {
     jdoc = await getJurisdictions();
@@ -214,5 +217,5 @@ ${footer()}</div>`;
     b.querySelector('#zipBannerGo').onclick = () => { b.hidden = true; open({ zip: (getModel().site || {}).zip }); };
     b.querySelector('#zipBannerX').onclick = () => { b.hidden = true; };
   }
-  return { open, close, maybeShowOnStart, isOpen: () => !!(root && !root.hidden), getJdoc: () => jdoc };
+  return { open, close, whenClosed, maybeShowOnStart, isOpen: () => !!(root && !root.hidden), getJdoc: () => jdoc };
 }

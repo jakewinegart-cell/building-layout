@@ -41,6 +41,7 @@ def money_total(txt):
 
 with sync_playwright() as p:
     b = p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'])
+    import _skipsize; _skipsize.patch(b)
     # ===================================================== desktop
     pg = b.new_page(viewport={'width': 1280, 'height': 800}); errs = []
     pg.on('pageerror', lambda e: errs.append(str(e)))
