@@ -117,6 +117,7 @@ with sync_playwright() as p:
         bot = last_bot(pg); pv = preview_on(pg)
         exp = t['tool']
         good = (exp == 'propose_edit' and (pv or t['id'] in ('T17', 'T23', 'T08'))) or (exp == 'ask_clarification' and pg.locator('#wzLog .wz-chip').count() >= 2) or (exp == 'answer_question' and bool(bot)) or (exp == 'meta' and bool(bot))
+        if t['id'] == 'T12': good = pv or pg.locator('#wzLog .wz-chip').count() >= 2  # v5: "24 by 16" previews directly (with a Swap chip)
         if t['id'] == 'T23': good = 'hip' in bot.lower() and not pv
         if t['id'] == 'T17': good = 'under walls' in bot.lower()
         if t['id'] == 'T08': good = pv or 'pitch' in bot.lower()
