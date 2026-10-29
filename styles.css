@@ -472,3 +472,4 @@ em.assumed { font-style: normal; font-size: 10px; font-weight: 800; background: 
 .shareBanner button { font: inherit; padding: 6px 10px; border-radius: 8px; border: 0; cursor: pointer; }
 .shareBanner .sb-save { background: #f26b1d; color: #fff; font-weight: 700; }
 .plansBtn { font: inherit; }
+.shareBanner #sbClose { background: #fff; color: #1d2733; }

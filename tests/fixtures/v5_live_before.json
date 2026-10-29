@@ -1,0 +1,122 @@
+{
+ "make it 20 by 16": [
+  {
+   "status": 200,
+   "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"footprint.resize\",\"slots\":{\"d\":16,\"w\":20}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":1942,\"completion_tokens\":28,\"total_tokens\":1970,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":49.830909729003906}}"
+  }
+ ],
+ "make the addition 24 ft wide": [
+  {
+   "status": 200,
+   "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"footprint.resize\",\"slots\":{\"widthFt\":24}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":1971,\"completion_tokens\":24,\"total_tokens\":1995,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":50.233638763427734}}"
+  }
+ ],
+ "add a window on the north wall": [
+  {
+   "status": 200,
+   "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"openings.add\",\"slots\":{\"heightIn\":48,\"kind\":\"window\",\"wall\":\"north\",\"widthIn\":36}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2000,\"completion_tokens\":37,\"total_tokens\":2037,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":51.95000457763672}}"
+  }
+ ],
+ "add a door": [
+  {
+   "status": 200,
+   "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"openings.add\",\"slots\":{\"heightIn\":80,\"kind\":\"door\",\"wall\":\"south\",\"widthIn\":36}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2103,\"completion_tokens\":37,\"total_tokens\":2140,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":54.47818374633789}}"
+  }
+ ],
+ "move the door to the east wall": [
+  {
+   "status": 200,
+   "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"openings.move\",\"slots\":{\"opening\":\"op-mvtpo1d71e94\",\"wall\":\"east\"}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2209,\"completion_tokens\":35,\"total_tokens\":2244,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":56.925453186035156}}"
+  }
+ ],
+ "delete the window": [
+  {
+   "status": 200,
+   "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"openings.remove\",\"slots\":{\"id\":\"op-win1\"}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2196,\"completion_tokens\":25,\"total_tokens\":2221,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":55.833641052246094}}"
+  }
+ ],
+ "make the walls 9 ft": [
+  {
+   "status": 200,
+   "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"walls.set_height\",\"slots\":{\"heightFt\":9}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2186,\"completion_tokens\":25,\"total_tokens\":2211,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":55.58818435668945}}"
+  }
+ ],
+ "gable roof": [
+  {
+   "status": 200,
+   "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"roof.set_shape\",\"slots\":{\"shape\":\"gable\"}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2137,\"completion_tokens\":25,\"total_tokens\":2162,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":54.385459899902344}}"
+  }
+ ],
+ "add a pier": [
+  {
+   "status": 200,
+   "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"foundation.add_pier\",\"slots\":{}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2173,\"completion_tokens\":22,\"total_tokens\":2195,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":55.03727340698242}}"
+  }
+ ],
+ "piers 6 ft apart": [
+  {
+   "status": 502,
+   "body": "{\"error\":\"model did not call a tool\",\"text\":\"propose_edit(edits=[{\\\"intent\\\":\\\"foundation.set_params\\\", \\\"slots\\\":{\\\"pierSpacingIn\\\":72, \\\"pierSpacingIn\\\":\\\"72\\\"}}])\"}"
+  }
+ ],
+ "what does this cost": [
+  {
+   "status": 502,
+   "body": "{\"error\":\"model did not call a tool\",\"text\":\"[answer_question(intent=ask.cost, topic=\\\"total cost\\\"),]\"}"
+  }
+ ],
+ "make it a deck": [
+  {
+   "status": 200,
+   "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"footprint.set_type\",\"slots\":{\"type\":\"deck\"}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2161,\"completion_tokens\":25,\"total_tokens\":2186,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":54.97454833984375}}"
+  }
+ ],
+ "shed roof": [
+  {
+   "status": 200,
+   "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"roof.make_shed\",\"slots\":{\"highHeight\":\"8 ft\",\"highSide\":\"north\",\"lowHeight\":\"8 ft\"}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2174,\"completion_tokens\":41,\"total_tokens\":2215,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":56.53000259399414}}"
+  }
+ ],
+ "make it 12x12": [
+  {
+   "status": 200,
+   "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"footprint.resize\",\"slots\":{\"d\":12,\"w\":12}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2177,\"completion_tokens\":27,\"total_tokens\":2204,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":55.521820068359375}}"
+  }
+ ],
+ "remove the door": [
+  {
+   "status": 200,
+   "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"openings.remove\",\"slots\":{\"id\":\"op-door1\"}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2176,\"completion_tokens\":25,\"total_tokens\":2201,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":55.34273147583008}}"
+  }
+ ],
+ "add a 36 inch door on the south wall": [
+  {
+   "status": 200,
+   "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"openings.add\",\"slots\":{\"heightIn\":80,\"kind\":\"door\",\"wall\":\"south\",\"widthIn\":36}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2176,\"completion_tokens\":37,\"total_tokens\":2213,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":56.27000427246094}}"
+  }
+ ],
+ "how tall are the walls": [
+  {
+   "status": 502,
+   "body": "{\"error\":\"model did not call a tool\",\"text\":\"[answer_question(intent=\\\"ask.value\\\", topic=\\\"wall height\\\"),]\"}"
+  }
+ ],
+ "make the walls 10 feet tall": [
+  {
+   "status": 200,
+   "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"walls.set_height\",\"slots\":{\"heightFt\":10}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2221,\"completion_tokens\":25,\"total_tokens\":2246,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":56.4472770690918}}"
+  }
+ ],
+ "change the roof to a 6/12 pitch": [
+  {
+   "status": 200,
+   "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"roof.set_pitch\",\"slots\":{\"pitch\":\"6/12\"}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2222,\"completion_tokens\":27,\"total_tokens\":2249,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":56.626365661621094}}"
+  }
+ ],
+ "make the overhang 12 inches": [
+  {
+   "status": 200,
+   "body": "{\"tool_call\":{\"name\":\"propose_edit\",\"arguments\":{\"edits\":[{\"intent\":\"roof.set_overhang\",\"slots\":{\"overhangIn\":\"12\"}}]}},\"model\":\"@cf/meta/llama-4-scout-17b-16e-instruct\",\"usage\":{\"prompt_tokens\":2203,\"completion_tokens\":28,\"total_tokens\":2231,\"prompt_tokens_details\":{\"cached_tokens\":0},\"neurons\":56.237274169921875}}"
+  }
+ ]
+}
